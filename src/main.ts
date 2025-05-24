@@ -6,6 +6,7 @@ interface ScrollingPluginSettings {
     mouse_scroll_speed: number;
     mouse_scroll_smoothness: number;
     mouse_scroll_invert: boolean;
+    scrollbar_enabled: boolean;
     center_cursor_enabled: boolean;
     center_cursor_editing_distance: number;
     center_cursor_moving_distance: number;
@@ -20,8 +21,9 @@ const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     mouse_scroll_speed: 1,
     mouse_scroll_smoothness: 1,
     mouse_scroll_invert: false,
+    scrollbar_enabled: true,
     center_cursor_enabled: true,
-    center_cursor_editing_distance: 75,
+    center_cursor_editing_distance: 25,
     center_cursor_moving_distance: 25,
     center_cursor_editing_smoothness: 1,
     center_cursor_moving_smoothness: 1,
@@ -228,10 +230,15 @@ class ScrollingSettingTab extends PluginSettingTab {
                 );
         }
 
-        // Centered cursor settings
+        // Centered text cursor settings
+        new Setting(containerEl).setHeading();
         new Setting(containerEl)
             .setName("Centered text cursor")
-            .setDesc("Keeps the text cursor within a comfortable zone while moving or editing. Behaves similarly to Vim's `scrolloff` option.")
+            .setDesc(createFragment(frag => {
+                frag.createDiv({}, div => div.innerHTML =
+                    "Keeps the text cursor within a comfortable zone while moving or editing. Behaves similarly to Vim's <code>scrolloff</code> option."
+                );
+            }))
             .setHeading();
 
         new Setting(containerEl)
@@ -247,14 +254,15 @@ class ScrollingSettingTab extends PluginSettingTab {
             );
 
         if (this.plugin.settings.center_cursor_enabled) {
-            const fragment0 = new DocumentFragment();
-            fragment0.createDiv({}, div => div.setText("Defines how far from the screen center the cursor can move before scrolling (in \"%\")."));
-            fragment0.createDiv({}, div => div.setText("0% keeps the cursor perfectly centered."));
-            fragment0.createDiv({}, div => div.setText("100% effectively disables this feature."));
-
             new Setting(containerEl)
                 .setName("Center radius while editing")
-                .setDesc(fragment0)
+                .setDesc(createFragment(frag => {
+                    frag.createDiv({}, div => div.innerHTML =
+                        "Defines how far from the screen center the cursor can move before scrolling (in \"%\").<br>" +
+                        "0% keeps the cursor perfectly centered.<br>" +
+                        "100% effectively disables this feature."
+                    );
+                }))
                 .addExtraButton(button => {
                     button
                         .setIcon('reset')
@@ -275,13 +283,15 @@ class ScrollingSettingTab extends PluginSettingTab {
                     })
                 );
 
-            const fragment1 = new DocumentFragment();
-            fragment1.createDiv({}, div => div.setText("Defines how far from the screen center the cursor can be moved before scrolling (in \"%\")."));
-            fragment1.createDiv({}, div => div.setText("0% keeps the cursor perfectly centered."));
-            fragment1.createDiv({}, div => div.setText("100% effectively disables this feature."));
             new Setting(containerEl)
                 .setName("Center radius while moving cursor")
-                .setDesc(fragment1)
+                .setDesc(createFragment(frag => {
+                    frag.createDiv({}, div => div.innerHTML =
+                        "Defines how far from the screen center the cursor can be moved before scrolling (in \"%\").<br>" +
+                        "0% keeps the cursor perfectly centered.<br>" +
+                        "100% effectively disables this feature."
+                    );
+                }))
                 .addExtraButton(button => {
                     button
                         .setIcon('reset')
@@ -304,7 +314,13 @@ class ScrollingSettingTab extends PluginSettingTab {
 
             new Setting(containerEl)
                 .setName("Scroll animation when editing")
-                .setDesc("Adjusts the smoothness of scrolling when editing moves the cursor outside the central zone. 0 means instant.")
+                .setDesc("")
+                .setDesc(createFragment(frag => {
+                    frag.createDiv({}, div => div.innerHTML =
+                        "Adjusts the smoothness of scrolling when editing moves the cursor outside the central zone.<br>" +
+                        "Set to 0 to disable smooth scroll when editing."
+                    );
+                }))
                 .addExtraButton(button => {
                     button
                         .setIcon('reset')
@@ -327,7 +343,12 @@ class ScrollingSettingTab extends PluginSettingTab {
 
             new Setting(containerEl)
                 .setName("Scroll animation when moving cursor")
-                .setDesc("Adjusts the smoothness of scrolling when the cursor is moved outside the center zone. 0 means instant.")
+                .setDesc(createFragment(frag => {
+                    frag.createDiv({}, div => div.innerHTML =
+                        "Adjusts the smoothness of scrolling when the text cursor is moved outside the central zone.<br>" +
+                        "Set to 0 to disable smooth scroll when moving text cursor."
+                    );
+                }))
                 .addExtraButton(button => {
                     button
                         .setIcon('reset')
@@ -349,12 +370,14 @@ class ScrollingSettingTab extends PluginSettingTab {
                 );
 
 
-            const fragment2 = new DocumentFragment();
-            fragment2.createDiv({}, div => div.setText("Also apply this feature when the text cursor is moved with the mouse."));
-            fragment2.createDiv({}, div => div.setText("Recommended to keep disabled to avoid unexpected scrolling while using the mouse to reposition the cursor."));
             new Setting(containerEl)
                 .setName("Invoke on mouse-driven cursor movement")
-                .setDesc(fragment2)
+                .setDesc(createFragment(frag => {
+                    frag.createDiv({}, div => div.innerHTML =
+                        "Also apply this feature when the text cursor is moved with the mouse.<br>" +
+                        "Recommended to keep disabled to avoid unexpected scrolling while using the mouse to reposition the cursor."
+                    );
+                }))
                 .addToggle(toggle => toggle
                     .setValue(this.plugin.settings.center_cursor_enable_mouse)
                     .onChange(async (value) => {
