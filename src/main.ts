@@ -2,11 +2,11 @@ import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting } from "ob
 
 
 interface ScrollingPluginSettings {
+    scrollbar_hidden: boolean;
     mouse_scroll_enabled: boolean;
     mouse_scroll_speed: number;
     mouse_scroll_smoothness: number;
     mouse_scroll_invert: boolean;
-    scrollbar_enabled: boolean;
     center_cursor_enabled: boolean;
     center_cursor_editing_distance: number;
     center_cursor_moving_distance: number;
@@ -17,11 +17,11 @@ interface ScrollingPluginSettings {
 
 
 const DEFAULT_SETTINGS: ScrollingPluginSettings = {
+    scrollbar_hidden: false,
     mouse_scroll_enabled: true,
     mouse_scroll_speed: 1,
     mouse_scroll_smoothness: 1,
     mouse_scroll_invert: false,
-    scrollbar_enabled: true,
     center_cursor_enabled: true,
     center_cursor_editing_distance: 25,
     center_cursor_moving_distance: 25,
@@ -39,8 +39,8 @@ export default class ScrollingPlugin extends Plugin {
     mouseup: boolean;
 
     last_selectionchange: number;
-
     smoothscroll_timeout: any;
+    scrollbar_hide_style: HTMLStyleElement | undefined;
 
     async onload() {
         await this.loadSettings();
@@ -55,10 +55,12 @@ export default class ScrollingPlugin extends Plugin {
         this.registerDomEvent(document, "mousedown", () => this.mousedown_callback());
         this.registerDomEvent(document, "mouseup", () => this.mouseup_callback());
 
+        this.apply_scrollbar_hide();
         console.log("ScrollingPlugin loaded");
     }
 
     async onunload() {
+        this.remove_scrollbar_hide();
         console.log("ScrollingPlugin unloaded");
     }
 
@@ -87,26 +89,26 @@ export default class ScrollingPlugin extends Plugin {
     selectionchange_callback() {
         // selectionchange will also be invoked with mouse actions; this prevents further actions.
         // maybe expose as a setting.
-        if (this.mousedown) return null;
+        if (this.mousedown) return;
         if (this.mouseup) {
             this.mouseup = false;
-            return null;
+            return;
         }
 
         setTimeout(() => {
-            if (this.mousedown) return null;
+            if (this.mousedown) return;
 
             if (this.editing) {
                 this.editing = false;
-                return null;
+                return;
             }
 
             // const editor = this.app.workspace.activeEditor?.editor;
             const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor
-            if (!editor) return null;
+            if (!editor) return;
 
             // return if text got selected; we do not want to interfere with that
-            if (editor.somethingSelected()) return null;
+            if (editor.somethingSelected()) return;
 
             this.scroll(editor);
         }, 10);
@@ -117,7 +119,7 @@ export default class ScrollingPlugin extends Plugin {
 
         // cursor position on screen in pixels
         const cursor = editor_view.coordsAtPos(editor_view.state.selection.main.head);
-        if (!cursor) return null;
+        if (!cursor) return;
 
         const current_scroll_y = editor.getScrollInfo().top;
         const cursor_y = cursor.top;
@@ -133,10 +135,48 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     smoothscroll(editor: Editor, dest: number, step_size: number, time: number, step: number) {
-        if (!step) return null;
+        if (!step) return;
         const move_to = dest - step_size * (step - 1);
         editor.scrollTo(null, move_to);
         this.smoothscroll_timeout = setTimeout(() => this.smoothscroll(editor, dest, step_size, time, step - 1), time);
+    }
+
+    apply_scrollbar_hide() {
+        console.log("invoked")
+        // Updates the scrollbar hide style according to the current setting value
+        if (!this.settings.scrollbar_hidden) {
+            this.remove_scrollbar_hide()
+            console.log("call remove")
+            return;
+        }
+        console.log("dont call remove")
+
+        if (this.scrollbar_hide_style) return;
+        console.log("create new")
+
+        const style = document.createElement('style');
+        style.id = 'hide-md-scrollbar-style';
+        style.textContent = `
+            /* Hide scrollbar in the editor pane */
+            .markdown-source-view,
+            .cm-scroller {
+              scrollbar-width: none !important; /* Firefox */
+              -ms-overflow-style: none !important; /* IE 10+ */
+            }
+            .markdown-source-view::-webkit-scrollbar,
+            .cm-scroller::-webkit-scrollbar {
+              display: none !important; /* Chrome, Safari, Opera */
+            }
+          `;
+        document.head.appendChild(style);
+        this.scrollbar_hide_style = style;
+    }
+
+    remove_scrollbar_hide() {
+        if (this.scrollbar_hide_style && this.scrollbar_hide_style.parentNode) {
+            this.scrollbar_hide_style.parentNode.removeChild(this.scrollbar_hide_style);
+            this.scrollbar_hide_style = undefined;
+        }
     }
 }
 
@@ -153,7 +193,25 @@ class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
-        // Mouse Scrolling settings
+        // General settings
+        new Setting(containerEl)
+            .setName("General settings")
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName("Hide markdown scrollbar")
+            .setDesc("Whether to hide the scrollbar in markdown documents.")
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.scrollbar_hidden)
+                .onChange(async (value) => {
+                    this.plugin.settings.scrollbar_hidden = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.apply_scrollbar_hide();
+                })
+            );
+
+        // Mouse scrolling settings
+        new Setting(containerEl);
         new Setting(containerEl)
             .setName("Mouse Scrolling")
             .setHeading();
