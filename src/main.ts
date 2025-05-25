@@ -120,21 +120,50 @@ export default class ScrollingPlugin extends Plugin {
     scroll(editor: Editor) {
         const editor_view = editor.cm;
 
+        // Get the cursor position using the appropriate CM5 or CM6 interface
+        let cursor_coords;
+        if ((editor as any).cursorCoords) {
+            cursor_coords = (editor as any).cursorCoords(true, 'window');
+        } else if ((editor as any).coordsAtPos) {
+            const offset = editor.posToOffset(editor.getCursor());
+            cursor_coords = (editor as any).cm.coordsAtPos?.(offset) ?? (editor as any).coordsAtPos(offset);
+        } else {
+            return;
+        }
+
         // cursor position on screen in pixels
-        const cursor = editor_view.coordsAtPos(editor_view.state.selection.main.head);
-        if (!cursor) return;
+        // const cursor = editor_view.coordsAtPos(editor_view.state.selection.main.head);
+        // if (!cursor) return;
 
         const current_scroll_y = editor.getScrollInfo().top;
-        const cursor_y = cursor.top;
+        const cursor_y = cursor_coords.top;
         const scrollInfo = editor_view.scrollDOM.getBoundingClientRect();
-        const center = (scrollInfo.top + scrollInfo.bottom) / 2
+
+        const center_zone_radius = scrollInfo.height * 0.4 * (this.settings.center_cursor_editing_distance / 100);
+
+        const center = scrollInfo.height / 2
         const center_offset = cursor_y - center;
+        console.log(center_offset, center_zone_radius)
+
+        let goal; // center: current_scroll_y + center_offset
+        let distance; // center: center_offset
+        if (center_offset < -center_zone_radius) {
+            goal = current_scroll_y + center_offset + center_zone_radius;
+            distance = center_offset + center_zone_radius;
+            console.log(0, current_scroll_y, goal, distance)
+        } else if (center_offset > center_zone_radius) {
+            goal = current_scroll_y + center_offset - center_zone_radius;
+            distance = center_offset - center_zone_radius;
+            console.log(1, current_scroll_y, goal, distance)
+        } else {
+            return; // we are in the center zone :)
+        }
 
         clearTimeout(this.smoothscroll_timeout);
 
         const time = 5;
         let steps = Math.round(1 + 4 * this.settings.center_cursor_editing_smoothness);
-        this.smoothscroll(editor, current_scroll_y + center_offset, center_offset / steps, time, steps);
+        this.smoothscroll(editor, goal, distance / steps, time, steps);
     }
 
     smoothscroll(editor: Editor, dest: number, step_size: number, time: number, step: number) {
