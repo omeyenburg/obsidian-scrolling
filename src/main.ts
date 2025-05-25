@@ -2,7 +2,6 @@ import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting } from "ob
 
 
 interface ScrollingPluginSettings {
-    scrollbar_hidden: boolean;
     mouse_scroll_enabled: boolean;
     mouse_scroll_speed: number;
     mouse_scroll_smoothness: number;
@@ -13,11 +12,13 @@ interface ScrollingPluginSettings {
     center_cursor_editing_smoothness: number;
     center_cursor_moving_smoothness: number;
     center_cursor_enable_mouse: boolean;
+    scrollbar_global: boolean;
+    scrollbar_visibility: string;
+    scrollbar_width: number;
 }
 
 
 const DEFAULT_SETTINGS: ScrollingPluginSettings = {
-    scrollbar_hidden: false,
     mouse_scroll_enabled: true,
     mouse_scroll_speed: 1,
     mouse_scroll_smoothness: 1,
@@ -28,6 +29,9 @@ const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     center_cursor_editing_smoothness: 1,
     center_cursor_moving_smoothness: 1,
     center_cursor_enable_mouse: false,
+    scrollbar_global: false,
+    scrollbar_visibility: "show",
+    scrollbar_width: 12,
 }
 
 
@@ -40,7 +44,6 @@ export default class ScrollingPlugin extends Plugin {
 
     last_selectionchange: number;
     smoothscroll_timeout: any;
-    scrollbar_hide_style: HTMLStyleElement | undefined;
 
     async onload() {
         await this.loadSettings();
@@ -55,12 +58,12 @@ export default class ScrollingPlugin extends Plugin {
         this.registerDomEvent(document, "mousedown", () => this.mousedown_callback());
         this.registerDomEvent(document, "mouseup", () => this.mouseup_callback());
 
-        this.apply_scrollbar_hide();
+        this.update_scrollbar_css()
         console.log("ScrollingPlugin loaded");
     }
 
     async onunload() {
-        this.remove_scrollbar_hide();
+        this.remove_css();
         console.log("ScrollingPlugin unloaded");
     }
 
@@ -141,42 +144,66 @@ export default class ScrollingPlugin extends Plugin {
         this.smoothscroll_timeout = setTimeout(() => this.smoothscroll(editor, dest, step_size, time, step - 1), time);
     }
 
-    apply_scrollbar_hide() {
-        console.log("invoked")
-        // Updates the scrollbar hide style according to the current setting value
-        if (!this.settings.scrollbar_hidden) {
-            this.remove_scrollbar_hide()
-            console.log("call remove")
-            return;
-        }
-        console.log("dont call remove")
-
-        if (this.scrollbar_hide_style) return;
-        console.log("create new")
+    update_scrollbar_css() {
+        this.remove_css()
 
         const style = document.createElement('style');
-        style.id = 'hide-md-scrollbar-style';
-        style.textContent = `
-            /* Hide scrollbar in the editor pane */
-            .markdown-source-view,
-            .cm-scroller {
-              scrollbar-width: none !important; /* Firefox */
-              -ms-overflow-style: none !important; /* IE 10+ */
-            }
-            .markdown-source-view::-webkit-scrollbar,
-            .cm-scroller::-webkit-scrollbar {
-              display: none !important; /* Chrome, Safari, Opera */
-            }
-          `;
+        style.id = 'scrolling-scrollbar-style';
+        const global = this.settings.scrollbar_global;
+
+        let display: string | undefined;
+        let color: string | undefined;
+
+        const visibility = this.settings.scrollbar_visibility;
+        if (visibility == "hide") {
+            display = "none";
+        } else if (visibility == "scroll") {
+            color = "transparent";
+        }
+
+        const width = this.settings.scrollbar_width;
+        if (width == 0) {
+            display = "none";
+        }
+
+        if (global) {
+            style.textContent = `
+* {
+  ${width > 0 ? `scrollbar-width: ${width}px !important;` : ""}
+  ${display !== undefined ? `-ms-overflow-style: ${display};` : ""}
+}
+*::-webkit-scrollbar {
+  ${width > 0 ? `width: ${width}px !important;` : ""}
+  ${display !== undefined ? `display: ${display};` : ""}
+}
+*::-webkit-scrollbar-thumb {
+  ${color !== undefined ? `background-color: ${color} !important;` : ""}
+}
+`;
+        } else {
+            style.textContent = `
+.markdown-source-view,
+.cm-scroller {
+  ${width > 0 ? `scrollbar-width: ${width}px !important;` : ""}
+  ${display !== undefined ? `-ms-overflow-style: ${display};` : ""}
+}
+.markdown-source-view::-webkit-scrollbar,
+.cm-scroller::-webkit-scrollbar {
+  ${width > 0 ? `width: ${width}px !important;` : ""}
+  ${display !== undefined ? `display: ${display};` : ""}
+}
+.markdown-source-view::-webkit-scrollbar-thumb,
+.cm-scroller::-webkit-scrollbar-thumb {
+  ${color !== undefined ? `background-color: ${color} !important;` : ""}
+}
+`;
+        }
+
         document.head.appendChild(style);
-        this.scrollbar_hide_style = style;
     }
 
-    remove_scrollbar_hide() {
-        if (this.scrollbar_hide_style && this.scrollbar_hide_style.parentNode) {
-            this.scrollbar_hide_style.parentNode.removeChild(this.scrollbar_hide_style);
-            this.scrollbar_hide_style = undefined;
-        }
+    remove_css() {
+        document.getElementById("scrolling-scrollbar-style")?.remove();
     }
 }
 
@@ -193,27 +220,9 @@ class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
-        // General settings
-        new Setting(containerEl)
-            .setName("General settings")
-            .setHeading();
-
-        new Setting(containerEl)
-            .setName("Hide markdown scrollbar")
-            .setDesc("Whether to hide the scrollbar in markdown documents.")
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.scrollbar_hidden)
-                .onChange(async (value) => {
-                    this.plugin.settings.scrollbar_hidden = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.apply_scrollbar_hide();
-                })
-            );
-
         // Mouse scrolling settings
-        new Setting(containerEl);
         new Setting(containerEl)
-            .setName("Mouse Scrolling")
+            .setName("Mouse scrolling")
             .setHeading();
 
         new Setting(containerEl)
@@ -223,8 +232,8 @@ class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.mouse_scroll_enabled)
                 .onChange(async (value) => {
                     this.plugin.settings.mouse_scroll_enabled = value;
-                    await this.plugin.saveSettings();
                     this.display();
+                    await this.plugin.saveSettings();
                 })
             );
 
@@ -239,8 +248,8 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setTooltip('Restore default')
                         .onClick(async () => {
                             this.plugin.settings.mouse_scroll_speed = DEFAULT_SETTINGS.mouse_scroll_speed
-                            await this.plugin.saveSettings()
                             this.display();
+                            await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
@@ -262,8 +271,8 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setTooltip('Restore default')
                         .onClick(async () => {
                             this.plugin.settings.mouse_scroll_smoothness = DEFAULT_SETTINGS.mouse_scroll_smoothness
-                            await this.plugin.saveSettings()
                             this.display()
+                            await this.plugin.saveSettings()
                         })
                 })
                 .addSlider(slider => slider
@@ -306,8 +315,8 @@ class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.center_cursor_enabled)
                 .onChange(async (value) => {
                     this.plugin.settings.center_cursor_enabled = value;
-                    await this.plugin.saveSettings();
                     this.display();
+                    await this.plugin.saveSettings();
                 })
             );
 
@@ -327,8 +336,8 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setTooltip('Restore default')
                         .onClick(async () => {
                             this.plugin.settings.center_cursor_editing_distance = DEFAULT_SETTINGS.center_cursor_editing_distance
-                            await this.plugin.saveSettings()
                             this.display();
+                            await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
@@ -356,8 +365,8 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setTooltip('Restore default')
                         .onClick(async () => {
                             this.plugin.settings.center_cursor_moving_distance = DEFAULT_SETTINGS.center_cursor_moving_distance
-                            await this.plugin.saveSettings()
                             this.display();
+                            await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
@@ -372,7 +381,6 @@ class ScrollingSettingTab extends PluginSettingTab {
 
             new Setting(containerEl)
                 .setName("Scroll animation when editing")
-                .setDesc("")
                 .setDesc(createFragment(frag => {
                     frag.createDiv({}, div => div.innerHTML =
                         "Adjusts the smoothness of scrolling when editing moves the cursor outside the central zone.<br>" +
@@ -385,8 +393,8 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setTooltip('Restore default')
                         .onClick(async () => {
                             this.plugin.settings.center_cursor_editing_smoothness = DEFAULT_SETTINGS.center_cursor_editing_smoothness
-                            await this.plugin.saveSettings()
                             this.display();
+                            await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
@@ -413,8 +421,8 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setTooltip('Restore default')
                         .onClick(async () => {
                             this.plugin.settings.center_cursor_moving_smoothness = DEFAULT_SETTINGS.center_cursor_moving_smoothness
-                            await this.plugin.saveSettings()
                             this.display();
+                            await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
@@ -426,7 +434,6 @@ class ScrollingSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     })
                 );
-
 
             new Setting(containerEl)
                 .setName("Invoke on mouse-driven cursor movement")
@@ -444,5 +451,78 @@ class ScrollingSettingTab extends PluginSettingTab {
                     })
                 );
         }
+
+        // Scrollbar appearance settings
+        new Setting(containerEl);
+        new Setting(containerEl)
+            .setName("Scrollbar appearance")
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName("Apply to all scrollbars")
+            .setDesc("Whether the following options should apply to all scrollbars in obsidian or only scrollbars in markdown files.")
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.scrollbar_global)
+                .onChange(async (value) => {
+                    this.plugin.settings.scrollbar_global = value;
+                    this.plugin.update_scrollbar_css()
+                    await this.plugin.saveSettings();
+                })
+            );
+
+        // dropdown menu: hide all, hide bars (only markdown file), show bars while scrolling, show bar while scrolling (only markdown file), show all
+        new Setting(containerEl)
+            .setName("Scrollbar visibility")
+            .setDesc("When to show scrollbars.")
+            .addExtraButton(button => {
+                button
+                    .setIcon('reset')
+                    .setTooltip('Restore default')
+                    .onClick(async () => {
+                        this.plugin.settings.scrollbar_visibility = DEFAULT_SETTINGS.scrollbar_visibility
+                        this.plugin.update_scrollbar_css()
+                        await this.plugin.saveSettings()
+                    });
+            })
+            .addDropdown(dropdown => dropdown
+                .addOption("hide", "Always hide scrollbars")
+                .addOption("scroll", "Show scrollbars while scrolling")
+                .addOption("show", "Always show scrollbars")
+                .setValue(this.plugin.settings.scrollbar_visibility)
+                .onChange(async (value) => {
+                    this.plugin.settings.scrollbar_visibility = value;
+                    this.plugin.update_scrollbar_css()
+                    this.display()
+                    await this.plugin.saveSettings();
+                })
+            )
+
+        if (this.plugin.settings.scrollbar_visibility !== "hide") {
+            new Setting(containerEl)
+                .setName("Scrollbar thickness")
+                .setDesc("Width of scrollbars in px.")
+                .addExtraButton(button => {
+                    button
+                        .setIcon('reset')
+                        .setTooltip('Restore default')
+                        .onClick(async () => {
+                            this.plugin.settings.scrollbar_width = DEFAULT_SETTINGS.scrollbar_width
+                            this.plugin.update_scrollbar_css()
+                            this.display()
+                            await this.plugin.saveSettings()
+                        });
+                })
+                .addSlider(slider => slider
+                    .setValue(this.plugin.settings.scrollbar_width)
+                    .setLimits(0, 30, 1)
+                    .setDynamicTooltip()
+                    .onChange(async (value) => {
+                        this.plugin.settings.scrollbar_width = value;
+                        this.plugin.update_scrollbar_css()
+                        await this.plugin.saveSettings();
+                    })
+                );
+        }
+
     }
 }
