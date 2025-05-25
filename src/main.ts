@@ -40,9 +40,11 @@ const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
 
-    private recentEdit: boolean;
-    private recentMouseUp: boolean;
-    private smoothscrollTimeout: NodeJS.Timeout;
+    private recentEdit: boolean = false;
+    private recentMouseUp: boolean = false;
+    private centeringTimeout: number;
+    private centeringLastTime: number = 0;
+    private centeringScrollIntensity: number = 0;
 
     async onload() {
         await this.loadSettings();
@@ -52,22 +54,7 @@ export default class ScrollingPlugin extends Plugin {
         // Will be automatically deleted on reload
         this.registerEvent(this.app.workspace.on("editor-change", (editor) => this.editHandler(editor)));
         this.registerDomEvent(document, "mouseup", () => this.mouseUpHandler());
-
-        // This is invoked on mouse down (selection start), editing as well, wrapping/layout changes due to stuff expanding while hovering on a line with cursor
-        // this.registerDomEvent(document, "selectionchange", () => this.selectionchange_callback());
-        // this.registerDomEvent(document, "mousedown", () => this.mousedown_callback());
-
-        // This is specific to CodeMirror 5.
-        // Will this just not iterate over anything if no cm5 is there?
-        //
-        // actually, cm5 is not supported for quite some time, so who cares
-        // this.app.workspace.iterateCodeMirrors((cm: CodeMirror.Editor) => {
-        //     const mouseHandler = () => { console.log("mouse in cm5") };
-        //     const cursorHandler = () => { console.log("cursor in cm5") };
-
-        //     cm.on("mousedown", mouseHandler);
-        //     cm.on("cursorActivity", cursorHandler);
-        // });
+        this.registerDomEvent(document, "keydown", () => this.keyHandler());
 
         // This is specific to CodeMirror 6.
         /*
@@ -91,9 +78,6 @@ export default class ScrollingPlugin extends Plugin {
         */
 
         this.registerEditorExtension(EditorView.updateListener.of((update: ViewUpdate) => {
-            // Called after higher-level editor-change event, no reason to use this.
-            // if (update.docChanged) {}
-
             // This checks if this update was caused by a mouse down event.
             let mouseDown = false
             for (const tr of update.transactions) {
@@ -110,10 +94,6 @@ export default class ScrollingPlugin extends Plugin {
             if (mouseDown) return;
             if (this.recentMouseUp) return; // <- Later maybe create a setting for this.
 
-            // Dont want it either when caused by edit.
-            if (this.recentEdit) return;
-
-            // Call handle cursor to scroll.
             this.cursorHandler();
         }));
 
@@ -137,25 +117,25 @@ export default class ScrollingPlugin extends Plugin {
         await this.saveData(this.settings);
     }
 
+    keyHandler() {
+        this.recentMouseUp = false;
+    }
+
+    mouseUpHandler() {
+        this.recentMouseUp = true;
+
+        // recentMouseUp will be reset either when a key is pressed or 100 ms pass.
+        // This timeout is needed, because the keydown event is not reliable,
+        // in normal mode of vim, keydown events are pretty much inaccessible.
+        // Already wasted too much time with this.
+        setTimeout(() => {
+            this.recentMouseUp = false;
+        }, 100);
+    }
+
     editHandler(editor: Editor) {
         this.recentEdit = true; // Will be reset by cursorHandler
         this.invokeScroll(editor);
-    }
-
-    // mousedown_callback() {
-    //     console.log("mousedown")
-    //     this.mousedown = true;
-    // }
-
-    mouseUpHandler() {
-        // console.log("mouseup")
-        // this.mousedown = false;
-
-        this.recentMouseUp = true;
-        setTimeout(() => {
-            this.recentMouseUp = false;
-        }, 50); // yes, the time must be somewhat high
-        // at least higher than 40, TODO: can we solve it without any timeout?!
     }
 
     cursorHandler() {
@@ -170,73 +150,77 @@ export default class ScrollingPlugin extends Plugin {
         this.invokeScroll(editor);
     }
 
-    invokeScroll(editor: Editor) {
-        // const editor_view = editor.cm;
+    calculateScrollIntensity() {
+        const decayRate = 0.02;
+        const time = performance.now();
+        const elapsed = time - this.centeringLastTime;
+        this.centeringLastTime = time;
+        this.centeringScrollIntensity = Math.max(0, this.centeringScrollIntensity - elapsed * decayRate) + 1;
+    }
 
-        // Get the cursor position using the appropriate CM5 or CM6 interface
-        let cursorVerticalPosition;
-        if ((editor as any).cursorCoords) {
-            // CodeMirror5
-            console.log("using cm5")
-            const cursor = (editor as any).cursorCoords(true, 'window');
-            const scrollEl = (editor as any).getScrollerElement?.();
-            const viewOffset = scrollEl?.getBoundingClientRect().top ?? 0;
-            cursorVerticalPosition = cursor.top + editor.cm.defaultLineHeight - viewOffset;
-        } else if ((editor as any).coordsAtPos) {
-            // CodeMirror6
-            console.log("using cm6")
-            const offset = editor.posToOffset(editor.getCursor());
-            const cursor = (editor as any).cm.coordsAtPos?.(offset) ?? (editor as any).coordsAtPos(offset);
-            const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
-            cursorVerticalPosition = cursor.top + editor.cm.defaultLineHeight - viewOffset;
-        } else {
-            return;
+    invokeScroll(editor: Editor) {
+        // Invert the scroll effect: 1 or -1
+        const invertCenteringScroll = 1;
+
+        // If scrolling fast, skip animation steps.
+        // (Only if not scrolling inverted and if recent edit occured, run this later)
+        if (invertCenteringScroll === 1 && this.recentEdit === false) {
+            this.calculateScrollIntensity()
         }
+
+        // Get cursor position. (Specific to CodeMirror 6)
+        const cursor_as_offset = editor.posToOffset(editor.getCursor());
+        const cursor = (editor as any).cm.coordsAtPos?.(cursor_as_offset) ?? (editor as any).coordsAtPos(cursor_as_offset);
+        const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
+        const cursorVerticalPosition = cursor.top + editor.cm.defaultLineHeight - viewOffset;
 
         const scrollInfo = editor.getScrollInfo();
         const currentVerticalPosition = scrollInfo.top;
-        const centerZoneRadius = scrollInfo.height * 0.4 * (this.settings.centerCursorEditingDistance / 100);
+        let centerZoneRadius = (scrollInfo.height / 2) * (this.settings.centerCursorEditingDistance / 100);
 
-        // const cursorHeight = cursorCoords.bottom - cursorCoords.top;
-        // const cursor_y = (cursorCoords.top + cursorCoords.bottom) / 2 - 100; // for some reason i need this offset by - 100 approximately, so that its actally centered. why??
-
-
-        // cursor position on screen in pixels
-        // const cursor = editor_view.coordsAtPos(editor_view.state.selection.main.head);
-        // if (!cursor) return;
-        // const cursor_y = cursor.top + editor_view.defaultLineHeight - viewOffset;
-
-        // const wrapper_top = editor_view.getWrapperElement().getBoundingClientRect().top;
-        // const cursor_y = (cursorCoords.top + cursorCoords.bottom) / 2 - wrapper_top;
+        // Decrease center zone radius slightly to ensure that:
+        // - cursor stays on the screen.
+        // - we scroll before cursor gets to close to the edge and obsidian takes over scrolling.
+        if (invertCenteringScroll === -1) {
+            centerZoneRadius *= 0.95;
+        }
 
         const center = scrollInfo.height / 2
         const centerOffset = cursorVerticalPosition - center;
 
-        let goal; // center: currentVerticalPosition + center_offset
-        let distance; // center: center_offset
+        let goal;
+        let distance;
         if (centerOffset < -centerZoneRadius) {
-            goal = currentVerticalPosition + centerOffset + centerZoneRadius;
-            distance = centerOffset + centerZoneRadius;
+            goal = currentVerticalPosition + centerOffset + centerZoneRadius * invertCenteringScroll;
+            distance = centerOffset + centerZoneRadius * invertCenteringScroll;
         } else if (centerOffset > centerZoneRadius) {
-            goal = currentVerticalPosition + centerOffset - centerZoneRadius;
-            distance = centerOffset - centerZoneRadius;
+            goal = currentVerticalPosition + centerOffset - centerZoneRadius * invertCenteringScroll;
+            distance = centerOffset - centerZoneRadius * invertCenteringScroll;
         } else {
-            return; // we are in the center zone :)
+            return;
         }
 
-        clearTimeout(this.smoothscrollTimeout);
+        // Can't scroll by fractions, so return early.
+        if (Math.abs(distance) < 1) return;
 
-        // Some magic
-        const time = 5;
+        if (invertCenteringScroll === 1 && this.recentEdit === true) {
+            this.calculateScrollIntensity()
+        }
+
+        cancelAnimationFrame(this.centeringTimeout)
+
+        // let steps = Math.max(1, Math.round(2 + 4 * this.settings.centerCursorEditingSmoothness - this.centeringScrollIntensity ** 0.5));
         let steps = Math.round(1 + 4 * this.settings.centerCursorEditingSmoothness);
-        this.smoothScroll(editor, goal, distance / steps, time, steps);
+        if (invertCenteringScroll === 1 && this.centeringScrollIntensity > 5) steps = 1;
+
+        this.smoothScroll(editor, goal, distance / steps, steps);
     }
 
-    smoothScroll(editor: Editor, dest: number, step_size: number, time: number, step: number) {
+    smoothScroll(editor: Editor, dest: number, step_size: number, step: number) {
         if (!step) return;
 
         editor.scrollTo(null, dest - step_size * (step - 1));
-        this.smoothscrollTimeout = setTimeout(() => this.smoothScroll(editor, dest, step_size, time, step - 1), time);
+        this.centeringTimeout = requestAnimationFrame(() => this.smoothScroll(editor, dest, step_size, step - 1))
     }
 
     updateScrollbarCSS() {
@@ -618,6 +602,5 @@ class ScrollingSettingTab extends PluginSettingTab {
                     })
                 );
         }
-
     }
 }
