@@ -1,49 +1,48 @@
 import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { EditorView, ViewUpdate } from "@codemirror/view";
+import { Transaction } from "@codemirror/state";
 
 
 interface ScrollingPluginSettings {
-    mouse_scroll_enabled: boolean;
-    mouse_scroll_speed: number;
-    mouse_scroll_smoothness: number;
-    mouse_scroll_invert: boolean;
-    center_cursor_enabled: boolean;
-    center_cursor_editing_distance: number;
-    center_cursor_moving_distance: number;
-    center_cursor_editing_smoothness: number;
-    center_cursor_moving_smoothness: number;
+    mouseScrollEnabled: boolean;
+    mouseScrollSpeed: number;
+    mouseScrollSmoothness: number;
+    mouseScrollInvert: boolean;
+    centerCursorEnabled: boolean;
+    centerCursorEditingDistance: number;
+    centerCursorMovingDistance: number;
+    centerCursorEditingSmoothness: number;
+    centerCursorMovingSmoothness: number;
     center_cursor_enable_mouse: boolean;
-    scrollbar_global: boolean;
-    scrollbar_visibility: string;
-    scrollbar_width: number;
+    scrollbarGlobal: boolean;
+    scrollbarVisibility: string;
+    scrollbarWidth: number;
 }
 
 
 const DEFAULT_SETTINGS: ScrollingPluginSettings = {
-    mouse_scroll_enabled: true,
-    mouse_scroll_speed: 1,
-    mouse_scroll_smoothness: 1,
-    mouse_scroll_invert: false,
-    center_cursor_enabled: true,
-    center_cursor_editing_distance: 25,
-    center_cursor_moving_distance: 25,
-    center_cursor_editing_smoothness: 1,
-    center_cursor_moving_smoothness: 1,
+    mouseScrollEnabled: true,
+    mouseScrollSpeed: 1,
+    mouseScrollSmoothness: 1,
+    mouseScrollInvert: false,
+    centerCursorEnabled: true,
+    centerCursorEditingDistance: 25,
+    centerCursorMovingDistance: 25,
+    centerCursorEditingSmoothness: 1,
+    centerCursorMovingSmoothness: 1,
     center_cursor_enable_mouse: false,
-    scrollbar_global: false,
-    scrollbar_visibility: "show",
-    scrollbar_width: 12,
+    scrollbarGlobal: false,
+    scrollbarVisibility: "show",
+    scrollbarWidth: 12,
 }
 
 
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
 
-    editing: boolean;
-    mousedown: boolean;
-    mouseup: boolean;
-
-    last_selectionchange: number;
-    smoothscroll_timeout: any;
+    private recentEdit: boolean;
+    private recentMouseUp: boolean;
+    private smoothscrollTimeout: NodeJS.Timeout;
 
     async onload() {
         await this.loadSettings();
@@ -51,19 +50,82 @@ export default class ScrollingPlugin extends Plugin {
 
         // Callbacks for markdown changes and cursor movements
         // Will be automatically deleted on reload
-        this.registerEvent(this.app.workspace.on("editor-change", (editor) => this.edit_callback(editor)));
+        this.registerEvent(this.app.workspace.on("editor-change", (editor) => this.editHandler(editor)));
+        this.registerDomEvent(document, "mouseup", () => this.mouseUpHandler());
 
-        // this is invoked on mouse down (selection start), editing as well, wrapping/layout changes due to stuff expanding while hovering on a line with cursor
-        this.registerDomEvent(document, "selectionchange", () => this.selectionchange_callback());
-        this.registerDomEvent(document, "mousedown", () => this.mousedown_callback());
-        this.registerDomEvent(document, "mouseup", () => this.mouseup_callback());
+        // This is invoked on mouse down (selection start), editing as well, wrapping/layout changes due to stuff expanding while hovering on a line with cursor
+        // this.registerDomEvent(document, "selectionchange", () => this.selectionchange_callback());
+        // this.registerDomEvent(document, "mousedown", () => this.mousedown_callback());
 
-        this.update_scrollbar_css()
+        // This is specific to CodeMirror 5.
+        // Will this just not iterate over anything if no cm5 is there?
+        //
+        // actually, cm5 is not supported for quite some time, so who cares
+        // this.app.workspace.iterateCodeMirrors((cm: CodeMirror.Editor) => {
+        //     const mouseHandler = () => { console.log("mouse in cm5") };
+        //     const cursorHandler = () => { console.log("cursor in cm5") };
+
+        //     cm.on("mousedown", mouseHandler);
+        //     cm.on("cursorActivity", cursorHandler);
+        // });
+
+        // This is specific to CodeMirror 6.
+        /*
+        Event order when using mouse:
+        1. cursorActivity (cm6, with select.pointer)
+        2. mousedown (dom)
+        3. selectionchange (dom)
+        4. mouseup (dom)
+        5. cursorActivity (cm6, without select.pointer)
+
+        Event order when editing:
+        1. editor-change (workspace)
+        2. docChanged (cm6)
+        3. cursorActivity (cm6)
+        4. selectionchange (dom)
+
+        Event order when editing, but single character replace with vim:
+        1. editor-change (workspace)
+        2. docChanged (cm6)
+        3. cursorActivity (cm6)
+        */
+
+        this.registerEditorExtension(EditorView.updateListener.of((update: ViewUpdate) => {
+            // Called after higher-level editor-change event, no reason to use this.
+            // if (update.docChanged) {}
+
+            // This checks if this update was caused by a mouse down event.
+            let mouseDown = false
+            for (const tr of update.transactions) {
+                const event = tr.annotation(Transaction.userEvent);
+                if (event === "select.pointer") {
+                    mouseDown = true
+                }
+            }
+
+            // Only procceed if its a cursor event.
+            if (!update.selectionSet) return;
+
+            // We want to return if this event was caused by a mouse.
+            if (mouseDown) return;
+            if (this.recentMouseUp) return; // <- Later maybe create a setting for this.
+
+            // Dont want it either when caused by edit.
+            if (this.recentEdit) return;
+
+            // Call handle cursor to scroll.
+            this.cursorHandler();
+        }));
+
+        // Initializes css to style scroll bars.
+        this.updateScrollbarCSS();
+
         console.log("ScrollingPlugin loaded");
     }
 
     async onunload() {
-        this.remove_css();
+        this.removeScrollbarCSS();
+
         console.log("ScrollingPlugin unloaded");
     }
 
@@ -75,122 +137,126 @@ export default class ScrollingPlugin extends Plugin {
         await this.saveData(this.settings);
     }
 
-    edit_callback(editor: Editor) {
-        this.editing = true;
-        this.scroll(editor);
+    editHandler(editor: Editor) {
+        this.recentEdit = true; // Will be reset by cursorHandler
+        this.invokeScroll(editor);
     }
 
-    mousedown_callback() {
-        this.mousedown = true;
+    // mousedown_callback() {
+    //     console.log("mousedown")
+    //     this.mousedown = true;
+    // }
+
+    mouseUpHandler() {
+        // console.log("mouseup")
+        // this.mousedown = false;
+
+        this.recentMouseUp = true;
+        setTimeout(() => {
+            this.recentMouseUp = false;
+        }, 50); // yes, the time must be somewhat high
+        // at least higher than 40, TODO: can we solve it without any timeout?!
     }
 
-    mouseup_callback() {
-        this.mousedown = false;
-        this.mouseup = true;
-    }
-
-    selectionchange_callback() {
-        // selectionchange will also be invoked with mouse actions; this prevents further actions.
-        // maybe expose as a setting.
-        if (this.mousedown) return;
-        if (this.mouseup) {
-            this.mouseup = false;
+    cursorHandler() {
+        if (this.recentEdit) {
+            this.recentEdit = false;
             return;
         }
 
-        setTimeout(() => {
-            if (this.mousedown) return;
+        const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor
+        if (!editor) return;
 
-            if (this.editing) {
-                this.editing = false;
-                return;
-            }
-
-            // const editor = this.app.workspace.activeEditor?.editor;
-            const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor
-            if (!editor) return;
-
-            // return if text got selected; we do not want to interfere with that
-            if (editor.somethingSelected()) return;
-
-            this.scroll(editor);
-        }, 10);
+        this.invokeScroll(editor);
     }
 
-    scroll(editor: Editor) {
-        const editor_view = editor.cm;
+    invokeScroll(editor: Editor) {
+        // const editor_view = editor.cm;
 
         // Get the cursor position using the appropriate CM5 or CM6 interface
-        let cursor_coords;
+        let cursorVerticalPosition;
         if ((editor as any).cursorCoords) {
-            cursor_coords = (editor as any).cursorCoords(true, 'window');
+            // CodeMirror5
+            console.log("using cm5")
+            const cursor = (editor as any).cursorCoords(true, 'window');
+            const scrollEl = (editor as any).getScrollerElement?.();
+            const viewOffset = scrollEl?.getBoundingClientRect().top ?? 0;
+            cursorVerticalPosition = cursor.top + editor.cm.defaultLineHeight - viewOffset;
         } else if ((editor as any).coordsAtPos) {
+            // CodeMirror6
+            console.log("using cm6")
             const offset = editor.posToOffset(editor.getCursor());
-            cursor_coords = (editor as any).cm.coordsAtPos?.(offset) ?? (editor as any).coordsAtPos(offset);
+            const cursor = (editor as any).cm.coordsAtPos?.(offset) ?? (editor as any).coordsAtPos(offset);
+            const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
+            cursorVerticalPosition = cursor.top + editor.cm.defaultLineHeight - viewOffset;
         } else {
             return;
         }
+
+        const scrollInfo = editor.getScrollInfo();
+        const currentVerticalPosition = scrollInfo.top;
+        const centerZoneRadius = scrollInfo.height * 0.4 * (this.settings.centerCursorEditingDistance / 100);
+
+        // const cursorHeight = cursorCoords.bottom - cursorCoords.top;
+        // const cursor_y = (cursorCoords.top + cursorCoords.bottom) / 2 - 100; // for some reason i need this offset by - 100 approximately, so that its actally centered. why??
+
 
         // cursor position on screen in pixels
         // const cursor = editor_view.coordsAtPos(editor_view.state.selection.main.head);
         // if (!cursor) return;
+        // const cursor_y = cursor.top + editor_view.defaultLineHeight - viewOffset;
 
-        const current_scroll_y = editor.getScrollInfo().top;
-        const cursor_y = cursor_coords.top;
-        const scrollInfo = editor_view.scrollDOM.getBoundingClientRect();
-
-        const center_zone_radius = scrollInfo.height * 0.4 * (this.settings.center_cursor_editing_distance / 100);
+        // const wrapper_top = editor_view.getWrapperElement().getBoundingClientRect().top;
+        // const cursor_y = (cursorCoords.top + cursorCoords.bottom) / 2 - wrapper_top;
 
         const center = scrollInfo.height / 2
-        const center_offset = cursor_y - center;
-        console.log(center_offset, center_zone_radius)
+        const centerOffset = cursorVerticalPosition - center;
 
-        let goal; // center: current_scroll_y + center_offset
+        let goal; // center: currentVerticalPosition + center_offset
         let distance; // center: center_offset
-        if (center_offset < -center_zone_radius) {
-            goal = current_scroll_y + center_offset + center_zone_radius;
-            distance = center_offset + center_zone_radius;
-            console.log(0, current_scroll_y, goal, distance)
-        } else if (center_offset > center_zone_radius) {
-            goal = current_scroll_y + center_offset - center_zone_radius;
-            distance = center_offset - center_zone_radius;
-            console.log(1, current_scroll_y, goal, distance)
+        if (centerOffset < -centerZoneRadius) {
+            goal = currentVerticalPosition + centerOffset + centerZoneRadius;
+            distance = centerOffset + centerZoneRadius;
+        } else if (centerOffset > centerZoneRadius) {
+            goal = currentVerticalPosition + centerOffset - centerZoneRadius;
+            distance = centerOffset - centerZoneRadius;
         } else {
             return; // we are in the center zone :)
         }
 
-        clearTimeout(this.smoothscroll_timeout);
+        clearTimeout(this.smoothscrollTimeout);
 
+        // Some magic
         const time = 5;
-        let steps = Math.round(1 + 4 * this.settings.center_cursor_editing_smoothness);
-        this.smoothscroll(editor, goal, distance / steps, time, steps);
+        let steps = Math.round(1 + 4 * this.settings.centerCursorEditingSmoothness);
+        this.smoothScroll(editor, goal, distance / steps, time, steps);
     }
 
-    smoothscroll(editor: Editor, dest: number, step_size: number, time: number, step: number) {
+    smoothScroll(editor: Editor, dest: number, step_size: number, time: number, step: number) {
         if (!step) return;
-        const move_to = dest - step_size * (step - 1);
-        editor.scrollTo(null, move_to);
-        this.smoothscroll_timeout = setTimeout(() => this.smoothscroll(editor, dest, step_size, time, step - 1), time);
+
+        editor.scrollTo(null, dest - step_size * (step - 1));
+        this.smoothscrollTimeout = setTimeout(() => this.smoothScroll(editor, dest, step_size, time, step - 1), time);
     }
 
-    update_scrollbar_css() {
-        this.remove_css()
+    updateScrollbarCSS() {
+        this.removeScrollbarCSS()
 
         const style = document.createElement('style');
         style.id = 'scrolling-scrollbar-style';
-        const global = this.settings.scrollbar_global;
+        const global = this.settings.scrollbarGlobal;
 
         let display: string | undefined;
         let color: string | undefined;
 
-        const visibility = this.settings.scrollbar_visibility;
+        const visibility = this.settings.scrollbarVisibility;
         if (visibility == "hide") {
             display = "none";
         } else if (visibility == "scroll") {
             color = "transparent";
         }
 
-        const width = this.settings.scrollbar_width;
+        const width = this.settings.scrollbarWidth;
         if (width == 0) {
             display = "none";
         }
@@ -231,7 +297,7 @@ export default class ScrollingPlugin extends Plugin {
         document.head.appendChild(style);
     }
 
-    remove_css() {
+    removeScrollbarCSS() {
         document.getElementById("scrolling-scrollbar-style")?.remove();
     }
 }
@@ -258,16 +324,16 @@ class ScrollingSettingTab extends PluginSettingTab {
             .setName("Enabled")
             .setDesc("Whether mouse scrolling settings should be applied.")
             .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.mouse_scroll_enabled)
+                .setValue(this.plugin.settings.mouseScrollEnabled)
                 .onChange(async (value) => {
-                    this.plugin.settings.mouse_scroll_enabled = value;
+                    this.plugin.settings.mouseScrollEnabled = value;
                     this.display();
                     await this.plugin.saveSettings();
                 })
             );
 
         // TODO: split mouse wheel and touchpad up?
-        if (this.plugin.settings.mouse_scroll_enabled) {
+        if (this.plugin.settings.mouseScrollEnabled) {
             new Setting(containerEl)
                 .setName("Scroll speed")
                 .setDesc("Controls how fast you scroll using your mouse wheel or trackpad.")
@@ -276,17 +342,17 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon('reset')
                         .setTooltip('Restore default')
                         .onClick(async () => {
-                            this.plugin.settings.mouse_scroll_speed = DEFAULT_SETTINGS.mouse_scroll_speed
+                            this.plugin.settings.mouseScrollSpeed = DEFAULT_SETTINGS.mouseScrollSpeed
                             this.display();
                             await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
-                    .setValue(this.plugin.settings.mouse_scroll_speed)
+                    .setValue(this.plugin.settings.mouseScrollSpeed)
                     .setLimits(0, 4, 0.1)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
-                        this.plugin.settings.mouse_scroll_speed = value;
+                        this.plugin.settings.mouseScrollSpeed = value;
                         await this.plugin.saveSettings();
                     })
                 );
@@ -299,17 +365,17 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon('reset')
                         .setTooltip('Restore default')
                         .onClick(async () => {
-                            this.plugin.settings.mouse_scroll_smoothness = DEFAULT_SETTINGS.mouse_scroll_smoothness
+                            this.plugin.settings.mouseScrollSmoothness = DEFAULT_SETTINGS.mouseScrollSmoothness
                             this.display()
                             await this.plugin.saveSettings()
                         })
                 })
                 .addSlider(slider => slider
-                    .setValue(this.plugin.settings.mouse_scroll_smoothness)
+                    .setValue(this.plugin.settings.mouseScrollSmoothness)
                     .setLimits(0, 4, 0.1)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
-                        this.plugin.settings.mouse_scroll_smoothness = value;
+                        this.plugin.settings.mouseScrollSmoothness = value;
                         await this.plugin.saveSettings();
                     })
                 );
@@ -318,9 +384,9 @@ class ScrollingSettingTab extends PluginSettingTab {
                 .setName("Invert scroll direction")
                 .setDesc("Flips scroll direction.")
                 .addToggle(toggle => toggle
-                    .setValue(this.plugin.settings.mouse_scroll_invert)
+                    .setValue(this.plugin.settings.mouseScrollInvert)
                     .onChange(async (value) => {
-                        this.plugin.settings.mouse_scroll_invert = value;
+                        this.plugin.settings.mouseScrollInvert = value;
                         await this.plugin.saveSettings();
                     })
                 );
@@ -341,15 +407,15 @@ class ScrollingSettingTab extends PluginSettingTab {
             .setName("Enabled")
             .setDesc("Whether to enable the centered cursor feature.")
             .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.center_cursor_enabled)
+                .setValue(this.plugin.settings.centerCursorEnabled)
                 .onChange(async (value) => {
-                    this.plugin.settings.center_cursor_enabled = value;
+                    this.plugin.settings.centerCursorEnabled = value;
                     this.display();
                     await this.plugin.saveSettings();
                 })
             );
 
-        if (this.plugin.settings.center_cursor_enabled) {
+        if (this.plugin.settings.centerCursorEnabled) {
             new Setting(containerEl)
                 .setName("Center radius while editing")
                 .setDesc(createFragment(frag => {
@@ -364,17 +430,17 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon('reset')
                         .setTooltip('Restore default')
                         .onClick(async () => {
-                            this.plugin.settings.center_cursor_editing_distance = DEFAULT_SETTINGS.center_cursor_editing_distance
+                            this.plugin.settings.centerCursorEditingDistance = DEFAULT_SETTINGS.centerCursorEditingDistance
                             this.display();
                             await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
-                    .setValue(this.plugin.settings.center_cursor_editing_distance)
+                    .setValue(this.plugin.settings.centerCursorEditingDistance)
                     .setLimits(0, 100, 1)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
-                        this.plugin.settings.center_cursor_editing_distance = value;
+                        this.plugin.settings.centerCursorEditingDistance = value;
                         await this.plugin.saveSettings();
                     })
                 );
@@ -393,17 +459,17 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon('reset')
                         .setTooltip('Restore default')
                         .onClick(async () => {
-                            this.plugin.settings.center_cursor_moving_distance = DEFAULT_SETTINGS.center_cursor_moving_distance
+                            this.plugin.settings.centerCursorMovingDistance = DEFAULT_SETTINGS.centerCursorMovingDistance
                             this.display();
                             await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
-                    .setValue(this.plugin.settings.center_cursor_moving_distance)
+                    .setValue(this.plugin.settings.centerCursorMovingDistance)
                     .setLimits(0, 100, 1)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
-                        this.plugin.settings.center_cursor_moving_distance = value;
+                        this.plugin.settings.centerCursorMovingDistance = value;
                         await this.plugin.saveSettings();
                     })
                 );
@@ -421,17 +487,17 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon('reset')
                         .setTooltip('Restore default')
                         .onClick(async () => {
-                            this.plugin.settings.center_cursor_editing_smoothness = DEFAULT_SETTINGS.center_cursor_editing_smoothness
+                            this.plugin.settings.centerCursorEditingSmoothness = DEFAULT_SETTINGS.centerCursorEditingSmoothness
                             this.display();
                             await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
-                    .setValue(this.plugin.settings.center_cursor_editing_smoothness)
+                    .setValue(this.plugin.settings.centerCursorEditingSmoothness)
                     .setLimits(0, 4, 0.1)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
-                        this.plugin.settings.center_cursor_editing_smoothness = value;
+                        this.plugin.settings.centerCursorEditingSmoothness = value;
                         await this.plugin.saveSettings();
                     })
                 );
@@ -449,17 +515,17 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon('reset')
                         .setTooltip('Restore default')
                         .onClick(async () => {
-                            this.plugin.settings.center_cursor_moving_smoothness = DEFAULT_SETTINGS.center_cursor_moving_smoothness
+                            this.plugin.settings.centerCursorMovingSmoothness = DEFAULT_SETTINGS.centerCursorMovingSmoothness
                             this.display();
                             await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
-                    .setValue(this.plugin.settings.center_cursor_moving_smoothness)
+                    .setValue(this.plugin.settings.centerCursorMovingSmoothness)
                     .setLimits(0, 4, 0.1)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
-                        this.plugin.settings.center_cursor_moving_smoothness = value;
+                        this.plugin.settings.centerCursorMovingSmoothness = value;
                         await this.plugin.saveSettings();
                     })
                 );
@@ -491,10 +557,10 @@ class ScrollingSettingTab extends PluginSettingTab {
             .setName("Apply to all scrollbars")
             .setDesc("Whether the following options should apply to all scrollbars in obsidian or only scrollbars in markdown files.")
             .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.scrollbar_global)
+                .setValue(this.plugin.settings.scrollbarGlobal)
                 .onChange(async (value) => {
-                    this.plugin.settings.scrollbar_global = value;
-                    this.plugin.update_scrollbar_css()
+                    this.plugin.settings.scrollbarGlobal = value;
+                    this.plugin.updateScrollbarCSS();
                     await this.plugin.saveSettings();
                 })
             );
@@ -508,25 +574,25 @@ class ScrollingSettingTab extends PluginSettingTab {
                     .setIcon('reset')
                     .setTooltip('Restore default')
                     .onClick(async () => {
-                        this.plugin.settings.scrollbar_visibility = DEFAULT_SETTINGS.scrollbar_visibility
-                        this.plugin.update_scrollbar_css()
-                        await this.plugin.saveSettings()
+                        this.plugin.settings.scrollbarVisibility = DEFAULT_SETTINGS.scrollbarVisibility
+                        this.plugin.updateScrollbarCSS();
+                        await this.plugin.saveSettings();
                     });
             })
             .addDropdown(dropdown => dropdown
                 .addOption("hide", "Always hide scrollbars")
                 .addOption("scroll", "Show scrollbars while scrolling")
                 .addOption("show", "Always show scrollbars")
-                .setValue(this.plugin.settings.scrollbar_visibility)
+                .setValue(this.plugin.settings.scrollbarVisibility)
                 .onChange(async (value) => {
-                    this.plugin.settings.scrollbar_visibility = value;
-                    this.plugin.update_scrollbar_css()
-                    this.display()
+                    this.plugin.settings.scrollbarVisibility = value;
+                    this.plugin.updateScrollbarCSS();
+                    this.display();
                     await this.plugin.saveSettings();
                 })
             )
 
-        if (this.plugin.settings.scrollbar_visibility !== "hide") {
+        if (this.plugin.settings.scrollbarVisibility !== "hide") {
             new Setting(containerEl)
                 .setName("Scrollbar thickness")
                 .setDesc("Width of scrollbars in px.")
@@ -535,19 +601,19 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon('reset')
                         .setTooltip('Restore default')
                         .onClick(async () => {
-                            this.plugin.settings.scrollbar_width = DEFAULT_SETTINGS.scrollbar_width
-                            this.plugin.update_scrollbar_css()
-                            this.display()
-                            await this.plugin.saveSettings()
+                            this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth
+                            this.plugin.updateScrollbarCSS();
+                            this.display();
+                            await this.plugin.saveSettings();
                         });
                 })
                 .addSlider(slider => slider
-                    .setValue(this.plugin.settings.scrollbar_width)
+                    .setValue(this.plugin.settings.scrollbarWidth)
                     .setLimits(0, 30, 1)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
-                        this.plugin.settings.scrollbar_width = value;
-                        this.plugin.update_scrollbar_css()
+                        this.plugin.settings.scrollbarWidth = value;
+                        this.plugin.updateScrollbarCSS();
                         await this.plugin.saveSettings();
                     })
                 );
