@@ -2,41 +2,43 @@ import { PluginSettingTab, Setting } from "obsidian";
 import type { default as ScrollingPlugin } from "./main";
 
 export interface ScrollingPluginSettings {
-    centerCursorDynamicAnimation: boolean;
-    centerCursorEditingRadius: number;
-    centerCursorEditingSmoothness: number;
-    centerCursorEnableMouse: boolean;
-    centerCursorEnableMouseSelect: boolean;
-    centerCursorEnabled: boolean;
-    centerCursorInvert: boolean;
-    centerCursorMovingDistance: number;
-    centerCursorMovingSmoothness: number;
+    smartScrollMode: string; // disabled, follow-cursor, page-jump
+    smartScrollEditRadius: number;
+    smartScrollEditSmoothness: number;
+    smartScrollMoveRadius: number;
+    smartScrollMoveSmoothness: number;
+    smartScrollEnableMouse: boolean;
+    smartScrollEnableSelection: boolean;
+    smartScrollDynamicAnimation: boolean;
+
+    scrollbarGlobal: boolean;
+    scrollbarVisibility: string; // hide, scroll, show
+    scrollbarWidth: number;
+
     mouseScrollEnabled: boolean;
     mouseScrollInvert: boolean;
     mouseScrollSmoothness: number;
     mouseScrollSpeed: number;
-    scrollbarGlobal: boolean;
-    scrollbarVisibility: string;
-    scrollbarWidth: number;
 }
 
 export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
-    centerCursorDynamicAnimation: true,
-    centerCursorEditingRadius: 25,
-    centerCursorEditingSmoothness: 1,
-    centerCursorEnableMouse: false,
-    centerCursorEnableMouseSelect: false,
-    centerCursorEnabled: true,
-    centerCursorInvert: false,
-    centerCursorMovingDistance: 25,
-    centerCursorMovingSmoothness: 1,
+    smartScrollMode: "follow-cursor",
+    smartScrollEditRadius: 75,
+    smartScrollEditSmoothness: 25,
+    smartScrollMoveRadius: 75,
+    smartScrollMoveSmoothness: 25,
+    smartScrollEnableMouse: false,
+    smartScrollEnableSelection: false,
+    smartScrollDynamicAnimation: true,
+
+    scrollbarGlobal: false,
+    scrollbarVisibility: "show",
+    scrollbarWidth: 12,
+
     mouseScrollEnabled: true,
     mouseScrollInvert: false,
     mouseScrollSmoothness: 1,
     mouseScrollSpeed: 1,
-    scrollbarGlobal: false,
-    scrollbarVisibility: "show",
-    scrollbarWidth: 12,
 };
 
 export class ScrollingSettingTab extends PluginSettingTab {
@@ -51,126 +53,48 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
-        // Mouse scrolling settings
-        new Setting(containerEl).setName("Mouse scrolling").setHeading();
+        new Setting(containerEl).setName("Smart Scrolling").setHeading();
 
         new Setting(containerEl)
-            .setName("Enabled")
-            .setDesc("Whether mouse scrolling settings should be applied.")
-            .addToggle((toggle) =>
-                toggle.setValue(this.plugin.settings.mouseScrollEnabled).onChange(async (value) => {
-                    this.plugin.settings.mouseScrollEnabled = value;
-                    this.display();
-                    await this.plugin.saveSettings();
-                }),
-            );
-
-        // TODO: split mouse wheel and touchpad up?
-        if (this.plugin.settings.mouseScrollEnabled) {
-            new Setting(containerEl)
-                .setName("Scroll speed")
-                .setDesc("Controls how fast you scroll using your mouse wheel or trackpad.")
-                .addExtraButton((button) => {
-                    button
-                        .setIcon("reset")
-                        .setTooltip("Restore default")
-                        .onClick(async () => {
-                            this.plugin.settings.mouseScrollSpeed =
-                                DEFAULT_SETTINGS.mouseScrollSpeed;
-                            this.display();
-                            await this.plugin.saveSettings();
-                        });
-                })
-                .addSlider((slider) =>
-                    slider
-                        .setValue(this.plugin.settings.mouseScrollSpeed)
-                        .setLimits(0, 4, 0.1)
-                        .setDynamicTooltip()
-                        .onChange(async (value) => {
-                            this.plugin.settings.mouseScrollSpeed = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-
-            new Setting(containerEl)
-                .setName("Scroll smoothness")
-                .setDesc("Determines how smooth scrolling should be. 0 means instant.")
-                .addExtraButton((button) => {
-                    button
-                        .setIcon("reset")
-                        .setTooltip("Restore default")
-                        .onClick(async () => {
-                            this.plugin.settings.mouseScrollSmoothness =
-                                DEFAULT_SETTINGS.mouseScrollSmoothness;
-                            this.display();
-                            await this.plugin.saveSettings();
-                        });
-                })
-                .addSlider((slider) =>
-                    slider
-                        .setValue(this.plugin.settings.mouseScrollSmoothness)
-                        .setLimits(0, 4, 0.1)
-                        .setDynamicTooltip()
-                        .onChange(async (value) => {
-                            this.plugin.settings.mouseScrollSmoothness = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-
-            new Setting(containerEl)
-                .setName("Invert scroll direction")
-                .setDesc("Flips scroll direction.")
-                .addToggle((toggle) =>
-                    toggle
-                        .setValue(this.plugin.settings.mouseScrollInvert)
-                        .onChange(async (value) => {
-                            this.plugin.settings.mouseScrollInvert = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-        }
-
-        // Centered text cursor settings
-        new Setting(containerEl).setHeading();
-        new Setting(containerEl)
-            .setName("Centered text cursor")
+            .setName("Mode")
             .setDesc(
                 createFragment((frag) => {
                     frag.createDiv(
                         {},
                         (div) =>
                             (div.innerHTML =
-                                "Keeps the text cursor within a comfortable zone while moving or editing. Behaves similarly to Vim's <code>scrolloff</code> option."),
+                                "Follow Cursor: Smoothly keeps cursor visible (like Vim's <code>scrolloff</code>).<br>" +
+                                "Page Jumping: Reduces scrolling by jumping whole pages at screen edges."),
                     );
                 }),
             )
-            .setHeading();
-
-        new Setting(containerEl)
-            .setName("Enabled")
-            .setDesc("Whether to enable the centered cursor feature.")
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.centerCursorEnabled)
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("disabled", "Disabled")
+                    .addOption("follow-cursor", "Follow Cursor")
+                    .addOption("page-jump", "Page Jumping")
+                    .setValue(this.plugin.settings.smartScrollMode)
                     .onChange(async (value) => {
-                        this.plugin.settings.centerCursorEnabled = value;
+                        this.plugin.settings.smartScrollMode = value;
                         this.display();
                         await this.plugin.saveSettings();
                     }),
             );
 
-        if (this.plugin.settings.centerCursorEnabled) {
+        if (this.plugin.settings.smartScrollMode !== "disabled") {
             new Setting(containerEl)
-                .setName("Center radius while editing")
+                .setName("Scroll zone radius when editing")
                 .setDesc(
                     createFragment((frag) => {
                         frag.createDiv(
                             {},
                             (div) =>
                                 (div.innerHTML =
-                                    'Defines how far from the screen center the cursor can move before scrolling (in "%").<br>' +
-                                    "0% keeps the cursor perfectly centered.<br>" +
-                                    "100% effectively disables this feature."),
+                                    this.plugin.settings.smartScrollMode === "follow-cursor"
+                                        ? "Defines how far the cursor can move from the center before scrolling.<br>" +
+                                          "0% keeps the cursor perfectly centered, while 100% effectively disables this feature."
+                                        : "Defines how far the cursor can move before jumping.<br>" +
+                                          "Lower values might appear buggy."),
                         );
                     }),
                 )
@@ -179,69 +103,63 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.centerCursorEditingRadius =
-                                DEFAULT_SETTINGS.centerCursorEditingRadius;
+                            this.plugin.settings.smartScrollEditRadius =
+                                DEFAULT_SETTINGS.smartScrollEditRadius;
                             this.display();
                             await this.plugin.saveSettings();
                         });
                 })
                 .addSlider((slider) =>
                     slider
-                        .setValue(this.plugin.settings.centerCursorEditingRadius)
+                        .setValue(this.plugin.settings.smartScrollEditRadius)
                         .setLimits(0, 100, 1)
                         .setDynamicTooltip()
                         .onChange(async (value) => {
-                            this.plugin.settings.centerCursorEditingRadius = value;
+                            this.plugin.settings.smartScrollEditRadius = value;
                             await this.plugin.saveSettings();
                         }),
                 );
 
             new Setting(containerEl)
-                .setName("Center radius while moving cursor")
+                .setName("Scroll smoothness when editing")
                 .setDesc(
-                    createFragment((frag) => {
-                        frag.createDiv(
-                            {},
-                            (div) =>
-                                (div.innerHTML =
-                                    'Defines how far from the screen center the cursor can be moved before scrolling (in "%").<br>' +
-                                    "0% keeps the cursor perfectly centered.<br>" +
-                                    "100% effectively disables this feature."),
-                        );
-                    }),
+                    "Adjusts how fast or slow the scrolling animation is when editing moves the cursor.",
                 )
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.centerCursorMovingDistance =
-                                DEFAULT_SETTINGS.centerCursorMovingDistance;
+                            this.plugin.settings.smartScrollEditSmoothness =
+                                DEFAULT_SETTINGS.smartScrollEditSmoothness;
                             this.display();
                             await this.plugin.saveSettings();
                         });
                 })
                 .addSlider((slider) =>
                     slider
-                        .setValue(this.plugin.settings.centerCursorMovingDistance)
+                        .setValue(this.plugin.settings.smartScrollEditSmoothness)
                         .setLimits(0, 100, 1)
                         .setDynamicTooltip()
                         .onChange(async (value) => {
-                            this.plugin.settings.centerCursorMovingDistance = value;
+                            this.plugin.settings.smartScrollEditSmoothness = value;
                             await this.plugin.saveSettings();
                         }),
                 );
 
             new Setting(containerEl)
-                .setName("Scroll animation when editing")
+                .setName("Scroll zone radius when moving cursor")
                 .setDesc(
                     createFragment((frag) => {
                         frag.createDiv(
                             {},
                             (div) =>
                                 (div.innerHTML =
-                                    "Adjusts the smoothness of scrolling when editing moves the cursor outside the central zone.<br>" +
-                                    "Set to 0 to disable smooth scroll when editing."),
+                                    this.plugin.settings.smartScrollMode === "follow-cursor"
+                                        ? "Defines how far you can move the cursor from the center before scrolling.<br>" +
+                                          "0% keeps the cursor perfectly centered, while 100% effectively disables this feature."
+                                        : "Defines how far you can move the cursor before jumping.<br>" +
+                                          "Lower values might appear buggy."),
                         );
                     }),
                 )
@@ -250,54 +168,46 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.centerCursorEditingSmoothness =
-                                DEFAULT_SETTINGS.centerCursorEditingSmoothness;
+                            this.plugin.settings.smartScrollMoveRadius =
+                                DEFAULT_SETTINGS.smartScrollMoveRadius;
                             this.display();
                             await this.plugin.saveSettings();
                         });
                 })
                 .addSlider((slider) =>
                     slider
-                        .setValue(this.plugin.settings.centerCursorEditingSmoothness)
-                        .setLimits(0, 4, 0.1)
+                        .setValue(this.plugin.settings.smartScrollMoveRadius)
+                        .setLimits(0, 100, 1)
                         .setDynamicTooltip()
                         .onChange(async (value) => {
-                            this.plugin.settings.centerCursorEditingSmoothness = value;
+                            this.plugin.settings.smartScrollMoveRadius = value;
                             await this.plugin.saveSettings();
                         }),
                 );
 
             new Setting(containerEl)
-                .setName("Scroll animation when moving cursor")
+                .setName("Scroll smoothness when moving cursor")
                 .setDesc(
-                    createFragment((frag) => {
-                        frag.createDiv(
-                            {},
-                            (div) =>
-                                (div.innerHTML =
-                                    "Adjusts the smoothness of scrolling when the text cursor is moved outside the central zone.<br>" +
-                                    "Set to 0 to disable smooth scroll when moving text cursor."),
-                        );
-                    }),
+                    "Adjusts how fast or slow the scrolling animation is when you move the cursor.",
                 )
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.centerCursorMovingSmoothness =
-                                DEFAULT_SETTINGS.centerCursorMovingSmoothness;
+                            this.plugin.settings.smartScrollMoveSmoothness =
+                                DEFAULT_SETTINGS.smartScrollMoveSmoothness;
                             this.display();
                             await this.plugin.saveSettings();
                         });
                 })
                 .addSlider((slider) =>
                     slider
-                        .setValue(this.plugin.settings.centerCursorMovingSmoothness)
-                        .setLimits(0, 4, 0.1)
+                        .setValue(this.plugin.settings.smartScrollMoveSmoothness)
+                        .setLimits(0, 100, 1)
                         .setDynamicTooltip()
                         .onChange(async (value) => {
-                            this.plugin.settings.centerCursorMovingSmoothness = value;
+                            this.plugin.settings.smartScrollMoveSmoothness = value;
                             await this.plugin.saveSettings();
                         }),
                 );
@@ -317,31 +227,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 )
                 .addToggle((toggle) =>
                     toggle
-                        .setValue(this.plugin.settings.centerCursorEnableMouse)
+                        .setValue(this.plugin.settings.smartScrollEnableMouse)
                         .onChange(async (value) => {
-                            this.plugin.settings.centerCursorEnableMouse = value;
+                            this.plugin.settings.smartScrollEnableMouse = value;
+                            this.display();
                             await this.plugin.saveSettings();
                         }),
                 );
 
-            if (this.plugin.settings.centerCursorEnableMouse) {
+            if (this.plugin.settings.smartScrollEnableMouse) {
                 new Setting(containerEl)
-                    .setName("Invoke on selection with mouse.")
-                    .setDesc(
-                        createFragment((frag) => {
-                            frag.createDiv(
-                                {},
-                                (div) =>
-                                    (div.innerHTML =
-                                        "Also trigger, when the mouse has selected text."),
-                            );
-                        }),
-                    )
+                    .setName("Invoke on mouse selection")
+                    .setDesc("Also trigger, when the mouse has selected text.")
                     .addToggle((toggle) =>
                         toggle
-                            .setValue(this.plugin.settings.centerCursorEnableMouseSelect)
+                            .setValue(this.plugin.settings.smartScrollEnableSelection)
                             .onChange(async (value) => {
-                                this.plugin.settings.centerCursorEnableMouseSelect = value;
+                                this.plugin.settings.smartScrollEnableSelection = value;
                                 await this.plugin.saveSettings();
                             }),
                     );
@@ -356,51 +258,27 @@ export class ScrollingSettingTab extends PluginSettingTab {
                             (div) =>
                                 (div.innerHTML =
                                     "Skip animation frames if lots of scroll events occur.<br>" +
-                                    "Should make scrolling with pressed arrow keys/vim motions a lot smoother."),
+                                    "Should make scrolling with pressed arrow keys/vim motions much smoother."),
                         );
                     }),
                 )
                 .addToggle((toggle) =>
                     toggle
-                        .setValue(this.plugin.settings.centerCursorDynamicAnimation)
+                        .setValue(this.plugin.settings.smartScrollDynamicAnimation)
                         .onChange(async (value) => {
-                            this.plugin.settings.centerCursorDynamicAnimation = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-
-            new Setting(containerEl)
-                .setName("Alternative effect: Scroll by whole pages")
-                .setDesc(
-                    createFragment((frag) => {
-                        frag.createDiv(
-                            {},
-                            (div) =>
-                                (div.innerHTML =
-                                    "This inverts the above options to reduce overall scrolling, by scrolling by whole pages.<br>" +
-                                    "Best paired with high center radius and longer animation.<br>" +
-                                    "Low values of center radius might appear buggy."),
-                        );
-                    }),
-                )
-                .addToggle((toggle) =>
-                    toggle
-                        .setValue(this.plugin.settings.centerCursorInvert)
-                        .onChange(async (value) => {
-                            this.plugin.settings.centerCursorInvert = value;
+                            this.plugin.settings.smartScrollDynamicAnimation = value;
                             await this.plugin.saveSettings();
                         }),
                 );
         }
 
-        // Scrollbar appearance settings
         new Setting(containerEl);
-        new Setting(containerEl).setName("Scrollbar appearance").setHeading();
+        new Setting(containerEl).setName("Scrollbar Appearance").setHeading();
 
         new Setting(containerEl)
             .setName("Apply to all scrollbars")
             .setDesc(
-                "Whether the following options should apply to all scrollbars in obsidian or only scrollbars in markdown files.",
+                "Whether the following options should apply to all scrollbars or only in markdown files.",
             )
             .addToggle((toggle) =>
                 toggle.setValue(this.plugin.settings.scrollbarGlobal).onChange(async (value) => {
@@ -410,7 +288,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
             );
 
-        // dropdown menu: hide all, hide bars (only markdown file), show bars while scrolling, show bar while scrolling (only markdown file), show all
         new Setting(containerEl)
             .setName("Scrollbar visibility")
             .setDesc("When to show scrollbars.")
@@ -442,7 +319,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (this.plugin.settings.scrollbarVisibility !== "hide") {
             new Setting(containerEl)
                 .setName("Scrollbar thickness")
-                .setDesc("Width of scrollbars in px.")
+                .setDesc("Width in pixels.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -462,6 +339,84 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .onChange(async (value) => {
                             this.plugin.settings.scrollbarWidth = value;
                             this.plugin.scrollbar.updateStyle();
+                            await this.plugin.saveSettings();
+                        }),
+                );
+        }
+
+        new Setting(containerEl);
+        new Setting(containerEl).setName("Mouse/Trackpad Scrolling (Experimental)").setHeading();
+
+        new Setting(containerEl)
+            .setName("Enabled")
+            .setDesc("Whether mouse scrolling settings should be applied.")
+            .addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.mouseScrollEnabled).onChange(async (value) => {
+                    this.plugin.settings.mouseScrollEnabled = value;
+                    this.display();
+                    await this.plugin.saveSettings();
+                }),
+            );
+
+        if (this.plugin.settings.mouseScrollEnabled) {
+            new Setting(containerEl)
+                .setName("Scroll speed")
+                .setDesc("Controls how fast you scroll using your mouse wheel or trackpad.")
+                .addExtraButton((button) => {
+                    button
+                        .setIcon("reset")
+                        .setTooltip("Restore default")
+                        .onClick(async () => {
+                            this.plugin.settings.mouseScrollSpeed =
+                                DEFAULT_SETTINGS.mouseScrollSpeed;
+                            this.display();
+                            await this.plugin.saveSettings();
+                        });
+                })
+                .addSlider((slider) =>
+                    slider
+                        .setValue(this.plugin.settings.mouseScrollSpeed)
+                        .setLimits(0, 100, 1)
+                        .setDynamicTooltip()
+                        .onChange(async (value) => {
+                            this.plugin.settings.mouseScrollSpeed = value;
+                            await this.plugin.saveSettings();
+                        }),
+                );
+
+            new Setting(containerEl)
+                .setName("Scroll smoothness")
+                .setDesc("Determines how smooth scrolling should be. 0 means instant.")
+                .addExtraButton((button) => {
+                    button
+                        .setIcon("reset")
+                        .setTooltip("Restore default")
+                        .onClick(async () => {
+                            this.plugin.settings.mouseScrollSmoothness =
+                                DEFAULT_SETTINGS.mouseScrollSmoothness;
+                            this.display();
+                            await this.plugin.saveSettings();
+                        });
+                })
+                .addSlider((slider) =>
+                    slider
+                        .setValue(this.plugin.settings.mouseScrollSmoothness)
+                        .setLimits(0, 100, 1)
+                        .setDynamicTooltip()
+                        .onChange(async (value) => {
+                            this.plugin.settings.mouseScrollSmoothness = value;
+                            await this.plugin.saveSettings();
+                        }),
+                );
+
+            new Setting(containerEl)
+                .setName("Invert scroll direction")
+                .setDesc("Flips scroll direction.")
+                .addToggle((toggle) =>
+                    toggle
+                        .setValue(this.plugin.settings.mouseScrollInvert)
+                        .onChange(async (value) => {
+                            this.plugin.settings.mouseScrollInvert = value;
                             await this.plugin.saveSettings();
                         }),
                 );
