@@ -193,7 +193,7 @@ export default class ScrollingPlugin extends Plugin {
         const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
         const cursorVerticalPosition = cursor.top + editor.cm.defaultLineHeight - viewOffset;
 
-        const scrollInfo = editor.getScrollInfo();
+        const scrollInfo = editor.getScrollInfo() as { top: number; left: number; height: number };
         const currentVerticalPosition = scrollInfo.top;
         let centerZoneRadius = (scrollInfo.height / 2) * (centerRadius / 100);
 
