@@ -4,16 +4,19 @@ import { Transaction } from "@codemirror/state";
 
 
 interface ScrollingPluginSettings {
-    mouseScrollEnabled: boolean;
-    mouseScrollSpeed: number;
-    mouseScrollSmoothness: number;
-    mouseScrollInvert: boolean;
-    centerCursorEnabled: boolean;
-    centerCursorEditingDistance: number;
-    centerCursorMovingDistance: number;
+    centerCursorDynamicAnimation: boolean;
+    centerCursorEditingRadius: number;
     centerCursorEditingSmoothness: number;
+    centerCursorEnableMouse: boolean;
+    centerCursorEnableMouseSelect: boolean;
+    centerCursorEnabled: boolean;
+    centerCursorInvert: boolean;
+    centerCursorMovingDistance: number;
     centerCursorMovingSmoothness: number;
-    center_cursor_enable_mouse: boolean;
+    mouseScrollEnabled: boolean;
+    mouseScrollInvert: boolean;
+    mouseScrollSmoothness: number;
+    mouseScrollSpeed: number;
     scrollbarGlobal: boolean;
     scrollbarVisibility: string;
     scrollbarWidth: number;
@@ -21,16 +24,19 @@ interface ScrollingPluginSettings {
 
 
 const DEFAULT_SETTINGS: ScrollingPluginSettings = {
-    mouseScrollEnabled: true,
-    mouseScrollSpeed: 1,
-    mouseScrollSmoothness: 1,
-    mouseScrollInvert: false,
-    centerCursorEnabled: true,
-    centerCursorEditingDistance: 25,
-    centerCursorMovingDistance: 25,
+    centerCursorDynamicAnimation: true,
+    centerCursorEditingRadius: 25,
     centerCursorEditingSmoothness: 1,
+    centerCursorEnableMouse: false,
+    centerCursorEnableMouseSelect: false,
+    centerCursorEnabled: true,
+    centerCursorInvert: false,
+    centerCursorMovingDistance: 25,
     centerCursorMovingSmoothness: 1,
-    center_cursor_enable_mouse: false,
+    mouseScrollEnabled: true,
+    mouseScrollInvert: false,
+    mouseScrollSmoothness: 1,
+    mouseScrollSpeed: 1,
     scrollbarGlobal: false,
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
@@ -42,21 +48,20 @@ export default class ScrollingPlugin extends Plugin {
 
     private recentEdit: boolean = false;
     private recentMouseUp: boolean = false;
-    private centeringTimeout: number;
-    private centeringLastTime: number = 0;
     private centeringScrollIntensity: number = 0;
 
     async onload() {
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this.app, this));
 
-        // Callbacks for markdown changes and cursor movements
-        // Will be automatically deleted on reload
-        this.registerEvent(this.app.workspace.on("editor-change", (editor) => this.editHandler(editor)));
-        this.registerDomEvent(document, "mouseup", () => this.mouseUpHandler());
-        this.registerDomEvent(document, "keydown", () => this.keyHandler());
+        this.registerEvent(this.app.workspace.on("editor-change", this.editHandler.bind(this)));
 
-        // This is specific to CodeMirror 6.
+        this.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this));
+        this.registerDomEvent(document, "keydown", this.keyHandler.bind(this));
+        this.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), { passive: false })
+
+        this.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
+
         /*
         Event order when using mouse:
         1. cursorActivity (cm6, with select.pointer)
@@ -70,32 +75,7 @@ export default class ScrollingPlugin extends Plugin {
         2. docChanged (cm6)
         3. cursorActivity (cm6)
         4. selectionchange (dom)
-
-        Event order when editing, but single character replace with vim:
-        1. editor-change (workspace)
-        2. docChanged (cm6)
-        3. cursorActivity (cm6)
         */
-
-        this.registerEditorExtension(EditorView.updateListener.of((update: ViewUpdate) => {
-            // This checks if this update was caused by a mouse down event.
-            let mouseDown = false
-            for (const tr of update.transactions) {
-                const event = tr.annotation(Transaction.userEvent);
-                if (event === "select.pointer") {
-                    mouseDown = true
-                }
-            }
-
-            // Only procceed if its a cursor event.
-            if (!update.selectionSet) return;
-
-            // We want to return if this event was caused by a mouse.
-            if (mouseDown) return;
-            if (this.recentMouseUp) return; // <- Later maybe create a setting for this.
-
-            this.cursorHandler();
-        }));
 
         // Initializes css to style scroll bars.
         this.updateScrollbarCSS();
@@ -138,19 +118,42 @@ export default class ScrollingPlugin extends Plugin {
         this.invokeScroll(editor);
     }
 
-    cursorHandler() {
+    cursorHandler(update: ViewUpdate) {
+        // This checks if this update was caused by a mouse down event.
+        let mouseDown = false
+        for (const tr of update.transactions) {
+            const event = tr.annotation(Transaction.userEvent);
+            if (event === "select.pointer") {
+                mouseDown = true
+            }
+        }
+
+        // Reset recentEdit, which was set by editHandler
         if (this.recentEdit) {
             this.recentEdit = false;
             return;
         }
 
+        // Only procceed if its a cursor event.
+        if (!update.selectionSet) return;
+
+        // Always cancel if event was caused by mouse down/movement.
+        if (mouseDown) return;
+
+        // Get the editor
         const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor
         if (!editor) return;
+
+        // Also cancel if mouse up, unless this setting allows it.
+        if (!this.settings.centerCursorEnableMouseSelect && editor.somethingSelected()) return;
+        if (this.recentMouseUp && !this.settings.centerCursorEnableMouse) return;
 
         this.invokeScroll(editor);
     }
 
+    private centeringLastTime: number = 0;
     calculateScrollIntensity() {
+        if (!this.settings.centerCursorDynamicAnimation) return;
         const decayRate = 0.02;
         const time = performance.now();
         const elapsed = time - this.centeringLastTime;
@@ -158,13 +161,29 @@ export default class ScrollingPlugin extends Plugin {
         this.centeringScrollIntensity = Math.max(0, this.centeringScrollIntensity - elapsed * decayRate) + 1;
     }
 
+    private centeringTimeout: number;
     invokeScroll(editor: Editor) {
-        // Invert the scroll effect: 1 or -1
-        const invertCenteringScroll = 1;
+        if (!this.settings.centerCursorEnabled) return;
+
+        let centerRadius;
+        let smoothness;
+        if (this.recentEdit) {
+            centerRadius = this.settings.centerCursorEditingRadius;
+            smoothness = this.settings.centerCursorEditingSmoothness;
+        } else {
+            centerRadius = this.settings.centerCursorMovingDistance;
+            smoothness = this.settings.centerCursorMovingSmoothness;
+        }
+
+        // Invert the scroll effect
+        let invertCenteringScroll = 1;
+        if (this.settings.centerCursorInvert) {
+            invertCenteringScroll = -1;
+        }
 
         // If scrolling fast, skip animation steps.
-        // (Only if not scrolling inverted and if recent edit occured, run this later)
-        if (invertCenteringScroll === 1 && this.recentEdit === false) {
+        // (Only if not scrolling inverted and scrolling without edit (otherwise run later))
+        if (!this.settings.centerCursorInvert && !this.recentEdit) {
             this.calculateScrollIntensity()
         }
 
@@ -176,7 +195,7 @@ export default class ScrollingPlugin extends Plugin {
 
         const scrollInfo = editor.getScrollInfo();
         const currentVerticalPosition = scrollInfo.top;
-        let centerZoneRadius = (scrollInfo.height / 2) * (this.settings.centerCursorEditingDistance / 100);
+        let centerZoneRadius = (scrollInfo.height / 2) * (centerRadius / 100);
 
         // Decrease center zone radius slightly to ensure that:
         // - cursor stays on the screen.
@@ -203,24 +222,169 @@ export default class ScrollingPlugin extends Plugin {
         // Can't scroll by fractions, so return early.
         if (Math.abs(distance) < 1) return;
 
-        if (invertCenteringScroll === 1 && this.recentEdit === true) {
+        // If scrolling fast, skip animation steps.
+        if (this.settings.centerCursorDynamicAnimation && !this.settings.centerCursorInvert && this.recentEdit) {
             this.calculateScrollIntensity()
         }
 
         cancelAnimationFrame(this.centeringTimeout)
 
-        // let steps = Math.max(1, Math.round(2 + 4 * this.settings.centerCursorEditingSmoothness - this.centeringScrollIntensity ** 0.5));
-        let steps = Math.round(1 + 4 * this.settings.centerCursorEditingSmoothness);
-        if (invertCenteringScroll === 1 && this.centeringScrollIntensity > 5) steps = 1;
+        // let steps = Math.max(1, Math.round(2 + 4 * smoothness - this.centeringScrollIntensity ** 0.5));
+        let steps = Math.round(1 + 4 * smoothness);
+        if (!this.settings.centerCursorInvert && this.centeringScrollIntensity > 5) steps = 1;
 
-        this.smoothScroll(editor, goal, distance / steps, steps);
+
+        const animate = (editor: Editor, dest: number, step_size: number, step: number) => {
+            if (!step) return;
+
+            editor.scrollTo(null, dest - step_size * (step - 1));
+            this.centeringTimeout = requestAnimationFrame(() => animate(editor, dest, step_size, step - 1))
+        }
+
+        animate(editor, goal, distance / steps, steps);
     }
 
-    smoothScroll(editor: Editor, dest: number, step_size: number, step: number) {
-        if (!step) return;
+    wheelHandler(event: WheelEvent) {
+        if (!this.settings.mouseScrollEnabled) return;
+        if (!event.deltaY) return;
 
-        editor.scrollTo(null, dest - step_size * (step - 1));
-        this.centeringTimeout = requestAnimationFrame(() => this.smoothScroll(editor, dest, step_size, step - 1))
+        let el: HTMLElement | null = event.target as HTMLElement;
+
+        while (el && el != document.body) {
+            const { overflowY } = getComputedStyle(el);
+            const allowsScrollY = (overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight;
+
+            if (allowsScrollY) {
+                var delta = event.deltaY;
+                if (event.deltaMode == event.DOM_DELTA_LINE) {
+                    delta *= 20;
+                }
+
+                if (this.isTrackpad(event)) {
+                    this.scrollWithTrackpad(el, delta)
+                } else {
+                    this.scrollWithMouse(el, delta)
+                }
+
+                event.preventDefault();
+                return;
+            }
+
+            el = el.parentElement;
+        }
+    }
+
+    private lastTrackpadUse: number = 0;
+    isTrackpad(event: WheelEvent): boolean {
+        if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
+            this.lastTrackpadUse = 0;
+            return false;
+        }
+
+        const commonDeltas = [120, 197.18010794176823];
+        for (const delta of commonDeltas) {
+            if ((event.deltaY / delta) % 1 == 0) {
+                this.lastTrackpadUse = 0;
+                return false;
+            }
+        }
+
+        const now = performance.now()
+
+        // Movement on both axes
+        if (event.deltaX !== 0 && event.deltaY !== 0) {
+            this.lastTrackpadUse = now;
+            return true;
+        }
+
+        // Small, fractional, non-zero delta
+        if (event.deltaY % 1 !== 0 && Math.abs(event.deltaY) < 50) {
+            this.lastTrackpadUse = now;
+            return true;
+        }
+
+        // Grace period
+        if (now - this.lastTrackpadUse < 1000) {
+            this.lastTrackpadUse = now;
+            return true;
+        }
+
+        return false;
+    }
+
+    // This works exactly as in Obsidian!
+    // Call with `this.scrollWithMouseNotTrackpad(el, event.deltaY)`
+    // No additional multiplier for deltaY needed. Default duration is 150!
+    private mouseScrollAnimation: number;
+    private mouseScrollTarget: number;
+    private lastMouseScroll: number;
+    scrollWithMouse(el: HTMLElement, change: number) {
+        if (!el) return;
+        cancelAnimationFrame(this.mouseScrollAnimation);
+
+        const duration = 150;
+        const startTime = performance.now()
+        if (this.lastMouseScroll && startTime - this.lastMouseScroll < duration) {
+            el.scrollTop = this.mouseScrollTarget
+        }
+        this.lastMouseScroll = startTime;
+
+        let start = el.scrollTop;
+        this.mouseScrollTarget = start + change
+
+        const easeOut = (t: number) => 1 - (1 - t) ** 2;
+
+        const animateScroll = (now: number) => {
+            now = performance.now()
+            let t = Math.min(1, (now - startTime) / duration);
+            t = easeOut(t);
+
+            el.scrollTop = start + change * t
+
+            if (t < 1) {
+                this.mouseScrollAnimation = requestAnimationFrame(animateScroll);
+            } else {
+                el.scrollTop = start + change;
+            }
+        }
+
+        this.mouseScrollAnimation = requestAnimationFrame(animateScroll);
+    }
+
+    private trackpadScrolling = false;
+    private trackpadScrollVelocity = 0;
+    private trackpadScrollFriction = 0;
+    scrollWithTrackpad(el: HTMLElement, change: number) {
+        const defaultFriction = 0.75;
+        const maxFriction = 0.98
+        const fullFrictionThreshold = 20;
+        const multiplier = 0.25;
+        const minVelocity = 0.1;
+
+        if (this.trackpadScrollVelocity * change < 0) {
+            this.trackpadScrolling = false
+        }
+
+        this.trackpadScrollVelocity += change * multiplier;
+
+        const animate = () => {
+            if (Math.abs(this.trackpadScrollVelocity) > minVelocity) {
+                el.scrollTop += this.trackpadScrollVelocity;
+                this.trackpadScrollVelocity *= this.trackpadScrollFriction;
+                this.trackpadScrollFriction = Math.max(0, Math.min(maxFriction, this.trackpadScrollFriction + 0.05))
+                requestAnimationFrame(animate);
+            } else {
+                this.trackpadScrolling = false;
+                this.trackpadScrollVelocity = 0;
+            }
+        };
+
+        this.trackpadScrollFriction = Math.min(1, (Math.abs(change) / fullFrictionThreshold) ** 3) * defaultFriction;
+
+        if (!this.trackpadScrolling) {
+            this.trackpadScrolling = true;
+            animate();
+        }
     }
 
     updateScrollbarCSS() {
@@ -414,17 +578,17 @@ class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon('reset')
                         .setTooltip('Restore default')
                         .onClick(async () => {
-                            this.plugin.settings.centerCursorEditingDistance = DEFAULT_SETTINGS.centerCursorEditingDistance
+                            this.plugin.settings.centerCursorEditingRadius = DEFAULT_SETTINGS.centerCursorEditingRadius
                             this.display();
                             await this.plugin.saveSettings()
                         });
                 })
                 .addSlider(slider => slider
-                    .setValue(this.plugin.settings.centerCursorEditingDistance)
+                    .setValue(this.plugin.settings.centerCursorEditingRadius)
                     .setLimits(0, 100, 1)
                     .setDynamicTooltip()
                     .onChange(async (value) => {
-                        this.plugin.settings.centerCursorEditingDistance = value;
+                        this.plugin.settings.centerCursorEditingRadius = value;
                         await this.plugin.saveSettings();
                     })
                 );
@@ -519,13 +683,64 @@ class ScrollingSettingTab extends PluginSettingTab {
                 .setDesc(createFragment(frag => {
                     frag.createDiv({}, div => div.innerHTML =
                         "Also apply this feature when the text cursor is moved with the mouse.<br>" +
-                        "Recommended to keep disabled to avoid unexpected scrolling while using the mouse to reposition the cursor."
+                        "Scrolling is triggered when you lift the mouse."
                     );
                 }))
                 .addToggle(toggle => toggle
-                    .setValue(this.plugin.settings.center_cursor_enable_mouse)
+                    .setValue(this.plugin.settings.centerCursorEnableMouse)
                     .onChange(async (value) => {
-                        this.plugin.settings.center_cursor_enable_mouse = value;
+                        this.plugin.settings.centerCursorEnableMouse = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
+            if (this.plugin.settings.centerCursorEnableMouse) {
+                new Setting(containerEl)
+                    .setName("Invoke on selection with mouse.")
+                    .setDesc(createFragment(frag => {
+                        frag.createDiv({}, div => div.innerHTML =
+                            "Also trigger, when the mouse has selected text."
+                        );
+                    }))
+                    .addToggle(toggle => toggle
+                        .setValue(this.plugin.settings.centerCursorEnableMouseSelect)
+                        .onChange(async (value) => {
+                            this.plugin.settings.centerCursorEnableMouseSelect = value;
+                            await this.plugin.saveSettings();
+                        })
+                    );
+
+            }
+
+            new Setting(containerEl)
+                .setName("Dynamic animations")
+                .setDesc(createFragment(frag => {
+                    frag.createDiv({}, div => div.innerHTML =
+                        "Skip animation frames if lots of scroll events occur.<br>" +
+                        "Should make scrolling with pressed arrow keys/vim motions a lot smoother."
+                    );
+                }))
+                .addToggle(toggle => toggle
+                    .setValue(this.plugin.settings.centerCursorDynamicAnimation)
+                    .onChange(async (value) => {
+                        this.plugin.settings.centerCursorDynamicAnimation = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
+            new Setting(containerEl)
+                .setName("Alternative effect: Scroll by whole pages")
+                .setDesc(createFragment(frag => {
+                    frag.createDiv({}, div => div.innerHTML =
+                        "This inverts the above options to reduce overall scrolling, by scrolling by whole pages.<br>" +
+                        "Best paired with high center radius and longer animation.<br>" +
+                        "Low values of center radius might appear buggy."
+                    );
+                }))
+                .addToggle(toggle => toggle
+                    .setValue(this.plugin.settings.centerCursorInvert)
+                    .onChange(async (value) => {
+                        this.plugin.settings.centerCursorInvert = value;
                         await this.plugin.saveSettings();
                     })
                 );
