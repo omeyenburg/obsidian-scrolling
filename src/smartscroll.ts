@@ -3,11 +3,14 @@ import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import type { default as ScrollingPlugin } from "./main";
 
-export class AutoScroll {
+export class SmartScroll {
     private plugin: ScrollingPlugin;
-    private recentEdit: boolean = false;
-    private recentMouseUp: boolean = false;
-    private centeringScrollIntensity: number = 0;
+
+    private recentEdit = false;
+    private recentMouseUp = false;
+    private scrollIntensity = 0;
+    private scrollLast = 0;
+    private animationFrame: number;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -20,29 +23,30 @@ export class AutoScroll {
         plugin.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
     }
 
-    keyHandler() {
+    private keyHandler(): void {
         this.recentMouseUp = false;
     }
 
-    mouseUpHandler() {
+    private mouseUpHandler(): void {
         this.recentMouseUp = true;
 
         // recentMouseUp will be reset either when a key is pressed or 100 ms pass.
-        // This timeout is needed, because the keydown event is not reliable,
-        // in normal mode of vim, keydown events are pretty much inaccessible.
+        // This timeout is needed, because the keydown event is not reliable:
+        // In normal mode of vim, keydown events are pretty much inaccessible.
         // Already wasted too much time with this.
         setTimeout(() => {
             this.recentMouseUp = false;
         }, 100);
     }
 
-    editHandler(editor: Editor) {
+    private editHandler(editor: Editor): void {
         this.recentEdit = true; // Will be reset by cursorHandler
         this.invokeScroll(editor);
     }
 
-    cursorHandler(update: ViewUpdate) {
-        // This checks if this update was caused by a mouse down event.
+    private cursorHandler(update: ViewUpdate): void {
+        // This checks if this update was caused by a mouse down event,
+        // but can't detect mouse up.
         let mouseDown = false;
         for (const tr of update.transactions) {
             const event = tr.annotation(Transaction.userEvent);
@@ -57,7 +61,7 @@ export class AutoScroll {
             return;
         }
 
-        // Only procceed if its a cursor event.
+        // Only proceed if its a cursor event
         if (!update.selectionSet) return;
 
         // Always cancel if event was caused by mouse down/movement.
@@ -68,55 +72,55 @@ export class AutoScroll {
         if (!editor) return;
 
         // Also cancel if mouse up, unless this setting allows it.
-        if (!this.plugin.settings.centerCursorEnableMouseSelect && editor.somethingSelected())
+        if (!this.plugin.settings.smartScrollEnableSelection && editor.somethingSelected())
             return;
-        if (this.recentMouseUp && !this.plugin.settings.centerCursorEnableMouse) return;
+        if (this.recentMouseUp && !this.plugin.settings.smartScrollEnableMouse) return;
 
         this.invokeScroll(editor);
     }
 
-    private centeringLastTime: number = 0;
-    calculateScrollIntensity() {
-        if (!this.plugin.settings.centerCursorDynamicAnimation) return;
+    private calculateScrollIntensity(): void {
+        if (!this.plugin.settings.smartScrollDynamicAnimation) return;
+
         const decayRate = 0.02;
         const time = performance.now();
-        const elapsed = time - this.centeringLastTime;
-        this.centeringLastTime = time;
-        this.centeringScrollIntensity =
-            Math.max(0, this.centeringScrollIntensity - elapsed * decayRate) + 1;
+        const elapsed = time - this.scrollLast;
+
+        this.scrollLast = time;
+        this.scrollIntensity = Math.max(0, this.scrollIntensity - elapsed * decayRate) + 1;
     }
 
-    private centeringTimeout: number;
-    invokeScroll(editor: Editor) {
-        if (!this.plugin.settings.centerCursorEnabled) return;
+    private invokeScroll(editor: Editor): void {
+        if (this.plugin.settings.smartScrollMode === "disabled") return;
 
         let centerRadius;
         let smoothness;
         if (this.recentEdit) {
-            centerRadius = this.plugin.settings.centerCursorEditingRadius;
-            smoothness = this.plugin.settings.centerCursorEditingSmoothness;
+            centerRadius = this.plugin.settings.smartScrollEditRadius;
+            smoothness = this.plugin.settings.smartScrollEditSmoothness;
         } else {
-            centerRadius = this.plugin.settings.centerCursorMovingDistance;
-            smoothness = this.plugin.settings.centerCursorMovingSmoothness;
+            centerRadius = this.plugin.settings.smartScrollMoveRadius;
+            smoothness = this.plugin.settings.smartScrollMoveSmoothness;
         }
 
         // Invert the scroll effect
         let invertCenteringScroll = 1;
-        if (this.plugin.settings.centerCursorInvert) {
+        if (this.plugin.settings.smartScrollMode === "page-jump") {
             invertCenteringScroll = -1;
         }
 
-        // If scrolling fast, skip animation steps.
+        // If scrolling fast, skip animation steps
         // (Only if not scrolling inverted and scrolling without edit (otherwise run later))
-        if (!this.plugin.settings.centerCursorInvert && !this.recentEdit) {
+        if (this.plugin.settings.smartScrollMode === "follow-cursor" && !this.recentEdit) {
             this.calculateScrollIntensity();
         }
 
-        // Get cursor position. (Specific to CodeMirror 6)
+        // Get cursor position (CodeMirror 6)
         const cursor_as_offset = editor.posToOffset(editor.getCursor());
         const cursor =
             (editor as any).cm.coordsAtPos?.(cursor_as_offset) ??
             (editor as any).coordsAtPos(cursor_as_offset);
+
         const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
         const cursorVerticalPosition = cursor.top + editor.cm.defaultLineHeight - viewOffset;
 
@@ -151,27 +155,28 @@ export class AutoScroll {
         // Can't scroll by fractions, so return early.
         if (Math.abs(distance) < 1) return;
 
-        // If scrolling fast, skip animation steps.
+        // Calculate scroll intensity to skip animation steps.
         if (
-            this.plugin.settings.centerCursorDynamicAnimation &&
-            !this.plugin.settings.centerCursorInvert &&
+            this.plugin.settings.smartScrollDynamicAnimation &&
+            this.plugin.settings.smartScrollMode === "follow-cursor" &&
             this.recentEdit
         ) {
             this.calculateScrollIntensity();
         }
 
-        cancelAnimationFrame(this.centeringTimeout);
+        cancelAnimationFrame(this.animationFrame);
 
-        // let steps = Math.max(1, Math.round(2 + 4 * smoothness - this.centeringScrollIntensity ** 0.5));
-        let steps = Math.round(1 + 4 * smoothness);
-        if (!this.plugin.settings.centerCursorInvert && this.centeringScrollIntensity > 5)
-            steps = 1;
+        // let steps = Math.max(1, Math.round(2 + 4 * smoothness - this.scrollIntensity ** 0.5));
+        let steps = Math.round(1 + smoothness / 5);
+
+        // If scrolling fast, skip animation steps.
+        if (this.plugin.settings.smartScrollMode === "follow-cursor" && this.scrollIntensity > 5) steps = 1;
 
         const animate = (editor: Editor, dest: number, step_size: number, step: number) => {
             if (!step) return;
 
             editor.scrollTo(null, dest - step_size * (step - 1));
-            this.centeringTimeout = requestAnimationFrame(() =>
+            this.animationFrame = requestAnimationFrame(() =>
                 animate(editor, dest, step_size, step - 1),
             );
         };

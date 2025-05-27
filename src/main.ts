@@ -1,5 +1,5 @@
 import { Plugin } from "obsidian";
-import { AutoScroll } from "./autoscroll";
+import { SmartScroll } from "./smartscroll";
 import { MouseScroll } from "./mousescroll";
 import { Scrollbar } from "./scrollbar";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "./settings";
@@ -12,7 +12,7 @@ export default class ScrollingPlugin extends Plugin {
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this));
 
-        new AutoScroll(this);
+        new SmartScroll(this);
         new MouseScroll(this);
         this.scrollbar = new Scrollbar(this);
 

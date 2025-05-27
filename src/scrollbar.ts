@@ -8,7 +8,7 @@ export class Scrollbar {
         this.updateStyle();
     }
 
-    updateStyle() {
+    updateStyle(): void {
         this.removeStyle();
 
         const style = document.createElement("style");
@@ -25,6 +25,7 @@ export class Scrollbar {
             color = "transparent";
         }
 
+        // Default width of Obsidian appears to be 12px.
         const width = this.plugin.settings.scrollbarWidth;
         if (width == 0) {
             display = "none";
@@ -66,7 +67,7 @@ export class Scrollbar {
         document.head.appendChild(style);
     }
 
-    removeStyle() {
+    removeStyle(): void {
         document.getElementById("scrolling-scrollbar-style")?.remove();
     }
 }
