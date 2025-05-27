@@ -3,9 +3,28 @@ import type { default as ScrollingPlugin } from "./main";
 export class Scrollbar {
     plugin: ScrollingPlugin;
 
+    private scrolling = false;
+    private scrollTimeout: NodeJS.Timeout;
+
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
         this.updateStyle();
+
+        plugin.registerDomEvent(document, "wheel", this.scrollHandler.bind(this));
+    }
+
+    private scrollHandler(): void {
+        clearTimeout(this.scrollTimeout);
+
+        if (!this.scrolling) {
+            this.scrolling = true;
+            this.updateStyle();
+        }
+
+        this.scrollTimeout = setTimeout(() => {
+            this.scrolling = false;
+            this.updateStyle();
+        }, 500);
     }
 
     updateStyle(): void {
@@ -21,7 +40,7 @@ export class Scrollbar {
         const visibility = this.plugin.settings.scrollbarVisibility;
         if (visibility == "hide") {
             display = "none";
-        } else if (visibility == "scroll") {
+        } else if (visibility == "scroll" && !this.scrolling) {
             color = "transparent";
         }
 
@@ -45,6 +64,7 @@ export class Scrollbar {
   ${color !== undefined ? `background-color: ${color} !important;` : ""}
 }
 `;
+
         } else {
             style.textContent = `
 .markdown-source-view,
