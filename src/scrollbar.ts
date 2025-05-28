@@ -18,14 +18,12 @@ export class Scrollbar {
             plugin.app.workspace.on("active-leaf-change", this.attachScrollHandler.bind(this)),
         );
 
-        this.attachScrollHandler(plugin.app.workspace.getLeaf());
+        this.attachScrollHandler();
     }
 
-    private attachScrollHandler(leaf: WorkspaceLeaf | null) {
-        if (!leaf) return;
-
-        const view = leaf.view;
-        if (!(view instanceof MarkdownView)) return;
+    private attachScrollHandler() {
+        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return;
 
         setTimeout(() => {
             const scroller =
