@@ -32,10 +32,7 @@ export class MouseScroll {
                 el.scrollHeight > el.clientHeight;
 
             if (allowsScrollY) {
-                var delta = event.deltaY;
-                if (event.deltaMode == event.DOM_DELTA_LINE) {
-                    delta *= 20;
-                }
+                const delta = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
 
                 if (this.plugin.settings.touchpadEnabled && this.isTouchpad(event)) {
                     this.scrollWithTouchpad(el, delta);
