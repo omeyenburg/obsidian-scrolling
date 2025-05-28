@@ -3,10 +3,10 @@ import type { default as ScrollingPlugin } from "./main";
 export class MouseScroll {
     private plugin: ScrollingPlugin;
 
-    private trackpadLastUse = 0;
-    private trackpadFriction = 0;
-    private trackpadVelocity = 0;
-    private trackpadScrolling = false;
+    private touchpadLastUse = 0;
+    private touchpadFriction = 0;
+    private touchpadVelocity = 0;
+    private touchpadScrolling = false;
     private mouseLastUse = 0;
     private mouseTarget: number;
     private mouseAnimationFrame: number;
@@ -20,7 +20,7 @@ export class MouseScroll {
     }
 
     private wheelHandler(event: WheelEvent): void {
-        if (!this.plugin.settings.mouseScrollEnabled) return;
+        if (!this.plugin.settings.mouseEnabled) return;
         if (!event.deltaY) return;
 
         let el: HTMLElement | null = event.target as HTMLElement;
@@ -37,8 +37,8 @@ export class MouseScroll {
                     delta *= 20;
                 }
 
-                if (this.isTrackpad(event)) {
-                    this.scrollWithTrackpad(el, delta);
+                if (this.isTouchpad(event)) {
+                    this.scrollWithTouchpad(el, delta);
                 } else {
                     this.scrollWithMouse(el, delta);
                 }
@@ -51,9 +51,9 @@ export class MouseScroll {
         }
     }
 
-    private isTrackpad(event: WheelEvent): boolean {
+    private isTouchpad(event: WheelEvent): boolean {
         if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
-            this.trackpadLastUse = 0;
+            this.touchpadLastUse = 0;
             return false;
         }
 
@@ -61,7 +61,7 @@ export class MouseScroll {
         const commonDeltas = [120, 197.18010794176823];
         for (const delta of commonDeltas) {
             if ((event.deltaY / delta) % 1 == 0) {
-                this.trackpadLastUse = 0;
+                this.touchpadLastUse = 0;
                 return false;
             }
         }
@@ -70,37 +70,39 @@ export class MouseScroll {
 
         // Movement on both axes
         if (event.deltaX !== 0 && event.deltaY !== 0) {
-            this.trackpadLastUse = now;
+            this.touchpadLastUse = now;
             return true;
         }
 
         // Small, fractional, non-zero delta
         if (event.deltaY % 1 !== 0 && Math.abs(event.deltaY) < 50) {
-            this.trackpadLastUse = now;
+            this.touchpadLastUse = now;
             return true;
         }
 
         // Grace period
-        if (now - this.trackpadLastUse < 1000) {
-            this.trackpadLastUse = now;
+        if (now - this.touchpadLastUse < 1000) {
+            this.touchpadLastUse = now;
             return true;
         }
 
         return false;
     }
 
-    // Really good approximation of the default scrolling in Obsidian with duration 150.
-    private scrollWithMouse(el: HTMLElement, change: number): void {
+    // Really good approximation of the default scrolling in Obsidian.
+    // Defaults: smoothness=150, speed=1
+    private scrollWithMouse(el: HTMLElement, delta: number): void {
         if (!el) return;
         cancelAnimationFrame(this.mouseAnimationFrame);
 
-        const duration = 150;
+        const smoothness = this.plugin.settings.mouseSmoothness;
+        const speed = this.plugin.settings.mouseSpeed / 50;
+        const invert = this.plugin.settings.mouseInvert ? -1 : 1;
+
+        const change = delta * speed * invert;
+
         const startTime = performance.now();
-        if (
-            this.mouseTarget &&
-            this.mouseLastUse &&
-            startTime - this.mouseLastUse < duration
-        ) {
+        if (this.mouseTarget && this.mouseLastUse && startTime - this.mouseLastUse < smoothness) {
             el.scrollTop = this.mouseTarget;
         }
         this.mouseLastUse = startTime;
@@ -112,7 +114,7 @@ export class MouseScroll {
 
         const animateScroll = (now: number) => {
             now = performance.now();
-            let t = Math.min(1, (now - startTime) / duration);
+            let t = Math.min(1, (now - startTime) / smoothness);
             t = easeOut(t);
 
             el.scrollTop = start + change * t;
@@ -127,39 +129,43 @@ export class MouseScroll {
         this.mouseAnimationFrame = requestAnimationFrame(animateScroll);
     }
 
-    private scrollWithTrackpad(el: HTMLElement, change: number): void {
-        const defaultFriction = 0.75;
+    // Similar to touchpad scrolling in obsidian.
+    // Defaults: smoothness=0.75, speed=0.25, frictionThreshold=20
+    private scrollWithTouchpad(el: HTMLElement, change: number): void {
+        const smoothness = this.plugin.settings.touchpadSmoothness / 100;
+        const speed = this.plugin.settings.touchpadSpeed / 200;
+        const frictionThreshold = this.plugin.settings.touchpadFrictionThreshold;
+        const invert = this.plugin.settings.mouseInvert ? -1 : 1;
+
         const maxFriction = 0.98;
-        const fullFrictionThreshold = 20;
-        const multiplier = 0.25;
         const minVelocity = 0.1;
 
-        if (this.trackpadVelocity * change < 0) {
-            this.trackpadScrolling = false;
+        if (this.touchpadVelocity * change < 0) {
+            this.touchpadScrolling = false;
         }
 
-        this.trackpadVelocity += change * multiplier;
+        this.touchpadVelocity += change * speed * invert;
 
         const animate = () => {
-            if (Math.abs(this.trackpadVelocity) > minVelocity) {
-                el.scrollTop += this.trackpadVelocity;
-                this.trackpadVelocity *= this.trackpadFriction;
-                this.trackpadFriction = Math.max(
+            if (Math.abs(this.touchpadVelocity) > minVelocity) {
+                el.scrollTop += this.touchpadVelocity;
+                this.touchpadVelocity *= this.touchpadFriction;
+                this.touchpadFriction = Math.max(
                     0,
-                    Math.min(maxFriction, this.trackpadFriction + 0.05),
+                    Math.min(maxFriction, this.touchpadFriction + 0.05),
                 );
                 requestAnimationFrame(animate);
             } else {
-                this.trackpadScrolling = false;
-                this.trackpadVelocity = 0;
+                this.touchpadScrolling = false;
+                this.touchpadVelocity = 0;
             }
         };
 
-        this.trackpadFriction =
-            Math.min(1, (Math.abs(change) / fullFrictionThreshold) ** 3) * defaultFriction;
+        this.touchpadFriction =
+            Math.min(1, (Math.abs(change) / frictionThreshold) ** 3) * smoothness;
 
-        if (!this.trackpadScrolling) {
-            this.trackpadScrolling = true;
+        if (!this.touchpadScrolling) {
+            this.touchpadScrolling = true;
             animate();
         }
     }

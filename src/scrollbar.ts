@@ -64,7 +64,6 @@ export class Scrollbar {
   ${color !== undefined ? `background-color: ${color} !important;` : ""}
 }
 `;
-
         } else {
             style.textContent = `
 .markdown-source-view,
