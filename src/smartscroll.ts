@@ -10,6 +10,7 @@ export class SmartScroll {
     private recentMouseUp = false;
     private scrollIntensity = 0;
     private scrollLast = 0;
+    private lastLine = 0;
     private animationFrame: number;
 
     private readonly intesityDecayRate = 0.01;
@@ -42,9 +43,23 @@ export class SmartScroll {
         }, 100);
     }
 
+    private getScrollDirection(editor: Editor): -1 | 0 | 1 {
+        const lastLine = this.lastLine;
+        this.lastLine = editor.getCursor().line;
+
+        if (lastLine < this.lastLine) {
+            return 1;
+        } else if (lastLine > this.lastLine) {
+            return -1;
+        }
+        return 0;
+    }
+
     private editHandler(editor: Editor): void {
         this.recentEdit = true; // Will be reset by cursorHandler
-        this.invokeScroll(editor);
+
+        const scrollDirection = this.getScrollDirection(editor);
+        this.invokeScroll(editor, scrollDirection);
     }
 
     private cursorHandler(update: ViewUpdate): void {
@@ -74,11 +89,13 @@ export class SmartScroll {
         const editor = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
         if (!editor) return;
 
+        const scrollDirection = this.getScrollDirection(editor);
+
         // Also cancel if mouse up, unless this setting allows it.
         if (!this.plugin.settings.smartScrollEnableSelection && editor.somethingSelected()) return;
         if (this.recentMouseUp && !this.plugin.settings.smartScrollEnableMouse) return;
 
-        this.invokeScroll(editor);
+        this.invokeScroll(editor, scrollDirection);
     }
 
     private calculateScrollIntensity(): void {
@@ -92,7 +109,7 @@ export class SmartScroll {
             Math.max(0, this.scrollIntensity - elapsed * this.intesityDecayRate) + 1;
     }
 
-    private invokeScroll(editor: Editor): void {
+    private invokeScroll(editor: Editor, scrollDirection: number): void {
         const mode = this.plugin.settings.smartScrollMode;
         if (mode === "disabled") return;
 
@@ -120,8 +137,10 @@ export class SmartScroll {
             (editor as any).cm.coordsAtPos?.(cursor_as_offset) ??
             (editor as any).coordsAtPos(cursor_as_offset);
 
+        const lineHeight = (editor as any).cm.defaultLineHeight;
+
         const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
-        const cursorVerticalPosition = cursor.top + editor.cm.defaultLineHeight - viewOffset;
+        const cursorVerticalPosition = cursor.top + lineHeight - viewOffset;
 
         const scrollInfo = editor.getScrollInfo() as { top: number; left: number; height: number };
         const currentVerticalPosition = scrollInfo.top;
@@ -135,10 +154,16 @@ export class SmartScroll {
 
         let goal;
         let distance;
-        if (centerOffset < -radius || cursor.top < viewOffset) {
+        if (
+            centerOffset < -radius ||
+            (mode === "page-jump" && scrollDirection === -1 && cursor.top < viewOffset + lineHeight)
+        ) {
             goal = currentVerticalPosition + centerOffset + radius * invert;
             distance = centerOffset + radius * invert;
-        } else if (centerOffset > radius || cursor.top > scrollInfo.height + viewOffset) {
+        } else if (
+            centerOffset > radius ||
+            (mode === "page-jump" && scrollDirection === 1 && cursor.top > scrollInfo.height + viewOffset - lineHeight)
+        ) {
             goal = currentVerticalPosition + centerOffset - radius * invert;
             if (mode === "page-jump" && radiusPercent === 100) {
                 goal -= editor.cm.defaultLineHeight;
