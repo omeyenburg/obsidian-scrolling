@@ -1,5 +1,5 @@
 import type { default as ScrollingPlugin } from "./main";
-import { Platform } from "obsidian";
+import { Platform, MarkdownView, WorkspaceLeaf } from "obsidian";
 
 export class Scrollbar {
     plugin: ScrollingPlugin;
@@ -14,7 +14,29 @@ export class Scrollbar {
         this.plugin = plugin;
         this.updateStyle();
 
-        plugin.registerDomEvent(document, "wheel", this.scrollHandler.bind(this));
+        plugin.registerEvent(
+            plugin.app.workspace.on("active-leaf-change", this.attachScrollHandler.bind(this)),
+        );
+
+        this.attachScrollHandler(plugin.app.workspace.getLeaf());
+    }
+
+    private attachScrollHandler(leaf: WorkspaceLeaf | null) {
+        if (!leaf) return;
+
+        const view = leaf.view;
+        if (!(view instanceof MarkdownView)) return;
+
+        const scroller =
+            view.contentEl.querySelector(".cm-scroller") ||
+            view.contentEl.querySelector(".markdown-preview-view");
+        if (!scroller) return;
+
+        this.plugin.registerDomEvent(
+            scroller as HTMLElement,
+            "scroll",
+            this.scrollHandler.bind(this),
+        );
     }
 
     private scrollHandler(): void {
