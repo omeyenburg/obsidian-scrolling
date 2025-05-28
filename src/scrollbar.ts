@@ -1,4 +1,5 @@
 import type { default as ScrollingPlugin } from "./main";
+import { Platform } from "obsidian";
 
 export class Scrollbar {
     plugin: ScrollingPlugin;
@@ -7,6 +8,9 @@ export class Scrollbar {
     private scrollTimeout: NodeJS.Timeout;
 
     constructor(plugin: ScrollingPlugin) {
+        // Styling scrollbars doesnt work on MacOS.
+        if (Platform.isMacOS) return;
+
         this.plugin = plugin;
         this.updateStyle();
 
@@ -21,6 +25,7 @@ export class Scrollbar {
             this.updateStyle();
         }
 
+        // Hide scrollbar again after 500 ms.
         this.scrollTimeout = setTimeout(() => {
             this.scrolling = false;
             this.updateStyle();
@@ -28,6 +33,9 @@ export class Scrollbar {
     }
 
     updateStyle(): void {
+        // Styling scrollbars doesnt work on MacOS.
+        if (Platform.isMacOS) return;
+
         this.removeStyle();
 
         const style = document.createElement("style");
@@ -45,42 +53,41 @@ export class Scrollbar {
         }
 
         // Default width of Obsidian appears to be 12px.
-        const width = this.plugin.settings.scrollbarWidth;
+        // Only linux supports this option.
+        const width = Platform.isLinux ? this.plugin.settings.scrollbarWidth : 0;
         if (width == 0) {
             display = "none";
         }
 
         if (global) {
-            style.textContent = `
-* {
-  ${width > 0 ? `scrollbar-width: ${width}px !important;` : ""}
-  ${display !== undefined ? `-ms-overflow-style: ${display};` : ""}
-}
-*::-webkit-scrollbar {
-  ${width > 0 ? `width: ${width}px !important;` : ""}
-  ${display !== undefined ? `display: ${display};` : ""}
-}
-*::-webkit-scrollbar-thumb {
-  ${color !== undefined ? `background-color: ${color} !important;` : ""}
-}
-`;
+            style.textContent = `\
+* {\
+  ${width > 0 ? `scrollbar-width: ${width}px !important;` : ""}\
+  ${display !== undefined ? `-ms-overflow-style: ${display};` : ""}\
+}\
+*::-webkit-scrollbar {\
+  ${width > 0 ? `width: ${width}px !important;` : ""}\
+  ${display !== undefined ? `display: ${display};` : ""}\
+}\
+*::-webkit-scrollbar-thumb {\
+  ${color !== undefined ? `background-color: ${color} !important;` : ""}\
+}`;
         } else {
-            style.textContent = `
-.markdown-source-view,
-.cm-scroller {
-  ${width > 0 ? `scrollbar-width: ${width}px !important;` : ""}
-  ${display !== undefined ? `-ms-overflow-style: ${display};` : ""}
-}
-.markdown-source-view::-webkit-scrollbar,
-.cm-scroller::-webkit-scrollbar {
-  ${width > 0 ? `width: ${width}px !important;` : ""}
-  ${display !== undefined ? `display: ${display};` : ""}
-}
-.markdown-source-view::-webkit-scrollbar-thumb,
-.cm-scroller::-webkit-scrollbar-thumb {
-  ${color !== undefined ? `background-color: ${color} !important;` : ""}
-}
-`;
+            style.textContent = `\
+.markdown-source-view,\
+.cm-scroller {\
+  ${width > 0 ? `scrollbar-width: ${width}px !important;` : ""}\
+  ${display !== undefined ? `-ms-overflow-style: ${display};` : ""}\
+}\
+.markdown-source-view::-webkit-scrollbar,\
+.cm-scroller::-webkit-scrollbar {\
+  ${width > 0 ? `width: ${width}px !important;` : ""}\
+  ${display !== undefined ? `display: ${display};` : ""}\
+}\
+.markdown-source-view::-webkit-scrollbar-thumb,\
+.cm-scroller::-webkit-scrollbar-thumb {\
+  ${color !== undefined ? `background-color: ${color} !important;` : ""}\
+}`;
         }
 
         document.head.appendChild(style);

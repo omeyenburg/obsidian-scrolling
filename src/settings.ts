@@ -282,13 +282,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
         }
 
-        containerEl.createEl("br");
-        if (Platform.isMacOS) {
-            new Setting(containerEl)
-                .setName("Scrollbar Appearance")
-                .setDesc("Unsupported on MacOS.")
-                .setHeading();
-        } else {
+        if (!Platform.isMacOS) {
+            containerEl.createEl("br");
             new Setting(containerEl).setName("Scrollbar Appearance").setHeading();
 
             new Setting(containerEl)
@@ -334,7 +329,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         }),
                 );
 
-            if (this.plugin.settings.scrollbarVisibility !== "hide") {
+            if (Platform.isLinux && this.plugin.settings.scrollbarVisibility !== "hide") {
                 new Setting(containerEl)
                     .setName("Scrollbar thickness")
                     .setDesc("Width in pixels.")
