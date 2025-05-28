@@ -69,13 +69,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
             .setName("Mode")
             .setDesc(
                 createFragment((frag) => {
-                    frag.createDiv(
-                        {},
-                        (div) =>
-                            (div.innerHTML =
-                                "Follow Cursor: Smoothly keeps cursor visible (like Vim's <code>scrolloff</code>).<br>" +
-                                "Page Jumping: Reduces scrolling by jumping whole pages at screen edges."),
-                    );
+                    const div = frag.createDiv();
+
+                    div.createEl("span", {
+                        text: "Follow Cursor: Smoothly keeps cursor visible (like Vim's scrolloff).",
+                    });
+                    div.createEl("br");
+                    div.createEl("span", {
+                        text: "Page Jumping: Reduces scrolling by jumping whole pages at screen edges.",
+                    });
                 }),
             )
             .addDropdown((dropdown) =>
@@ -96,16 +98,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setName("Scroll zone radius when editing")
                 .setDesc(
                     createFragment((frag) => {
-                        frag.createDiv(
-                            {},
-                            (div) =>
-                                (div.innerHTML =
-                                    this.plugin.settings.smartScrollMode === "follow-cursor"
-                                        ? "Defines how far the cursor can move from the center before scrolling.<br>" +
-                                          "0% keeps the cursor perfectly centered, while 100% effectively disables this feature."
-                                        : "Defines how far the cursor can move before jumping.<br>" +
-                                          "Lower values might appear buggy."),
-                        );
+                        const div = frag.createDiv();
+
+                        if (this.plugin.settings.smartScrollMode === "follow-cursor") {
+                            div.createEl("span", {
+                                text: "Defines how far the cursor can move from the center before scrolling.",
+                            });
+                            div.createEl("br");
+                            div.createEl("span", {
+                                text: "0% keeps the cursor perfectly centered, while 100% effectively disables this feature.",
+                            });
+                        } else {
+                            div.createEl("span", {
+                                text: "Defines how far the cursor can move before jumping.",
+                            });
+                            div.createEl("br");
+                            div.createEl("span", { text: "Lower values might appear buggy." });
+                        }
                     }),
                 )
                 .addExtraButton((button) => {
@@ -161,16 +170,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setName("Scroll zone radius when moving cursor")
                 .setDesc(
                     createFragment((frag) => {
-                        frag.createDiv(
-                            {},
-                            (div) =>
-                                (div.innerHTML =
-                                    this.plugin.settings.smartScrollMode === "follow-cursor"
-                                        ? "Defines how far you can move the cursor from the center before scrolling.<br>" +
-                                          "0% keeps the cursor perfectly centered, while 100% effectively disables this feature."
-                                        : "Defines how far you can move the cursor before jumping.<br>" +
-                                          "Lower values might appear buggy."),
-                        );
+                        const div = frag.createDiv();
+
+                        if (this.plugin.settings.smartScrollMode === "follow-cursor") {
+                            div.createEl("span", {
+                                text: "Defines how far you can move the cursor from the center before scrolling.",
+                            });
+                            div.createEl("br");
+                            div.createEl("span", {
+                                text: "0% keeps the cursor perfectly centered, while 100% effectively disables this feature.",
+                            });
+                        } else {
+                            div.createEl("span", {
+                                text: "Defines how far you can move the cursor before jumping.",
+                            });
+                            div.createEl("br");
+                            div.createEl("span", { text: "Lower values might appear buggy." });
+                        }
                     }),
                 )
                 .addExtraButton((button) => {
@@ -226,13 +242,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setName("Invoke on mouse-driven cursor movement")
                 .setDesc(
                     createFragment((frag) => {
-                        frag.createDiv(
-                            {},
-                            (div) =>
-                                (div.innerHTML =
-                                    "Also apply this feature when the text cursor is moved with the mouse.<br>" +
-                                    "Scrolling is triggered when you lift the mouse."),
-                        );
+                        const div = frag.createDiv();
+
+                            div.createEl("span", {
+                                text: "Also apply this feature when the text cursor is moved with the mouse.",
+                            });
+                            div.createEl("br");
+                            div.createEl("span", {
+                                text: "Scrolling is triggered when you lift the mouse.",
+                            });
                     }),
                 )
                 .addToggle((toggle) =>
@@ -263,13 +281,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setName("Dynamic animations")
                 .setDesc(
                     createFragment((frag) => {
-                        frag.createDiv(
-                            {},
-                            (div) =>
-                                (div.innerHTML =
-                                    "Skip animation frames if lots of scroll events occur.<br>" +
-                                    "Should make scrolling with pressed arrow keys/vim motions much smoother."),
-                        );
+                        const div = frag.createDiv();
+
+                            div.createEl("span", {
+                                text: "Skip animation frames if lots of scroll events occur.",
+                            });
+                            div.createEl("br");
+                            div.createEl("span", {
+                                text: "Should make scrolling with pressed arrow keys/vim motions much smoother.",
+                            });
                     }),
                 )
                 .addToggle((toggle) =>
@@ -388,13 +408,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setName("Touchpad detection")
                 .setDesc(
                     createFragment((frag) => {
-                        frag.createDiv(
-                            {},
-                            (div) =>
-                                (div.innerHTML =
-                                    "Detect touchpad input to provide smoother scrolling.<br>" +
-                                    "Detection works reliably on most devices but may occasionally misidentify input type."),
-                        );
+                        const div = frag.createDiv();
+
+                        div.createEl("span", {
+                            text: "Detect touchpad input to provide smoother scrolling.",
+                        });
+                        div.createEl("br");
+                        div.createEl("span", {
+                            text: "Detection works reliably on most devices but may occasionally misidentify input type.",
+                        });
                     }),
                 )
                 .addToggle((toggle) =>
