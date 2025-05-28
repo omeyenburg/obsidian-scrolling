@@ -63,7 +63,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
-        new Setting(containerEl).setName("Smart Scrolling").setHeading();
+        new Setting(containerEl).setName("Smart scrolling").setHeading();
 
         new Setting(containerEl)
             .setName("Mode")
@@ -72,19 +72,19 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     const div = frag.createDiv();
 
                     div.createEl("span", {
-                        text: "Follow Cursor: Smoothly keeps cursor visible (like Vim's scrolloff).",
+                        text: "Follow cursor: Smoothly keeps cursor visible (like Vim's scrolloff).",
                     });
                     div.createEl("br");
                     div.createEl("span", {
-                        text: "Page Jumping: Reduces scrolling by jumping whole pages at screen edges.",
+                        text: "Page jumping: Reduces scrolling by jumping whole pages at screen edges.",
                     });
                 }),
             )
             .addDropdown((dropdown) =>
                 dropdown
                     .addOption("disabled", "Disabled")
-                    .addOption("follow-cursor", "Follow Cursor")
-                    .addOption("page-jump", "Page Jumping")
+                    .addOption("follow-cursor", "Follow cursor")
+                    .addOption("page-jump", "Page jumping")
                     .setValue(this.plugin.settings.smartScrollMode)
                     .onChange(async (value) => {
                         this.plugin.settings.smartScrollMode = value;
@@ -240,19 +240,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
             new Setting(containerEl)
                 .setName("Invoke on mouse-driven cursor movement")
-                .setDesc(
-                    createFragment((frag) => {
-                        const div = frag.createDiv();
-
-                            div.createEl("span", {
-                                text: "Also apply this feature when the text cursor is moved with the mouse.",
-                            });
-                            div.createEl("br");
-                            div.createEl("span", {
-                                text: "Scrolling is triggered when you lift the mouse.",
-                            });
-                    }),
-                )
+                .setDesc("Apply this feature when the text cursor is moved with the mouse.")
                 .addToggle((toggle) =>
                     toggle
                         .setValue(this.plugin.settings.smartScrollEnableMouse)
@@ -280,17 +268,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             new Setting(containerEl)
                 .setName("Dynamic animations")
                 .setDesc(
-                    createFragment((frag) => {
-                        const div = frag.createDiv();
-
-                            div.createEl("span", {
-                                text: "Skip animation frames if lots of scroll events occur.",
-                            });
-                            div.createEl("br");
-                            div.createEl("span", {
-                                text: "Should make scrolling with pressed arrow keys/vim motions much smoother.",
-                            });
-                    }),
+                    "Skip animation frames if lots of scroll events occur for smoother animations.",
                 )
                 .addToggle((toggle) =>
                     toggle
@@ -304,7 +282,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         if (!Platform.isMacOS) {
             containerEl.createEl("br");
-            new Setting(containerEl).setName("Scrollbar Appearance").setHeading();
+            new Setting(containerEl).setName("Scrollbar appearance").setHeading();
 
             new Setting(containerEl)
                 .setName("Apply to all scrollbars")
@@ -380,7 +358,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
 
         containerEl.createEl("br");
-        new Setting(containerEl).setName("Mouse/Touchpad Scrolling (Experimental)").setHeading();
+        new Setting(containerEl).setName("Mouse/Touchpad scrolling (Experimental)").setHeading();
 
         new Setting(containerEl)
             .setName("Enabled")
