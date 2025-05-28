@@ -37,7 +37,7 @@ export class MouseScroll {
                     delta *= 20;
                 }
 
-                if (this.isTouchpad(event)) {
+                if (this.plugin.settings.touchpadEnabled && this.isTouchpad(event)) {
                     this.scrollWithTouchpad(el, delta);
                 } else {
                     this.scrollWithMouse(el, delta);

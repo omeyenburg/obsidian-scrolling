@@ -20,6 +20,7 @@ export interface ScrollingPluginSettings {
     mouseSpeed: number;
     mouseSmoothness: number;
 
+    touchpadEnabled: boolean;
     touchpadSmoothness: number;
     touchpadFrictionThreshold: number;
     touchpadSpeed: number;
@@ -44,6 +45,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     mouseSpeed: 50,
     mouseSmoothness: 150,
 
+    touchpadEnabled: true,
     touchpadSmoothness: 75,
     touchpadFrictionThreshold: 20,
     touchpadSpeed: 50,
@@ -282,7 +284,10 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         containerEl.createEl("br");
         if (Platform.isMacOS) {
-            new Setting(containerEl).setName("Scrollbar Appearance").setDesc("Unsupported on MacOS.").setHeading();
+            new Setting(containerEl)
+                .setName("Scrollbar Appearance")
+                .setDesc("Unsupported on MacOS.")
+                .setHeading();
         } else {
             new Setting(containerEl).setName("Scrollbar Appearance").setHeading();
 
@@ -375,6 +380,39 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         if (this.plugin.settings.mouseEnabled) {
             new Setting(containerEl)
+                .setName("Invert scroll direction")
+                .setDesc("Reverses the scroll direction for both mouse and touchpad.")
+                .addToggle((toggle) =>
+                    toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
+                        this.plugin.settings.mouseInvert = value;
+                        await this.plugin.saveSettings();
+                    }),
+                );
+
+            new Setting(containerEl)
+                .setName("Touchpad detection")
+                .setDesc(
+                    createFragment((frag) => {
+                        frag.createDiv(
+                            {},
+                            (div) =>
+                                (div.innerHTML =
+                                    "Detect touchpad input to provide smoother scrolling.<br>" +
+                                    "Detection works reliably on most devices but may occasionally misidentify input type."),
+                        );
+                    }),
+                )
+                .addToggle((toggle) =>
+                    toggle
+                        .setValue(this.plugin.settings.touchpadEnabled)
+                        .onChange(async (value) => {
+                            this.plugin.settings.touchpadEnabled = value;
+                            this.display();
+                            await this.plugin.saveSettings();
+                        }),
+                );
+
+            new Setting(containerEl)
                 .setName("Mouse scroll speed")
                 .setDesc("Scroll speed multiplier for mouse wheel.")
                 .addExtraButton((button) => {
@@ -422,94 +460,85 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         }),
                 );
 
-            if (this.plugin.settings.mouseEnabled) {
-                new Setting(containerEl)
-                    .setName("Touchpad scroll speed")
-                    .setDesc("Adjusts scroll speed when using a touchpad.")
-                    .addExtraButton((button) => {
-                        button
-                            .setIcon("reset")
-                            .setTooltip("Restore default")
-                            .onClick(async () => {
-                                this.plugin.settings.touchpadSpeed = DEFAULT_SETTINGS.touchpadSpeed;
-                                this.display();
-                                await this.plugin.saveSettings();
-                            });
-                    })
-                    .addSlider((slider) =>
-                        slider
-                            .setValue(this.plugin.settings.touchpadSpeed)
-                            .setLimits(1, 100, 1)
-                            .setDynamicTooltip()
-                            .onChange(async (value) => {
-                                this.plugin.settings.touchpadSpeed = value;
-                                await this.plugin.saveSettings();
-                            }),
-                    );
+            if (this.plugin.settings.touchpadEnabled) {
+                if (this.plugin.settings.mouseEnabled) {
+                    new Setting(containerEl)
+                        .setName("Touchpad scroll speed")
+                        .setDesc("Adjusts scroll speed when using a touchpad.")
+                        .addExtraButton((button) => {
+                            button
+                                .setIcon("reset")
+                                .setTooltip("Restore default")
+                                .onClick(async () => {
+                                    this.plugin.settings.touchpadSpeed =
+                                        DEFAULT_SETTINGS.touchpadSpeed;
+                                    this.display();
+                                    await this.plugin.saveSettings();
+                                });
+                        })
+                        .addSlider((slider) =>
+                            slider
+                                .setValue(this.plugin.settings.touchpadSpeed)
+                                .setLimits(1, 100, 1)
+                                .setDynamicTooltip()
+                                .onChange(async (value) => {
+                                    this.plugin.settings.touchpadSpeed = value;
+                                    await this.plugin.saveSettings();
+                                }),
+                        );
 
-                new Setting(containerEl)
-                    .setName("Touchpad smoothness")
-                    .setDesc("Controls the smoothness of touchpad.")
-                    .addExtraButton((button) => {
-                        button
-                            .setIcon("reset")
-                            .setTooltip("Restore default")
-                            .onClick(async () => {
-                                this.plugin.settings.touchpadSmoothness =
-                                    DEFAULT_SETTINGS.touchpadSmoothness;
-                                this.display();
-                                await this.plugin.saveSettings();
-                            });
-                    })
-                    .addSlider((slider) =>
-                        slider
-                            .setValue(this.plugin.settings.touchpadSmoothness)
-                            .setLimits(0, 100, 1)
-                            .setDynamicTooltip()
-                            .onChange(async (value) => {
-                                this.plugin.settings.touchpadSmoothness = value;
-                                await this.plugin.saveSettings();
-                            }),
-                    );
+                    new Setting(containerEl)
+                        .setName("Touchpad smoothness")
+                        .setDesc("Controls the smoothness of touchpad.")
+                        .addExtraButton((button) => {
+                            button
+                                .setIcon("reset")
+                                .setTooltip("Restore default")
+                                .onClick(async () => {
+                                    this.plugin.settings.touchpadSmoothness =
+                                        DEFAULT_SETTINGS.touchpadSmoothness;
+                                    this.display();
+                                    await this.plugin.saveSettings();
+                                });
+                        })
+                        .addSlider((slider) =>
+                            slider
+                                .setValue(this.plugin.settings.touchpadSmoothness)
+                                .setLimits(0, 100, 1)
+                                .setDynamicTooltip()
+                                .onChange(async (value) => {
+                                    this.plugin.settings.touchpadSmoothness = value;
+                                    await this.plugin.saveSettings();
+                                }),
+                        );
 
-                new Setting(containerEl)
-                    .setName("Touchpad friction threshold")
-                    .setDesc(
-                        "Sets the minimum speed below which increased friction is applied for finer control.",
-                    )
-                    .addExtraButton((button) => {
-                        button
-                            .setIcon("reset")
-                            .setTooltip("Restore default")
-                            .onClick(async () => {
-                                this.plugin.settings.touchpadFrictionThreshold =
-                                    DEFAULT_SETTINGS.touchpadFrictionThreshold;
-                                this.display();
-                                await this.plugin.saveSettings();
-                            });
-                    })
-                    .addSlider((slider) =>
-                        slider
-                            .setValue(this.plugin.settings.touchpadFrictionThreshold)
-                            .setLimits(1, 100, 1)
-                            .setDynamicTooltip()
-                            .onChange(async (value) => {
-                                this.plugin.settings.touchpadFrictionThreshold = value;
-                                await this.plugin.saveSettings();
-                            }),
-                    );
-
-                new Setting(containerEl)
-                    .setName("Invert scroll direction")
-                    .setDesc("Reverses the scroll direction for both mouse and touchpad.")
-                    .addToggle((toggle) =>
-                        toggle
-                            .setValue(this.plugin.settings.mouseInvert)
-                            .onChange(async (value) => {
-                                this.plugin.settings.mouseInvert = value;
-                                await this.plugin.saveSettings();
-                            }),
-                    );
+                    new Setting(containerEl)
+                        .setName("Touchpad friction threshold")
+                        .setDesc(
+                            "Sets the minimum speed below which increased friction is applied for finer control.",
+                        )
+                        .addExtraButton((button) => {
+                            button
+                                .setIcon("reset")
+                                .setTooltip("Restore default")
+                                .onClick(async () => {
+                                    this.plugin.settings.touchpadFrictionThreshold =
+                                        DEFAULT_SETTINGS.touchpadFrictionThreshold;
+                                    this.display();
+                                    await this.plugin.saveSettings();
+                                });
+                        })
+                        .addSlider((slider) =>
+                            slider
+                                .setValue(this.plugin.settings.touchpadFrictionThreshold)
+                                .setLimits(1, 100, 1)
+                                .setDynamicTooltip()
+                                .onChange(async (value) => {
+                                    this.plugin.settings.touchpadFrictionThreshold = value;
+                                    await this.plugin.saveSettings();
+                                }),
+                        );
+                }
             }
         }
     }
