@@ -61,7 +61,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
-        new Setting(containerEl).setName("Smart Scrolling").setHeading();
+        containerEl.createEl("h2", { text: "Smart Scrolling" });
 
         new Setting(containerEl)
             .setName("Mode")
@@ -280,8 +280,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
         }
 
-        new Setting(containerEl);
-        new Setting(containerEl).setName("Scrollbar Appearance").setHeading();
+        containerEl.createEl("br");
+        containerEl.createEl("h2", { text: "Scrollbar Appearance" });
 
         new Setting(containerEl)
             .setName("Apply to all scrollbars")
@@ -350,8 +350,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
         }
 
-        new Setting(containerEl);
-        new Setting(containerEl).setName("Mouse/Touchpad Scrolling (Experimental)").setHeading();
+        containerEl.createEl("br");
+        containerEl.createEl("h2", { text: "Mouse/Touchpad Scrolling (Experimental)" });
 
         new Setting(containerEl)
             .setName("Enabled")
