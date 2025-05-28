@@ -53,8 +53,8 @@ export class Scrollbar {
         }
 
         // Default width of Obsidian appears to be 12px.
-        // Only linux supports this option.
-        const width = Platform.isLinux ? this.plugin.settings.scrollbarWidth : 0;
+        // Only linux supports this option, set to -1 to ignore width.
+        const width = Platform.isLinux ? this.plugin.settings.scrollbarWidth : -1;
         if (width == 0) {
             display = "none";
         }
