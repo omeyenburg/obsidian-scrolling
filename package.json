@@ -1,6 +1,6 @@
 {
   "name": "scrolling",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Improve scrolling and keep your cursor exactly where you want it.",
   "main": "main.js",
   "scripts": {
@@ -9,8 +9,9 @@
     "version": "node version-bump.mjs"
   },
   "keywords": [
+    "mouse",
     "scroll",
-    "navigation"
+    "touchpad"
   ],
   "author": "omeyenburg",
   "license": "MIT",
