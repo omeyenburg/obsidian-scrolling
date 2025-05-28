@@ -14,7 +14,7 @@ export class MouseScroll {
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
-        plugin.registerDomEvent(document, "wheel", (e: WheelEvent) => this.wheelHandler(e), {
+        plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
             passive: false,
         });
     }

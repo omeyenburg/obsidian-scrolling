@@ -156,13 +156,17 @@ export class SmartScroll {
         let distance;
         if (
             centerOffset < -radius ||
-            (mode === "page-jump" && scrollDirection === -1 && cursor.top < viewOffset + lineHeight)
+            (mode === "page-jump" &&
+                scrollDirection === -1 &&
+                cursor.top < viewOffset + lineHeight * 2)
         ) {
             goal = currentVerticalPosition + centerOffset + radius * invert;
             distance = centerOffset + radius * invert;
         } else if (
             centerOffset > radius ||
-            (mode === "page-jump" && scrollDirection === 1 && cursor.top > scrollInfo.height + viewOffset - lineHeight)
+            (mode === "page-jump" &&
+                scrollDirection === 1 &&
+                cursor.top > scrollInfo.height + viewOffset - lineHeight * 2)
         ) {
             goal = currentVerticalPosition + centerOffset - radius * invert;
             if (mode === "page-jump" && radiusPercent === 100) {
