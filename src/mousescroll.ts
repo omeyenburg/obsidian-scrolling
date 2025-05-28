@@ -95,7 +95,7 @@ export class MouseScroll {
         if (!el) return;
         cancelAnimationFrame(this.mouseAnimationFrame);
 
-        const smoothness = this.plugin.settings.mouseSmoothness;
+        const smoothness = this.plugin.settings.mouseSmoothness * 2;
         const speed = this.plugin.settings.mouseSpeed / 50;
         const invert = this.plugin.settings.mouseInvert ? -1 : 1;
 

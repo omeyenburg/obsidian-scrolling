@@ -43,7 +43,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     mouseEnabled: true,
     mouseInvert: false,
     mouseSpeed: 50,
-    mouseSmoothness: 150,
+    mouseSmoothness: 75,
 
     touchpadEnabled: true,
     touchpadSmoothness: 75,
