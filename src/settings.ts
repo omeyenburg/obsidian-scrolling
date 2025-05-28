@@ -1,4 +1,4 @@
-import { PluginSettingTab, Setting } from "obsidian";
+import { Platform, PluginSettingTab, Setting } from "obsidian";
 import type { default as ScrollingPlugin } from "./main";
 
 export interface ScrollingPluginSettings {
@@ -61,7 +61,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
-        containerEl.createEl("h2", { text: "Smart Scrolling" });
+        new Setting(containerEl).setName("Smart Scrolling").setHeading();
 
         new Setting(containerEl)
             .setName("Mode")
@@ -281,77 +281,86 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
 
         containerEl.createEl("br");
-        containerEl.createEl("h2", { text: "Scrollbar Appearance" });
+        if (Platform.isMacOS) {
+            new Setting(containerEl).setName("Scrollbar Appearance").setDesc("Unsupported on MacOS.").setHeading();
+        } else {
+            new Setting(containerEl).setName("Scrollbar Appearance").setHeading();
 
-        new Setting(containerEl)
-            .setName("Apply to all scrollbars")
-            .setDesc("Whether scrollbar settings apply to all scrollbars or only markdown files.")
-            .addToggle((toggle) =>
-                toggle.setValue(this.plugin.settings.scrollbarGlobal).onChange(async (value) => {
-                    this.plugin.settings.scrollbarGlobal = value;
-                    this.plugin.scrollbar.updateStyle();
-                    await this.plugin.saveSettings();
-                }),
-            );
-
-        new Setting(containerEl)
-            .setName("Scrollbar visibility")
-            .setDesc("When to show scrollbars.")
-            .addExtraButton((button) => {
-                button
-                    .setIcon("reset")
-                    .setTooltip("Restore default")
-                    .onClick(async () => {
-                        this.plugin.settings.scrollbarVisibility =
-                            DEFAULT_SETTINGS.scrollbarVisibility;
-                        this.plugin.scrollbar.updateStyle();
-                        await this.plugin.saveSettings();
-                    });
-            })
-            .addDropdown((dropdown) =>
-                dropdown
-                    .addOption("hide", "Always hide scrollbars")
-                    .addOption("scroll", "Show scrollbars while scrolling")
-                    .addOption("show", "Always show scrollbars")
-                    .setValue(this.plugin.settings.scrollbarVisibility)
-                    .onChange(async (value) => {
-                        this.plugin.settings.scrollbarVisibility = value;
-                        this.plugin.scrollbar.updateStyle();
-                        this.display();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-        if (this.plugin.settings.scrollbarVisibility !== "hide") {
             new Setting(containerEl)
-                .setName("Scrollbar thickness")
-                .setDesc("Width in pixels.")
+                .setName("Apply to all scrollbars")
+                .setDesc(
+                    "Whether scrollbar settings apply to all scrollbars or only markdown files.",
+                )
+                .addToggle((toggle) =>
+                    toggle
+                        .setValue(this.plugin.settings.scrollbarGlobal)
+                        .onChange(async (value) => {
+                            this.plugin.settings.scrollbarGlobal = value;
+                            this.plugin.scrollbar.updateStyle();
+                            await this.plugin.saveSettings();
+                        }),
+                );
+
+            new Setting(containerEl)
+                .setName("Scrollbar visibility")
+                .setDesc("When to show scrollbars.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
+                            this.plugin.settings.scrollbarVisibility =
+                                DEFAULT_SETTINGS.scrollbarVisibility;
                             this.plugin.scrollbar.updateStyle();
-                            this.display();
                             await this.plugin.saveSettings();
                         });
                 })
-                .addSlider((slider) =>
-                    slider
-                        .setValue(this.plugin.settings.scrollbarWidth)
-                        .setLimits(0, 30, 1)
-                        .setDynamicTooltip()
+                .addDropdown((dropdown) =>
+                    dropdown
+                        .addOption("hide", "Always hide scrollbars")
+                        .addOption("scroll", "Show scrollbars while scrolling")
+                        .addOption("show", "Always show scrollbars")
+                        .setValue(this.plugin.settings.scrollbarVisibility)
                         .onChange(async (value) => {
-                            this.plugin.settings.scrollbarWidth = value;
+                            this.plugin.settings.scrollbarVisibility = value;
                             this.plugin.scrollbar.updateStyle();
+                            this.display();
                             await this.plugin.saveSettings();
                         }),
                 );
+
+            if (this.plugin.settings.scrollbarVisibility !== "hide") {
+                new Setting(containerEl)
+                    .setName("Scrollbar thickness")
+                    .setDesc("Width in pixels.")
+                    .addExtraButton((button) => {
+                        button
+                            .setIcon("reset")
+                            .setTooltip("Restore default")
+                            .onClick(async () => {
+                                this.plugin.settings.scrollbarWidth =
+                                    DEFAULT_SETTINGS.scrollbarWidth;
+                                this.plugin.scrollbar.updateStyle();
+                                this.display();
+                                await this.plugin.saveSettings();
+                            });
+                    })
+                    .addSlider((slider) =>
+                        slider
+                            .setValue(this.plugin.settings.scrollbarWidth)
+                            .setLimits(0, 30, 1)
+                            .setDynamicTooltip()
+                            .onChange(async (value) => {
+                                this.plugin.settings.scrollbarWidth = value;
+                                this.plugin.scrollbar.updateStyle();
+                                await this.plugin.saveSettings();
+                            }),
+                    );
+            }
         }
 
         containerEl.createEl("br");
-        containerEl.createEl("h2", { text: "Mouse/Touchpad Scrolling (Experimental)" });
+        new Setting(containerEl).setName("Mouse/Touchpad Scrolling (Experimental)").setHeading();
 
         new Setting(containerEl)
             .setName("Enabled")
