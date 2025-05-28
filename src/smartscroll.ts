@@ -12,6 +12,9 @@ export class SmartScroll {
     private scrollLast = 0;
     private animationFrame: number;
 
+    private readonly intesityDecayRate = 0.01;
+    private readonly intensityThreshold = 3;
+
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
@@ -72,8 +75,7 @@ export class SmartScroll {
         if (!editor) return;
 
         // Also cancel if mouse up, unless this setting allows it.
-        if (!this.plugin.settings.smartScrollEnableSelection && editor.somethingSelected())
-            return;
+        if (!this.plugin.settings.smartScrollEnableSelection && editor.somethingSelected()) return;
         if (this.recentMouseUp && !this.plugin.settings.smartScrollEnableMouse) return;
 
         this.invokeScroll(editor);
@@ -82,36 +84,33 @@ export class SmartScroll {
     private calculateScrollIntensity(): void {
         if (!this.plugin.settings.smartScrollDynamicAnimation) return;
 
-        const decayRate = 0.02;
         const time = performance.now();
         const elapsed = time - this.scrollLast;
 
         this.scrollLast = time;
-        this.scrollIntensity = Math.max(0, this.scrollIntensity - elapsed * decayRate) + 1;
+        this.scrollIntensity =
+            Math.max(0, this.scrollIntensity - elapsed * this.intesityDecayRate) + 1;
     }
 
     private invokeScroll(editor: Editor): void {
-        if (this.plugin.settings.smartScrollMode === "disabled") return;
+        const mode = this.plugin.settings.smartScrollMode;
+        if (mode === "disabled") return;
 
-        let centerRadius;
+        let radiusPercent;
         let smoothness;
         if (this.recentEdit) {
-            centerRadius = this.plugin.settings.smartScrollEditRadius;
+            radiusPercent = this.plugin.settings.smartScrollEditRadius;
             smoothness = this.plugin.settings.smartScrollEditSmoothness;
         } else {
-            centerRadius = this.plugin.settings.smartScrollMoveRadius;
+            radiusPercent = this.plugin.settings.smartScrollMoveRadius;
             smoothness = this.plugin.settings.smartScrollMoveSmoothness;
         }
 
-        // Invert the scroll effect
-        let invertCenteringScroll = 1;
-        if (this.plugin.settings.smartScrollMode === "page-jump") {
-            invertCenteringScroll = -1;
-        }
+        const dynamicAnimation = this.plugin.settings.smartScrollDynamicAnimation;
 
         // If scrolling fast, skip animation steps
         // (Only if not scrolling inverted and scrolling without edit (otherwise run later))
-        if (this.plugin.settings.smartScrollMode === "follow-cursor" && !this.recentEdit) {
+        if (mode === "follow-cursor" && !this.recentEdit) {
             this.calculateScrollIntensity();
         }
 
@@ -126,13 +125,16 @@ export class SmartScroll {
 
         const scrollInfo = editor.getScrollInfo() as { top: number; left: number; height: number };
         const currentVerticalPosition = scrollInfo.top;
-        let centerZoneRadius = (scrollInfo.height / 2) * (centerRadius / 100);
+        let radius = ((scrollInfo.height / 2) * radiusPercent) / 100;
+
+        // Invert the scroll effect
+        let invert = mode === "page-jump" ? -1 : 1;
 
         // Decrease center zone radius slightly to ensure that:
         // - cursor stays on the screen.
         // - we scroll before cursor gets to close to the edge and obsidian takes over scrolling.
-        if (invertCenteringScroll === -1) {
-            centerZoneRadius *= 0.95;
+        if (invert === -1) {
+            radius *= 0.95;
         }
 
         const center = scrollInfo.height / 2;
@@ -140,14 +142,12 @@ export class SmartScroll {
 
         let goal;
         let distance;
-        if (centerOffset < -centerZoneRadius) {
-            goal =
-                currentVerticalPosition + centerOffset + centerZoneRadius * invertCenteringScroll;
-            distance = centerOffset + centerZoneRadius * invertCenteringScroll;
-        } else if (centerOffset > centerZoneRadius) {
-            goal =
-                currentVerticalPosition + centerOffset - centerZoneRadius * invertCenteringScroll;
-            distance = centerOffset - centerZoneRadius * invertCenteringScroll;
+        if (centerOffset < -radius) {
+            goal = currentVerticalPosition + centerOffset + radius * invert;
+            distance = centerOffset + radius * invert;
+        } else if (centerOffset > radius) {
+            goal = currentVerticalPosition + centerOffset - radius * invert;
+            distance = centerOffset - radius * invert;
         } else {
             return;
         }
@@ -155,22 +155,17 @@ export class SmartScroll {
         // Can't scroll by fractions, so return early.
         if (Math.abs(distance) < 1) return;
 
+        cancelAnimationFrame(this.animationFrame);
+
         // Calculate scroll intensity to skip animation steps.
-        if (
-            this.plugin.settings.smartScrollDynamicAnimation &&
-            this.plugin.settings.smartScrollMode === "follow-cursor" &&
-            this.recentEdit
-        ) {
+        if (dynamicAnimation && mode === "follow-cursor" && this.recentEdit) {
             this.calculateScrollIntensity();
         }
 
-        cancelAnimationFrame(this.animationFrame);
-
-        // let steps = Math.max(1, Math.round(2 + 4 * smoothness - this.scrollIntensity ** 0.5));
         let steps = Math.round(1 + smoothness / 5);
 
         // If scrolling fast, skip animation steps.
-        if (this.plugin.settings.smartScrollMode === "follow-cursor" && this.scrollIntensity > 5) steps = 1;
+        if (mode === "follow-cursor" && this.scrollIntensity > this.intensityThreshold) steps = 1;
 
         const animate = (editor: Editor, dest: number, step_size: number, step: number) => {
             if (!step) return;
