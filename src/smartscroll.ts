@@ -130,23 +130,19 @@ export class SmartScroll {
         // Invert the scroll effect
         let invert = mode === "page-jump" ? -1 : 1;
 
-        // Decrease center zone radius slightly to ensure that:
-        // - cursor stays on the screen.
-        // - we scroll before cursor gets to close to the edge and obsidian takes over scrolling.
-        if (invert === -1) {
-            radius *= 0.95;
-        }
-
         const center = scrollInfo.height / 2;
         const centerOffset = cursorVerticalPosition - center;
 
         let goal;
         let distance;
-        if (centerOffset < -radius) {
+        if (centerOffset < -radius || cursor.top < viewOffset) {
             goal = currentVerticalPosition + centerOffset + radius * invert;
             distance = centerOffset + radius * invert;
-        } else if (centerOffset > radius) {
+        } else if (centerOffset > radius || cursor.top > scrollInfo.height + viewOffset) {
             goal = currentVerticalPosition + centerOffset - radius * invert;
+            if (mode === "page-jump" && radiusPercent === 100) {
+                goal -= editor.cm.defaultLineHeight;
+            }
             distance = centerOffset - radius * invert;
         } else {
             return;
