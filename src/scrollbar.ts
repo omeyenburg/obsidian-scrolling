@@ -27,16 +27,18 @@ export class Scrollbar {
         const view = leaf.view;
         if (!(view instanceof MarkdownView)) return;
 
-        const scroller =
-            view.contentEl.querySelector(".cm-scroller") ||
-            view.contentEl.querySelector(".markdown-preview-view");
-        if (!scroller) return;
+        setTimeout(() => {
+            const scroller =
+                view.contentEl.querySelector(".cm-scroller") ||
+                view.contentEl.querySelector(".markdown-preview-view");
+            if (!scroller) return;
 
-        this.plugin.registerDomEvent(
-            scroller as HTMLElement,
-            "scroll",
-            this.scrollHandler.bind(this),
-        );
+            this.plugin.registerDomEvent(
+                scroller as HTMLElement,
+                "scroll",
+                this.scrollHandler.bind(this),
+            );
+        }, 50);
     }
 
     private scrollHandler(): void {
