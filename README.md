@@ -33,7 +33,7 @@ Currently there are two methods of installation.
 
 ## Requirements
 
-- Obsidian: Version 1.8.10 or higher
+- Obsidian: Version 1.2.7 or higher
 - Platform: Desktop only
 
 ## Usage
