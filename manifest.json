@@ -1,8 +1,8 @@
 {
   "id": "scrolling",
   "name": "Scrolling",
-  "version": "1.0.2",
-  "minAppVersion": "1.8.10",
+  "version": "1.0.3",
+  "minAppVersion": "1.2.7",
   "description": "Improve scrolling and keep your cursor exactly where you want it.",
   "author": "omeyenburg",
   "authorUrl": "https://github.com/omeyenburg",
