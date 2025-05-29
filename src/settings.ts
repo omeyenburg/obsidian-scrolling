@@ -32,9 +32,9 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     smartScrollEditSmoothness: 25,
     smartScrollMoveRadius: 75,
     smartScrollMoveSmoothness: 25,
+    smartScrollDynamicAnimation: true,
     smartScrollEnableMouse: false,
     smartScrollEnableSelection: false,
-    smartScrollDynamicAnimation: true,
 
     scrollbarGlobal: false,
     scrollbarVisibility: "show",
@@ -239,6 +239,20 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
 
             new Setting(containerEl)
+                .setName("Dynamic animations")
+                .setDesc(
+                    "Skip animation frames if lots of scroll events occur for smoother animations.",
+                )
+                .addToggle((toggle) =>
+                    toggle
+                        .setValue(this.plugin.settings.smartScrollDynamicAnimation)
+                        .onChange(async (value) => {
+                            this.plugin.settings.smartScrollDynamicAnimation = value;
+                            await this.plugin.saveSettings();
+                        }),
+                );
+
+            new Setting(containerEl)
                 .setName("Invoke on mouse-driven cursor movement")
                 .setDesc("Apply this feature when the text cursor is moved with the mouse.")
                 .addToggle((toggle) =>
@@ -264,20 +278,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                             }),
                     );
             }
-
-            new Setting(containerEl)
-                .setName("Dynamic animations")
-                .setDesc(
-                    "Skip animation frames if lots of scroll events occur for smoother animations.",
-                )
-                .addToggle((toggle) =>
-                    toggle
-                        .setValue(this.plugin.settings.smartScrollDynamicAnimation)
-                        .onChange(async (value) => {
-                            this.plugin.settings.smartScrollDynamicAnimation = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
         }
 
         if (!Platform.isMacOS) {
@@ -381,32 +381,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }),
                 );
-
-            new Setting(containerEl)
-                .setName("Touchpad detection")
-                .setDesc(
-                    createFragment((frag) => {
-                        const div = frag.createDiv();
-
-                        div.createEl("span", {
-                            text: "Detect touchpad input to provide smoother scrolling.",
-                        });
-                        div.createEl("br");
-                        div.createEl("span", {
-                            text: "Detection works reliably on most devices but may occasionally misidentify input type.",
-                        });
-                    }),
-                )
-                .addToggle((toggle) =>
-                    toggle
-                        .setValue(this.plugin.settings.touchpadEnabled)
-                        .onChange(async (value) => {
-                            this.plugin.settings.touchpadEnabled = value;
-                            this.display();
-                            await this.plugin.saveSettings();
-                        }),
-                );
-
             new Setting(containerEl)
                 .setName("Mouse scroll speed")
                 .setDesc("Scroll speed multiplier for mouse wheel.")
@@ -451,6 +425,31 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setDynamicTooltip()
                         .onChange(async (value) => {
                             this.plugin.settings.mouseSmoothness = value;
+                            await this.plugin.saveSettings();
+                        }),
+                );
+
+            new Setting(containerEl)
+                .setName("Touchpad detection")
+                .setDesc(
+                    createFragment((frag) => {
+                        const div = frag.createDiv();
+
+                        div.createEl("span", {
+                            text: "Detect touchpad input to provide smoother scrolling.",
+                        });
+                        div.createEl("br");
+                        div.createEl("span", {
+                            text: "Detection works reliably on most devices but may occasionally misidentify input type.",
+                        });
+                    }),
+                )
+                .addToggle((toggle) =>
+                    toggle
+                        .setValue(this.plugin.settings.touchpadEnabled)
+                        .onChange(async (value) => {
+                            this.plugin.settings.touchpadEnabled = value;
+                            this.display();
                             await this.plugin.saveSettings();
                         }),
                 );
