@@ -134,10 +134,10 @@ export class SmartScroll {
         // Get cursor position (CodeMirror 6)
         const cursor_as_offset = editor.posToOffset(editor.getCursor());
         const cursor =
-            (editor as any).cm.coordsAtPos?.(cursor_as_offset) ??
-            (editor as any).coordsAtPos(cursor_as_offset);
+            editor.cm.coordsAtPos?.(cursor_as_offset) ??
+            editor.coordsAtPos(cursor_as_offset);
 
-        const lineHeight = (editor as any).cm.defaultLineHeight;
+        const lineHeight = editor.cm.defaultLineHeight;
 
         const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
         const cursorVerticalPosition = cursor.top + lineHeight - viewOffset;
