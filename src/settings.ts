@@ -287,7 +287,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             new Setting(containerEl)
                 .setName("Apply to all scrollbars")
                 .setDesc(
-                    "Whether scrollbar settings apply to all scrollbars or only markdown files.",
+                    "Whether scrollbar settings should apply to all scrollbars or only markdown files.",
                 )
                 .addToggle((toggle) =>
                     toggle
@@ -374,7 +374,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (this.plugin.settings.mouseEnabled) {
             new Setting(containerEl)
                 .setName("Invert scroll direction")
-                .setDesc("Reverses the scroll direction for both mouse and touchpad.")
+                .setDesc("Reverse the scroll direction.")
                 .addToggle((toggle) =>
                     toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
                         this.plugin.settings.mouseInvert = value;
@@ -407,7 +407,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
             new Setting(containerEl)
                 .setName("Mouse scroll smoothness")
-                .setDesc("Determines mouse scroll smoothness.")
+                .setDesc("Determines how smooth scrolling with a mouse should be.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -509,7 +509,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     new Setting(containerEl)
                         .setName("Touchpad friction threshold")
                         .setDesc(
-                            "Sets the minimum speed below which increased friction is applied for finer control.",
+                            "Sets the minimum scroll strength below which increased friction is applied for finer control.",
                         )
                         .addExtraButton((button) => {
                             button
