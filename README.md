@@ -1,21 +1,19 @@
 # Obsidian Scrolling
 
-A plugin for [Obsidian](https://obsidian.md/) that enhances scrolling behavior with intelligent cursor tracking, smooth mouse wheel animations, and customizable scrollbar styling.
+A plugin for [Obsidian](https://obsidian.md/) that enhances scrolling behavior with smart cursor tracking and smooth scroll animations.
 
 ## Features
 
-Each feature can be toggled individually via the plugin's settings panel.
+Each feature can be toggled and configured individually via the plugin's settings.
 
 - **Smart Scrolling**<br>
-Automatically centers the cursor during editing and navigation for improved focus and readability.
+Scrolls automatically while editing or navigating in a file.
 - **Scrollbar Customization**<br>
-Provides visual customization options for scrollbar appearance to match your theme preferences.
-- **Enhanced Mouse & Touchpad Scrolling**<br>
-Smooths mouse wheel and trackpad scrolling with customizable animations for a more fluid editing experience.
+Lets you hide the scrollbar or adjust its width.
+- **Mouse & Touchpad Scrolling**<br>
+Allows you to customize mouse wheel and touchpad scrolling.
 
 ## Installation
-
-Currently there are two methods of installation.
 
 ### Manual installation (Prebuilt release)
 
@@ -48,95 +46,91 @@ Once enabled, go to Settings -> Community Plugins -> Scrolling to configure the 
 - **Mode**<br>
 **Follow cursor**: Smoothly keeps text cursor within a comfortable zone while moving or editing.<br>
 Behaves similarly to Vim's `scrolloff` option.<br>
-**Page jumping**: Reduces scrolling by jumping whole pages at screen edges.<br>
+**Page jumping**: Reduces scrolling by jumping by whole pages at screen edges.<br>
 Best paired with high center radius and longer animation.<br>
-Default: Follow cursor
+→ Default: Follow cursor
 
     - **Scroll zone radius when editing**<br>
     Defines how far the cursor can move from the center before scrolling.<br>
-    Default: 75
+    → Default: 75
 
     - **Scroll smoothness when editing**<br>
     Adjusts how fast or slow the scrolling animation is when editing moves the cursor.<br>
-    Default: 25
+    → Default: 25
 
     - **Scroll zone radius when moving cursor**<br>
     Defines how far you can move the cursor from the center before scrolling.<br>
-    Default: 75
+    → Default: 75
 
     - **Scroll smoothness when moving cursor**<br>
     Adjusts how fast or slow the scrolling animation is when you move the cursor.<br>
-    Default: 25
+    → Default: 25
 
     - **Dynamic animations**<br>
-    Skip animation frames if lots of scroll events occur for smoother animations.<br>
-    Default: enabled
+    Skip animation frames if lots of scroll events occur for smoother animation.<br>
+    → Default: enabled
 
     - **Invoke on mouse-driven cursor movement**<br>
     Apply this feature when the text cursor is moved with the mouse.<br>
-    Default: disabled
+    → Default: disabled
 
         - **Invoke on mouse selection**<br>
-        Also trigger, when the mouse has selected text.<br>
-        Default: disabled
+        Also trigger when the mouse has selected text.<br>
+        → Default: disabled
 
 ### Scrollbar appearance
 
 - **Apply to all scrollbars**<br>
-Whether scrollbar settings apply to all scrollbars or only markdown files.
-Windows & Linux only.<br>
-Default: disabl
+Whether scrollbar settings should apply to all scrollbars or only markdown files. (Platform: Windows & Linux only)<br>
+→ Default: disabled
 
 - **Scrollbar visibility**<br>
-When to show scrollbars.
-Windows & Linux only.<br>
-Default: always
+Show scrollbars always, while scrolling or never. (Platform: Windows & Linux only)<br>
+→ Default: Always show scrollbars
 
 - **Scrollbar thickness**<br>
-Width in pixels.
-Linux only.<br>
-Default: 12
+Width in pixels. (Platform: Linux only)<br>
+→ Default: 12
 
 ### Mouse/Touchpad scrolling (Experimental)
 
 - **Enabled**<br>
 Whether mouse/touchpad scrolling settings are applied.<br>
-Default: enabled
+→ Default: enabled
 
     - **Invert scroll direction**<br>
-    Reverses the scroll direction for both mouse and touchpad.<br>
-    Default: disabled
+    Reverse the scroll direction for both mouse and touchpad.<br>
+    → Default: disabled
 
     - **Mouse scroll speed**<br>
     Scroll speed multiplier for mouse wheel.<br>
-    Default: 50
+    → Default: 50
 
     - **Mouse scroll smoothness**<br>
     Determines mouse scroll smoothness.<br>
-    Default: 75
+    → Default: 75
 
     - **Touchpad detection**<br>
     Detect touchpad input to provide smoother scrolling. (Should work well with most devices)<br>
-    Default: enabled
+    → Default: enabled
 
         - **Touchpad scroll speed**<br>
         Adjusts scroll speed when using a touchpad.<br>
-        Default: 50
+        → Default: 50
 
         - **Touchpad smoothness**<br>
         Controls the smoothness of touchpad.<br>
-        Default: 75
+        → Default: 75
 
         - **Touchpad friction threshold**<br>
-        Sets the minimum speed below which increased friction is applied for finer control.<br>
-        Default: 20
+        Sets the minimum scroll strength below which increased friction is applied for finer control.<br>
+        → Default: 20
 
 </details>
 
 ## Contributing
 
 Contributions are welcome! Feel free to open an issue or submit a pull request.
-You can follow the [manual installation](#manual-installation-from-source) guide to build this plugin.
 
 ## Similar projects
 
