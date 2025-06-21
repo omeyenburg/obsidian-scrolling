@@ -6,6 +6,8 @@ export class Scrollbar {
 
     private scrolling = false;
     private scrollTimeout: NodeJS.Timeout;
+    private currentVisibility: "show" | "hide" | "transparent" | null;
+    private currentWidth: number | null;
 
     constructor(plugin: ScrollingPlugin) {
         // Styling scrollbars doesnt work on MacOS.
@@ -58,64 +60,57 @@ export class Scrollbar {
         // Styling scrollbars doesnt work on MacOS.
         if (Platform.isMacOS) return;
 
-        this.removeStyle();
-
-        const style = document.createElement("style");
-        style.id = "scrolling-scrollbar-style";
-        const global = this.plugin.settings.scrollbarGlobal;
-
-        let display: string | undefined;
-        let color: string | undefined;
-
-        const visibility = this.plugin.settings.scrollbarVisibility;
-        if (visibility == "hide") {
-            display = "none";
-        } else if (visibility == "scroll" && !this.scrolling) {
-            color = "transparent";
+        let visibility: "show" | "hide" | "transparent" = "show";
+        if (this.plugin.settings.scrollbarVisibility == "hide") {
+            visibility = "hide";
+        } else if (this.plugin.settings.scrollbarVisibility == "scroll" && !this.scrolling) {
+            visibility = "transparent";
         }
 
         // Default width of Obsidian appears to be 12px.
         // Only linux supports this option, set to -1 to ignore width.
         const width = Platform.isLinux ? this.plugin.settings.scrollbarWidth : -1;
+
         if (width == 0) {
-            display = "none";
+            visibility = "hide";
         }
 
-        if (global) {
-            style.textContent = `\
-* {\
-  ${width > 0 ? `scrollbar-width: ${width}px !important;` : ""}\
-  ${display !== undefined ? `-ms-overflow-style: ${display};` : ""}\
-}\
-*::-webkit-scrollbar {\
-  ${width > 0 ? `width: ${width}px !important;` : ""}\
-  ${display !== undefined ? `display: ${display};` : ""}\
-}\
-*::-webkit-scrollbar-thumb {\
-  ${color !== undefined ? `background-color: ${color} !important;` : ""}\
-}`;
+        // Only proceed if state changed.
+        if (this.currentVisibility == visibility && this.currentWidth == width) return;
+        this.currentVisibility = visibility;
+        this.currentWidth = width;
+
+        this.removeStyle();
+
+        const styles = document.body.classList;
+
+        if (this.plugin.settings.scrollbarGlobal) {
+            styles.add("scrolling-global");
         } else {
-            style.textContent = `\
-.markdown-source-view,\
-.cm-scroller {\
-  ${width > 0 ? `scrollbar-width: ${width}px !important;` : ""}\
-  ${display !== undefined ? `-ms-overflow-style: ${display};` : ""}\
-}\
-.markdown-source-view::-webkit-scrollbar,\
-.cm-scroller::-webkit-scrollbar {\
-  ${width > 0 ? `width: ${width}px !important;` : ""}\
-  ${display !== undefined ? `display: ${display};` : ""}\
-}\
-.markdown-source-view::-webkit-scrollbar-thumb,\
-.cm-scroller::-webkit-scrollbar-thumb {\
-  ${color !== undefined ? `background-color: ${color} !important;` : ""}\
-}`;
+            styles.add("scrolling-markdown");
         }
 
-        document.head.appendChild(style);
+        if (visibility == "hide") {
+            styles.add("scrolling-hidden");
+        } else if (visibility == "transparent") {
+            styles.add("scrolling-transparent");
+        }
+
+        if (width > 0) {
+            styles.add("scrolling-width");
+            document.body.style.setProperty("--scrolling-scrollbar-width", `${width}px`);
+        }
     }
 
     removeStyle(): void {
-        document.getElementById("scrolling-scrollbar-style")?.remove();
+        document.body.classList.remove(
+            "scrolling-global",
+            "scrolling-markdown",
+            "scrolling-hidden",
+            "scrolling-transparent",
+            "scrolling-width",
+        );
+
+        document.body.style.removeProperty("--scrolling-scrollbar-width");
     }
 }
