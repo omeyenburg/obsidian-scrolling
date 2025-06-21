@@ -1,0 +1,42 @@
+.scrolling-global.scrolling-hidden * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrolling-global.scrolling-hidden *::-webkit-scrollbar {
+  display: none;
+}
+
+.scrolling-global.scrolling-transparent *::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+.scrolling-global.scrolling-width * {
+  scrollbar-width: var(--scrollbar-width);
+}
+.scrolling-global.scrolling-width *::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+}
+
+.scrolling-markdown.scrolling-hidden .markdown-source-view,
+.scrolling-markdown.scrolling-hidden .cm-scroller {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrolling-markdown.scrolling-hidden .markdown-source-view::-webkit-scrollbar,
+.scrolling-markdown.scrolling-hidden .cm-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.scrolling-markdown.scrolling-transparent .markdown-source-view::-webkit-scrollbar-thumb,
+.scrolling-markdown.scrolling-transparent .cm-scroller::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+.scrolling-markdown.scrolling-width .markdown-source-view,
+.scrolling-markdown.scrolling-width .cm-scroller {
+  scrollbar-width: var(--scrollbar-width);
+}
+.scrolling-markdown.scrolling-width .markdown-source-view::-webkit-scrollbar,
+.scrolling-markdown.scrolling-width .cm-scroller::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+}
