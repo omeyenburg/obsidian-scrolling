@@ -19,11 +19,20 @@ export class SmartScroll {
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
-        plugin.registerEvent(plugin.app.workspace.on("editor-change", this.editHandler.bind(this)));
+        // Handles editing events (first invokation must be supressed)
+        let initialEditorChange = plugin.app.workspace.on("editor-change", () => {
+            plugin.app.workspace.offref(initialEditorChange);
+            plugin.registerEvent(
+                plugin.app.workspace.on("editor-change", this.editHandler.bind(this)),
+            );
+        });
+        plugin.registerEvent(initialEditorChange);
 
+        // Additional context for the cursor handler
         plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this));
         plugin.registerDomEvent(document, "keydown", this.keyHandler.bind(this));
 
+        // Handles mouse events
         plugin.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
     }
 
@@ -44,6 +53,7 @@ export class SmartScroll {
     }
 
     private getScrollDirection(editor: Editor): -1 | 0 | 1 {
+        // Cursor movement direction: -1 (up), 0 (same line), 1 (down)
         const lastLine = this.lastLine;
         this.lastLine = editor.getCursor().line;
 
@@ -63,27 +73,25 @@ export class SmartScroll {
     }
 
     private cursorHandler(update: ViewUpdate): void {
-        // This checks if this update was caused by a mouse down event,
+        // Always cancel if event was caused by mouse down/movement.
+        // This only checks if this update was caused by a mouse down event,
         // but can't detect mouse up.
-        let mouseDown = false;
         for (const tr of update.transactions) {
             const event = tr.annotation(Transaction.userEvent);
             if (event === "select.pointer") {
-                mouseDown = true;
+                return;
             }
         }
 
-        // Reset recentEdit, which was set by editHandler
+        // Reset recentEdit, which was set by editHandler,
+        // because cursorHandler is invoked after every edit.
         if (this.recentEdit) {
             this.recentEdit = false;
             return;
         }
 
-        // Only proceed if its a cursor event
+        // Only proceed if its a cursor event.
         if (!update.selectionSet) return;
-
-        // Always cancel if event was caused by mouse down/movement.
-        if (mouseDown) return;
 
         // Get the editor
         const editor = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
@@ -92,8 +100,11 @@ export class SmartScroll {
         const scrollDirection = this.getScrollDirection(editor);
 
         // Also cancel if mouse up, unless this setting allows it.
-        if (!this.plugin.settings.smartScrollEnableSelection && editor.somethingSelected()) return;
-        if (this.recentMouseUp && !this.plugin.settings.smartScrollEnableMouse) return;
+        if (
+            (!this.plugin.settings.smartScrollEnableSelection && editor.somethingSelected()) ||
+            (this.recentMouseUp && !this.plugin.settings.smartScrollEnableMouse)
+        )
+            return;
 
         this.invokeScroll(editor, scrollDirection);
     }
@@ -133,9 +144,8 @@ export class SmartScroll {
 
         // Get cursor position (CodeMirror 6)
         const cursor_as_offset = editor.posToOffset(editor.getCursor());
-        const cursor =
-            editor.cm.coordsAtPos?.(cursor_as_offset) ??
-            editor.coordsAtPos(cursor_as_offset);
+        const cursor = editor.cm.coordsAtPos?.(cursor_as_offset);
+        if (!cursor) return;
 
         const lineHeight = editor.cm.defaultLineHeight;
 
@@ -177,7 +187,7 @@ export class SmartScroll {
             return;
         }
 
-        // Can't scroll by fractions, so return early.
+        // Can't scroll by fractions.
         if (Math.abs(distance) < 1) return;
 
         cancelAnimationFrame(this.animationFrame);
