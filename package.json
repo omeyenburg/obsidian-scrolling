@@ -1,6 +1,6 @@
 {
   "name": "scrolling",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Improve scrolling and keep your cursor exactly where you want it.",
   "main": "main.js",
   "scripts": {
