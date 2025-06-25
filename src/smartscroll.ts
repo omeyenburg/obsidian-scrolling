@@ -47,7 +47,7 @@ export class SmartScroll {
         // This timeout is needed, because the keydown event is not reliable:
         // In normal mode of vim, keydown events are pretty much inaccessible.
         // Already wasted too much time with this.
-        setTimeout(() => {
+        window.setTimeout(() => {
             this.recentMouseUp = false;
         }, 100);
     }
@@ -190,7 +190,7 @@ export class SmartScroll {
         // Can't scroll by fractions.
         if (Math.abs(distance) < 1) return;
 
-        cancelAnimationFrame(this.animationFrame);
+        window.cancelAnimationFrame(this.animationFrame);
 
         // Calculate scroll intensity to skip animation steps.
         if (dynamicAnimation && mode === "follow-cursor" && this.recentEdit) {
@@ -206,7 +206,7 @@ export class SmartScroll {
             if (!step) return;
 
             editor.scrollTo(null, dest - step_size * (step - 1));
-            this.animationFrame = requestAnimationFrame(() =>
+            this.animationFrame = window.requestAnimationFrame(() =>
                 animate(editor, dest, step_size, step - 1),
             );
         };

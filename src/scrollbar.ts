@@ -5,7 +5,7 @@ export class Scrollbar {
     plugin: ScrollingPlugin;
 
     private scrolling = false;
-    private scrollTimeout: NodeJS.Timeout;
+    private scrollTimeout: number;
     private currentVisibility: "show" | "hide" | "transparent" | null;
     private currentWidth: number | null;
 
@@ -27,7 +27,7 @@ export class Scrollbar {
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return;
 
-        setTimeout(() => {
+        window.setTimeout(() => {
             const scroller =
                 view.contentEl.querySelector(".cm-scroller") ||
                 view.contentEl.querySelector(".markdown-preview-view");
@@ -42,7 +42,7 @@ export class Scrollbar {
     }
 
     private scrollHandler(): void {
-        clearTimeout(this.scrollTimeout);
+        window.clearTimeout(this.scrollTimeout);
 
         if (!this.scrolling) {
             this.scrolling = true;
@@ -50,7 +50,7 @@ export class Scrollbar {
         }
 
         // Hide scrollbar again after 500 ms.
-        this.scrollTimeout = setTimeout(() => {
+        this.scrollTimeout = window.setTimeout(() => {
             this.scrolling = false;
             this.updateStyle();
         }, 500);

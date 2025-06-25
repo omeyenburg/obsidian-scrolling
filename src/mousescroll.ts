@@ -90,7 +90,7 @@ export class MouseScroll {
     // Defaults: smoothness=150, speed=1
     private scrollWithMouse(el: HTMLElement, delta: number): void {
         if (!el) return;
-        cancelAnimationFrame(this.mouseAnimationFrame);
+        window.cancelAnimationFrame(this.mouseAnimationFrame);
 
         const smoothness = this.plugin.settings.mouseSmoothness * 2;
         const speed = this.plugin.settings.mouseSpeed / 50;
@@ -117,13 +117,13 @@ export class MouseScroll {
             el.scrollTop = start + change * t;
 
             if (t < 1) {
-                this.mouseAnimationFrame = requestAnimationFrame(animateScroll);
+                this.mouseAnimationFrame = window.requestAnimationFrame(animateScroll);
             } else {
                 el.scrollTop = start + change;
             }
         };
 
-        this.mouseAnimationFrame = requestAnimationFrame(animateScroll);
+        this.mouseAnimationFrame = window.requestAnimationFrame(animateScroll);
     }
 
     // Similar to touchpad scrolling in obsidian.
@@ -151,7 +151,7 @@ export class MouseScroll {
                     0,
                     Math.min(maxFriction, this.touchpadFriction + 0.05),
                 );
-                requestAnimationFrame(animate);
+                window.requestAnimationFrame(animate);
             } else {
                 this.touchpadScrolling = false;
                 this.touchpadVelocity = 0;
