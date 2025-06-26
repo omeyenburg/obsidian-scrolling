@@ -1,4 +1,4 @@
-# Obsidian Scrolling
+# Scrolling
 
 A plugin for [Obsidian](https://obsidian.md/) that enhances scrolling behavior with smart cursor tracking and smooth scroll animations.
 
