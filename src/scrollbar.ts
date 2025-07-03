@@ -1,5 +1,5 @@
 import type { default as ScrollingPlugin } from "./main";
-import { Platform, MarkdownView, WorkspaceLeaf } from "obsidian";
+import { Platform, MarkdownView } from "obsidian";
 
 export class Scrollbar {
     plugin: ScrollingPlugin;
@@ -8,6 +8,7 @@ export class Scrollbar {
     private scrollTimeout: number;
     private currentVisibility: "show" | "hide" | "transparent" | null;
     private currentWidth: number | null;
+    private currentFileTreeHorizontal = false;
 
     constructor(plugin: ScrollingPlugin) {
         // Styling scrollbars doesnt work on MacOS.
@@ -75,14 +76,27 @@ export class Scrollbar {
             visibility = "hide";
         }
 
+        const fileTreeHorizontal = this.plugin.settings.scrollbarFileTreeHorizontal;
+
         // Only proceed if state changed.
-        if (this.currentVisibility == visibility && this.currentWidth == width) return;
-        this.currentVisibility = visibility;
+        if (
+            this.currentWidth == width &&
+            this.currentVisibility == visibility &&
+            this.currentFileTreeHorizontal == fileTreeHorizontal
+        )
+            return;
+
         this.currentWidth = width;
+        this.currentVisibility = visibility;
+        this.currentFileTreeHorizontal == fileTreeHorizontal;
 
         this.removeStyle();
 
         const styles = document.body.classList;
+
+        if (fileTreeHorizontal) {
+            styles.add("scrolling-filetree-horizontal");
+        }
 
         if (this.plugin.settings.scrollbarGlobal) {
             styles.add("scrolling-global");

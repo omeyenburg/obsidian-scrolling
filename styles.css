@@ -40,3 +40,16 @@
 .scrolling-markdown.scrolling-width .cm-scroller::-webkit-scrollbar {
   width: var(--scrollbar-width);
 }
+
+/* Add scrollbar to file tree */
+.scrolling-filetree-horizontal .nav-files-container {
+    overflow: auto;
+}
+.scrolling-filetree-horizontal .nav-files-container > div {
+    min-width: max-content;
+    min-height: max-content;
+}
+.scrolling-filetree-horizontal .tree-item-self .nav-file-title,
+.scrolling-filetree-horizontal .tree-item-self .nav-folder-title {
+    flex-shrink: 0;
+}
