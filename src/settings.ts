@@ -14,6 +14,7 @@ export interface ScrollingPluginSettings {
     scrollbarGlobal: boolean;
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
+    scrollbarFileTreeHorizontal: boolean;
 
     mouseEnabled: boolean;
     mouseInvert: boolean;
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     scrollbarGlobal: false,
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
+    scrollbarFileTreeHorizontal: false,
 
     mouseEnabled: true,
     mouseInvert: false,
@@ -280,14 +282,27 @@ export class ScrollingSettingTab extends PluginSettingTab {
             }
         }
 
-        if (!Platform.isMacOS) {
-            containerEl.createEl("br");
-            new Setting(containerEl).setName("Scrollbar appearance").setHeading();
+        containerEl.createEl("br");
+        new Setting(containerEl).setName("Scrollbar appearance").setHeading();
 
+        new Setting(containerEl)
+            .setName("Show horizontal scrollbar in file tree")
+            .setDesc("Allow horizontal scrolling in the file tree and add a horizontal scrollbar.")
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.scrollbarFileTreeHorizontal)
+                    .onChange(async (value) => {
+                        this.plugin.settings.scrollbarFileTreeHorizontal = value;
+                        this.plugin.scrollbar.updateStyle();
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        if (!Platform.isMacOS) {
             new Setting(containerEl)
-                .setName("Apply to all scrollbars")
+                .setName("Apply appearance to all scrollbars")
                 .setDesc(
-                    "Whether scrollbar settings should apply to all scrollbars or only markdown files.",
+                    "Whether scrollbar appearance settings should apply to all scrollbars or only markdown files.",
                 )
                 .addToggle((toggle) =>
                     toggle
@@ -326,35 +341,33 @@ export class ScrollingSettingTab extends PluginSettingTab {
                             await this.plugin.saveSettings();
                         }),
                 );
-
-            if (Platform.isLinux && this.plugin.settings.scrollbarVisibility !== "hide") {
-                new Setting(containerEl)
-                    .setName("Scrollbar thickness")
-                    .setDesc("Width in pixels.")
-                    .addExtraButton((button) => {
-                        button
-                            .setIcon("reset")
-                            .setTooltip("Restore default")
-                            .onClick(async () => {
-                                this.plugin.settings.scrollbarWidth =
-                                    DEFAULT_SETTINGS.scrollbarWidth;
-                                this.plugin.scrollbar.updateStyle();
-                                this.display();
-                                await this.plugin.saveSettings();
-                            });
-                    })
-                    .addSlider((slider) =>
-                        slider
-                            .setValue(this.plugin.settings.scrollbarWidth)
-                            .setLimits(0, 30, 1)
-                            .setDynamicTooltip()
-                            .onChange(async (value) => {
-                                this.plugin.settings.scrollbarWidth = value;
-                                this.plugin.scrollbar.updateStyle();
-                                await this.plugin.saveSettings();
-                            }),
-                    );
-            }
+        }
+        if (Platform.isLinux && this.plugin.settings.scrollbarVisibility !== "hide") {
+            new Setting(containerEl)
+                .setName("Scrollbar thickness")
+                .setDesc("Width in pixels.")
+                .addExtraButton((button) => {
+                    button
+                        .setIcon("reset")
+                        .setTooltip("Restore default")
+                        .onClick(async () => {
+                            this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
+                            this.plugin.scrollbar.updateStyle();
+                            this.display();
+                            await this.plugin.saveSettings();
+                        });
+                })
+                .addSlider((slider) =>
+                    slider
+                        .setValue(this.plugin.settings.scrollbarWidth)
+                        .setLimits(0, 30, 1)
+                        .setDynamicTooltip()
+                        .onChange(async (value) => {
+                            this.plugin.settings.scrollbarWidth = value;
+                            this.plugin.scrollbar.updateStyle();
+                            await this.plugin.saveSettings();
+                        }),
+                );
         }
 
         containerEl.createEl("br");
