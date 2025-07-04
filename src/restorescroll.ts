@@ -29,6 +29,8 @@ export class RestoreScroll {
     }
 
     private leafHandler(): void {
+        if (!this.plugin.settings.restoreScrollEnabled) return;
+
         window.clearTimeout(this.leafChangeTimeout);
 
         this.recentLeafChange = true;
@@ -39,6 +41,7 @@ export class RestoreScroll {
     }
 
     private fileHandler(file: TFile | null): void {
+        if (!this.plugin.settings.restoreScrollEnabled) return;
         if (!file) return;
 
         const markdownView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
@@ -88,6 +91,7 @@ export class RestoreScroll {
 
     // Invoked on cursor movement and mouse scroll.
     public saveScrollPosition() {
+        if (!this.plugin.settings.restoreScrollEnabled) return;
         const activeEditor = this.plugin.app.workspace.activeEditor;
         const editor = activeEditor?.editor;
         const file = activeEditor?.file;
