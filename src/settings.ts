@@ -11,6 +11,8 @@ export interface ScrollingPluginSettings {
     smartScrollEnableSelection: boolean;
     smartScrollDynamicAnimation: boolean;
 
+    restoreScrollEnabled: boolean;
+
     scrollbarGlobal: boolean;
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
@@ -36,6 +38,8 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     smartScrollDynamicAnimation: true,
     smartScrollEnableMouse: false,
     smartScrollEnableSelection: false,
+
+    restoreScrollEnabled: false,
 
     scrollbarGlobal: false,
     scrollbarVisibility: "show",
@@ -65,6 +69,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
+        new Setting(containerEl).setName("General").setHeading();
+
+        new Setting(containerEl)
+            .setName("Remember scroll position")
+            .setDesc(
+                "Store scroll position before closing a file and continue where you left off when opening it again.",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.restoreScrollEnabled)
+                    .onChange(async (value) => {
+                        this.plugin.settings.restoreScrollEnabled = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        containerEl.createEl("br");
         new Setting(containerEl).setName("Smart scrolling").setHeading();
 
         new Setting(containerEl)
@@ -74,11 +95,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     const div = frag.createDiv();
 
                     div.createEl("span", {
-                        text: "Follow cursor: Smoothly keeps cursor visible (like Vim's scrolloff).",
+                        text: "Follow cursor: Keep cursor smoothly near the center. (Typewriter mode)",
                     });
                     div.createEl("br");
                     div.createEl("span", {
-                        text: "Page jumping: Reduces scrolling by jumping whole pages at screen edges.",
+                        text: "Page jumping: Reduce scrolling by jumping whole pages at screen edges.",
                     });
                 }),
             )
@@ -104,7 +125,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
                         if (this.plugin.settings.smartScrollMode === "follow-cursor") {
                             div.createEl("span", {
-                                text: "Defines how far the cursor can move from the center before scrolling.",
+                                text: "How far the cursor can move from the center before scrolling.",
                             });
                             div.createEl("br");
                             div.createEl("span", {
@@ -112,7 +133,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                             });
                         } else {
                             div.createEl("span", {
-                                text: "Defines how far the cursor can move before jumping.",
+                                text: "How far the cursor can move before jumping.",
                             });
                             div.createEl("br");
                             div.createEl("span", { text: "Lower values might appear buggy." });
@@ -144,7 +165,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             new Setting(containerEl)
                 .setName("Scroll smoothness when editing")
                 .setDesc(
-                    "Adjusts how fast or slow the scrolling animation is when editing moves the cursor.",
+                    "How fast or slow the scrolling animation is when editing moves the cursor.",
                 )
                 .addExtraButton((button) => {
                     button
@@ -176,7 +197,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
                         if (this.plugin.settings.smartScrollMode === "follow-cursor") {
                             div.createEl("span", {
-                                text: "Defines how far you can move the cursor from the center before scrolling.",
+                                text: "How far you can move the cursor from the center before scrolling.",
                             });
                             div.createEl("br");
                             div.createEl("span", {
@@ -184,7 +205,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                             });
                         } else {
                             div.createEl("span", {
-                                text: "Defines how far you can move the cursor before jumping.",
+                                text: "How far you can move the cursor before jumping.",
                             });
                             div.createEl("br");
                             div.createEl("span", { text: "Lower values might appear buggy." });
@@ -215,9 +236,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
             new Setting(containerEl)
                 .setName("Scroll smoothness when moving cursor")
-                .setDesc(
-                    "Adjusts how fast or slow the scrolling animation is when you move the cursor.",
-                )
+                .setDesc("How fast or slow the scrolling animation is when you move the cursor.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -300,21 +319,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         if (!Platform.isMacOS) {
             new Setting(containerEl)
-                .setName("Apply appearance to all scrollbars")
-                .setDesc(
-                    "Whether scrollbar appearance settings should apply to all scrollbars or only markdown files.",
-                )
-                .addToggle((toggle) =>
-                    toggle
-                        .setValue(this.plugin.settings.scrollbarGlobal)
-                        .onChange(async (value) => {
-                            this.plugin.settings.scrollbarGlobal = value;
-                            this.plugin.scrollbar.updateStyle();
-                            await this.plugin.saveSettings();
-                        }),
-                );
-
-            new Setting(containerEl)
                 .setName("Scrollbar visibility")
                 .setDesc("When to show scrollbars.")
                 .addExtraButton((button) => {
@@ -341,33 +345,56 @@ export class ScrollingSettingTab extends PluginSettingTab {
                             await this.plugin.saveSettings();
                         }),
                 );
-        }
-        if (Platform.isLinux && this.plugin.settings.scrollbarVisibility !== "hide") {
-            new Setting(containerEl)
-                .setName("Scrollbar thickness")
-                .setDesc("Width in pixels.")
-                .addExtraButton((button) => {
-                    button
-                        .setIcon("reset")
-                        .setTooltip("Restore default")
-                        .onClick(async () => {
-                            this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
-                            this.plugin.scrollbar.updateStyle();
-                            this.display();
-                            await this.plugin.saveSettings();
-                        });
-                })
-                .addSlider((slider) =>
-                    slider
-                        .setValue(this.plugin.settings.scrollbarWidth)
-                        .setLimits(0, 30, 1)
-                        .setDynamicTooltip()
-                        .onChange(async (value) => {
-                            this.plugin.settings.scrollbarWidth = value;
-                            this.plugin.scrollbar.updateStyle();
-                            await this.plugin.saveSettings();
-                        }),
-                );
+
+            if (this.plugin.settings.scrollbarVisibility != "scroll") {
+                new Setting(containerEl)
+                    .setName("Apply appearance to all scrollbars")
+                    .setDesc(
+                        "Whether scrollbar appearance settings should apply to all scrollbars or only markdown files.",
+                    )
+                    .addToggle((toggle) =>
+                        toggle
+                            .setValue(this.plugin.settings.scrollbarGlobal)
+                            .onChange(async (value) => {
+                                this.plugin.settings.scrollbarGlobal = value;
+                                this.plugin.scrollbar.updateStyle();
+                                // this.display();
+                                await this.plugin.saveSettings();
+                            }),
+                    );
+            } else {
+                this.plugin.settings.scrollbarGlobal = false;
+                this.plugin.scrollbar.updateStyle();
+            }
+
+            if (Platform.isLinux && this.plugin.settings.scrollbarVisibility !== "hide") {
+                new Setting(containerEl)
+                    .setName("Scrollbar thickness")
+                    .setDesc("Width in pixels.")
+                    .addExtraButton((button) => {
+                        button
+                            .setIcon("reset")
+                            .setTooltip("Restore default")
+                            .onClick(async () => {
+                                this.plugin.settings.scrollbarWidth =
+                                    DEFAULT_SETTINGS.scrollbarWidth;
+                                this.plugin.scrollbar.updateStyle();
+                                this.display();
+                                await this.plugin.saveSettings();
+                            });
+                    })
+                    .addSlider((slider) =>
+                        slider
+                            .setValue(this.plugin.settings.scrollbarWidth)
+                            .setLimits(0, 30, 1)
+                            .setDynamicTooltip()
+                            .onChange(async (value) => {
+                                this.plugin.settings.scrollbarWidth = value;
+                                this.plugin.scrollbar.updateStyle();
+                                await this.plugin.saveSettings();
+                            }),
+                    );
+            }
         }
 
         containerEl.createEl("br");
@@ -420,7 +447,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
             new Setting(containerEl)
                 .setName("Mouse scroll smoothness")
-                .setDesc("Determines how smooth scrolling with a mouse should be.")
+                .setDesc("How smooth scrolling with a mouse should be.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -471,7 +498,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 if (this.plugin.settings.mouseEnabled) {
                     new Setting(containerEl)
                         .setName("Touchpad scroll speed")
-                        .setDesc("Adjusts scroll speed when using a touchpad.")
+                        .setDesc("Adjust scroll speed when using a touchpad.")
                         .addExtraButton((button) => {
                             button
                                 .setIcon("reset")
@@ -496,7 +523,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
                     new Setting(containerEl)
                         .setName("Touchpad smoothness")
-                        .setDesc("Controls the smoothness of touchpad.")
+                        .setDesc("Control the smoothness of touchpads.")
                         .addExtraButton((button) => {
                             button
                                 .setIcon("reset")
@@ -522,7 +549,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     new Setting(containerEl)
                         .setName("Touchpad friction threshold")
                         .setDesc(
-                            "Sets the minimum scroll strength below which increased friction is applied for finer control.",
+                            "The minimum scroll strength below which increased friction is applied for finer control.",
                         )
                         .addExtraButton((button) => {
                             button
