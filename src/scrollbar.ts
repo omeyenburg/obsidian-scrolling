@@ -11,6 +11,7 @@ export class Scrollbar {
     private currentVisibility: "show" | "hide" | "transparent" | null;
     private currentWidth: number | null;
     private currentFileTreeHorizontal = false;
+    private boundScrollHandler;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -20,7 +21,10 @@ export class Scrollbar {
         // Toggling file tree scrollbar works.
         if (Platform.isMacOS) return;
 
+        this.boundScrollHandler = this.scrollHandler.bind(this);
+
         this.attachScrollHandler();
+
         plugin.registerEvent(
             plugin.app.workspace.on("active-leaf-change", this.attachScrollHandler.bind(this)),
         );
@@ -31,23 +35,18 @@ export class Scrollbar {
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return;
 
+        const scroller = (view.contentEl.querySelector(".cm-scroller") ||
+            view.contentEl.querySelector(".markdown-preview-view")) as HTMLElement;
+        if (!scroller) return;
+
+        // Avoid scroll events after attach
         this.scrollEventSkip = true;
         window.setTimeout(() => {
             this.scrollEventSkip = false;
         }, 250);
 
-        window.requestAnimationFrame(() => {
-            const scroller =
-                view.contentEl.querySelector(".cm-scroller") ||
-                view.contentEl.querySelector(".markdown-preview-view");
-            if (!scroller) return;
-
-            this.plugin.registerDomEvent(
-                scroller as HTMLElement,
-                "scroll",
-                this.scrollHandler.bind(this),
-            );
-        });
+        scroller.removeEventListener("scroll", this.boundScrollHandler);
+        this.plugin.registerDomEvent(scroller as HTMLElement, "scroll", this.boundScrollHandler);
     }
 
     // Not invoked on MacOS.
@@ -62,6 +61,8 @@ export class Scrollbar {
             this.scrolling = true;
             this.updateStyle();
         }
+
+        this.plugin.restoreScroll.saveScrollPosition();
 
         // Hide scrollbar again after 500 ms.
         this.scrollTimeout = window.setTimeout(() => {
