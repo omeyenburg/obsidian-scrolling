@@ -34,11 +34,11 @@
 
 .scrolling-markdown.scrolling-width .markdown-source-view,
 .scrolling-markdown.scrolling-width .cm-scroller {
-  scrollbar-width: var(--scrollbar-width);
+  scrollbar-width: var(--scrolling-scrollbar-width);
 }
 .scrolling-markdown.scrolling-width .markdown-source-view::-webkit-scrollbar,
 .scrolling-markdown.scrolling-width .cm-scroller::-webkit-scrollbar {
-  width: var(--scrollbar-width);
+  width: var(--scrolling-scrollbar-width);
 }
 
 /* Add scrollbar to file tree */
