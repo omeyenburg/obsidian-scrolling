@@ -144,22 +144,34 @@ export class SmartScroll {
             this.calculateScrollIntensity();
         }
 
-        // Get cursor position (CodeMirror 6)
-        const cursor_as_offset = editor.posToOffset(editor.getCursor());
-        const cursor = editor.cm.coordsAtPos?.(cursor_as_offset);
-        if (!cursor) return;
+        // Get cursor position
+        const cursorEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
+        if (!cursorEl) return;
+        const cursor = cursorEl.getBoundingClientRect();
+
+        // Happens for a brief moment when entering a table
+        if (cursor.top < 0) return;
+
+        // Old method: reliable except for tables
+        // const cursor = editor.cm.coordsAtPos?.(editor.posToOffset(editor.getCursor()));
 
         const lineHeight = editor.cm.defaultLineHeight;
 
         const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
-        const cursorVerticalPosition = cursor.top + lineHeight - viewOffset;
+        let cursorVerticalPosition = cursor.top + lineHeight - viewOffset;
 
         const scrollInfo = editor.getScrollInfo() as { top: number; left: number; height: number };
         const currentVerticalPosition = scrollInfo.top;
         let radius = ((scrollInfo.height / 2) * radiusPercent) / 100;
 
         // Invert the scroll effect
-        let invert = mode === "page-jump" ? -1 : 1;
+        let invert;
+        if (mode === "page-jump") {
+            invert = -1;
+        } else {
+            invert = 1;
+            radius *= 0.9;
+        }
 
         const center = scrollInfo.height / 2;
         const centerOffset = cursorVerticalPosition - center;
