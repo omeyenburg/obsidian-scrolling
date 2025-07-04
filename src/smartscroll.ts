@@ -13,7 +13,7 @@ export class SmartScroll {
     private lastLine = 0;
     private animationFrame: number;
 
-    private readonly intesityDecayRate = 0.01;
+    private readonly intensityDecayRate = 0.01;
     private readonly intensityThreshold = 3;
 
     constructor(plugin: ScrollingPlugin) {
@@ -93,6 +93,8 @@ export class SmartScroll {
         // Only proceed if its a cursor event.
         if (!update.selectionSet) return;
 
+        this.plugin.restoreScroll.saveScrollPosition();
+
         // Get the editor
         const editor = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
         if (!editor) return;
@@ -117,7 +119,7 @@ export class SmartScroll {
 
         this.scrollLast = time;
         this.scrollIntensity =
-            Math.max(0, this.scrollIntensity - elapsed * this.intesityDecayRate) + 1;
+            Math.max(0, this.scrollIntensity - elapsed * this.intensityDecayRate) + 1;
     }
 
     private invokeScroll(editor: Editor, scrollDirection: number): void {

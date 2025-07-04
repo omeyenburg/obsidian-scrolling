@@ -1,10 +1,13 @@
 import { Plugin } from "obsidian";
+
 import { SmartScroll } from "./smartscroll";
 import { MouseScroll } from "./mousescroll";
 import { Scrollbar } from "./scrollbar";
+import { RestoreScroll } from "./restorescroll";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "./settings";
 
 export default class ScrollingPlugin extends Plugin {
+    restoreScroll: RestoreScroll;
     scrollbar: Scrollbar;
     settings: ScrollingPluginSettings;
 
@@ -14,6 +17,7 @@ export default class ScrollingPlugin extends Plugin {
 
         new SmartScroll(this);
         new MouseScroll(this);
+        this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
 
         console.log("ScrollingPlugin loaded");
