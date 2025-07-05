@@ -19,6 +19,11 @@ export class MouseScroll {
         });
     }
 
+    // Called in main
+    public activeLeafChangeHandler() {
+        this.touchpadVelocity = 0;
+    }
+
     private wheelHandler(event: WheelEvent): void {
         if (!this.plugin.settings.mouseEnabled) return;
         if (!event.deltaY) return;

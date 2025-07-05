@@ -7,31 +7,40 @@ import { RestoreScroll } from "./restorescroll";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "./settings";
 
 export default class ScrollingPlugin extends Plugin {
+    settings: ScrollingPluginSettings;
+
+    mousescroll: MouseScroll;
     restoreScroll: RestoreScroll;
     scrollbar: Scrollbar;
-    settings: ScrollingPluginSettings;
-    quitting: boolean;
 
     async onload() {
-        this.quitting = false;
-
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this));
 
         new SmartScroll(this);
-        new MouseScroll(this);
+        this.mousescroll = new MouseScroll(this);
         this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
 
-        this.registerEvent(this.app.workspace.on("quit", this.quit));
-        this.registerEvent(this.app.workspace.on("window-close", this.quit));
+        this.registerEvent(
+            this.app.workspace.on("quit", (tasks) => tasks.add(() => this.saveSettings())),
+        );
+        // this.registerEvent(this.app.workspace.on("quit", () => console.log("save")));
+
+        this.registerEvent(
+            this.app.workspace.on("active-leaf-change", this.activeLeafChangeHandler.bind(this)),
+        );
 
         console.log("ScrollingPlugin loaded");
     }
 
+    activeLeafChangeHandler() {
+        this.scrollbar.activeLeafChangeHandler();
+        this.mousescroll.activeLeafChangeHandler();
+    }
+
     async onunload() {
         this.scrollbar?.removeStyle();
-        this.quit();
 
         console.log("ScrollingPlugin unloaded");
     }
@@ -40,12 +49,7 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async saveSettings() {
+        console.log("save");
         await this.saveData(this.settings);
-    }
-
-    async quit() {
-        if (this.quitting) return;
-        this.quitting = true;
-        await this.saveSettings();
     }
 }
