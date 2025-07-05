@@ -10,9 +10,11 @@ export default class ScrollingPlugin extends Plugin {
     restoreScroll: RestoreScroll;
     scrollbar: Scrollbar;
     settings: ScrollingPluginSettings;
-    quitting = false;
+    quitting: boolean;
 
     async onload() {
+        this.quitting = false;
+
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this));
 
@@ -29,6 +31,7 @@ export default class ScrollingPlugin extends Plugin {
 
     async onunload() {
         this.scrollbar?.removeStyle();
+        this.quit();
 
         console.log("ScrollingPlugin unloaded");
     }
