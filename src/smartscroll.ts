@@ -1,6 +1,7 @@
 import { Editor, MarkdownView } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
+
 import type { default as ScrollingPlugin } from "./main";
 
 export class SmartScroll {
@@ -142,9 +143,6 @@ export class SmartScroll {
         const cursorEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
         if (!cursorEl) return;
         const cursor = cursorEl.getBoundingClientRect();
-
-        // Old method: reliable except for tables
-        // const cursor = editor.cm.coordsAtPos?.(editor.posToOffset(editor.getCursor()));
 
         const lineHeight = editor.cm.defaultLineHeight;
 

@@ -25,7 +25,6 @@ export default class ScrollingPlugin extends Plugin {
         this.registerEvent(
             this.app.workspace.on("quit", (tasks) => tasks.add(() => this.saveSettings())),
         );
-        // this.registerEvent(this.app.workspace.on("quit", () => console.log("save")));
 
         this.registerEvent(
             this.app.workspace.on("active-leaf-change", this.activeLeafChangeHandler.bind(this)),
@@ -49,7 +48,6 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async saveSettings() {
-        console.log("save");
         await this.saveData(this.settings);
     }
 }

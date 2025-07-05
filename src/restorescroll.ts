@@ -1,6 +1,7 @@
 import { MarkdownView, WorkspaceLeaf } from "obsidian";
-import { default as ScrollingPlugin } from "./main";
 import { around } from "monkey-around";
+
+import { default as ScrollingPlugin } from "./main";
 
 export class RestoreScroll {
     private plugin: ScrollingPlugin;
