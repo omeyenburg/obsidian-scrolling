@@ -10,6 +10,7 @@ export default class ScrollingPlugin extends Plugin {
     restoreScroll: RestoreScroll;
     scrollbar: Scrollbar;
     settings: ScrollingPluginSettings;
+    quitting = false;
 
     async onload() {
         await this.loadSettings();
@@ -19,6 +20,9 @@ export default class ScrollingPlugin extends Plugin {
         new MouseScroll(this);
         this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
+
+        this.registerEvent(this.app.workspace.on("quit", this.quit));
+        this.registerEvent(this.app.workspace.on("window-close", this.quit));
 
         console.log("ScrollingPlugin loaded");
     }
@@ -34,5 +38,11 @@ export default class ScrollingPlugin extends Plugin {
 
     async saveSettings() {
         await this.saveData(this.settings);
+    }
+
+    async quit() {
+        if (this.quitting) return;
+        this.quitting = true;
+        await this.saveSettings();
     }
 }

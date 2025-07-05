@@ -18,12 +18,6 @@ export class RestoreScroll {
         plugin.registerEvent(
             plugin.app.workspace.on("active-leaf-change", this.leafHandler.bind(this)),
         );
-
-        plugin.registerEvent(
-            plugin.app.workspace.on("quit", (tasks) =>
-                tasks.add(async () => await plugin.saveSettings()),
-            ),
-        );
     }
 
     private leafHandler(): void {
