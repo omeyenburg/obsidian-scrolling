@@ -3,15 +3,14 @@ import type { default as ScrollingPlugin } from "./main";
 
 export interface ScrollingPluginSettings {
     smartScrollMode: string; // disabled, follow-cursor, page-jump
-    smartScrollEditRadius: number;
-    smartScrollEditSmoothness: number;
-    smartScrollMoveRadius: number;
-    smartScrollMoveSmoothness: number;
+    smartScrollRadius: number;
+    smartScrollSmoothness: number;
     smartScrollEnableMouse: boolean;
     smartScrollEnableSelection: boolean;
     smartScrollDynamicAnimation: boolean;
 
     restoreScrollEnabled: boolean;
+    restoreScrollPositions: Record<string, number>;
 
     scrollbarGlobal: boolean;
     scrollbarVisibility: string; // hide, scroll, show
@@ -31,15 +30,14 @@ export interface ScrollingPluginSettings {
 
 export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     smartScrollMode: "follow-cursor",
-    smartScrollEditRadius: 75,
-    smartScrollEditSmoothness: 25,
-    smartScrollMoveRadius: 75,
-    smartScrollMoveSmoothness: 25,
+    smartScrollRadius: 75,
+    smartScrollSmoothness: 25,
     smartScrollDynamicAnimation: true,
     smartScrollEnableMouse: false,
     smartScrollEnableSelection: false,
 
     restoreScrollEnabled: false,
+    restoreScrollPositions: {},
 
     scrollbarGlobal: false,
     scrollbarVisibility: "show",
@@ -118,7 +116,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         if (this.plugin.settings.smartScrollMode !== "disabled") {
             new Setting(containerEl)
-                .setName("Scroll zone radius when editing")
+                .setName("Scroll zone radius")
                 .setDesc(
                     createFragment((frag) => {
                         const div = frag.createDiv();
@@ -145,25 +143,25 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.smartScrollEditRadius =
-                                DEFAULT_SETTINGS.smartScrollEditRadius;
+                            this.plugin.settings.smartScrollRadius =
+                                DEFAULT_SETTINGS.smartScrollRadius;
                             this.display();
                             await this.plugin.saveSettings();
                         });
                 })
                 .addSlider((slider) =>
                     slider
-                        .setValue(this.plugin.settings.smartScrollEditRadius)
+                        .setValue(this.plugin.settings.smartScrollRadius)
                         .setLimits(0, 100, 1)
                         .setDynamicTooltip()
                         .onChange(async (value) => {
-                            this.plugin.settings.smartScrollEditRadius = value;
+                            this.plugin.settings.smartScrollRadius = value;
                             await this.plugin.saveSettings();
                         }),
                 );
 
             new Setting(containerEl)
-                .setName("Scroll smoothness when editing")
+                .setName("Scroll smoothness")
                 .setDesc(
                     "How fast or slow the scrolling animation is when editing moves the cursor.",
                 )
@@ -172,89 +170,19 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.smartScrollEditSmoothness =
-                                DEFAULT_SETTINGS.smartScrollEditSmoothness;
+                            this.plugin.settings.smartScrollSmoothness =
+                                DEFAULT_SETTINGS.smartScrollSmoothness;
                             this.display();
                             await this.plugin.saveSettings();
                         });
                 })
                 .addSlider((slider) =>
                     slider
-                        .setValue(this.plugin.settings.smartScrollEditSmoothness)
+                        .setValue(this.plugin.settings.smartScrollSmoothness)
                         .setLimits(0, 100, 1)
                         .setDynamicTooltip()
                         .onChange(async (value) => {
-                            this.plugin.settings.smartScrollEditSmoothness = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-
-            new Setting(containerEl)
-                .setName("Scroll zone radius when moving cursor")
-                .setDesc(
-                    createFragment((frag) => {
-                        const div = frag.createDiv();
-
-                        if (this.plugin.settings.smartScrollMode === "follow-cursor") {
-                            div.createEl("span", {
-                                text: "How far you can move the cursor from the center before scrolling.",
-                            });
-                            div.createEl("br");
-                            div.createEl("span", {
-                                text: "0% keeps the cursor perfectly centered, while 100% effectively disables this feature.",
-                            });
-                        } else {
-                            div.createEl("span", {
-                                text: "How far you can move the cursor before jumping.",
-                            });
-                            div.createEl("br");
-                            div.createEl("span", { text: "Lower values might appear buggy." });
-                        }
-                    }),
-                )
-                .addExtraButton((button) => {
-                    button
-                        .setIcon("reset")
-                        .setTooltip("Restore default")
-                        .onClick(async () => {
-                            this.plugin.settings.smartScrollMoveRadius =
-                                DEFAULT_SETTINGS.smartScrollMoveRadius;
-                            this.display();
-                            await this.plugin.saveSettings();
-                        });
-                })
-                .addSlider((slider) =>
-                    slider
-                        .setValue(this.plugin.settings.smartScrollMoveRadius)
-                        .setLimits(0, 100, 1)
-                        .setDynamicTooltip()
-                        .onChange(async (value) => {
-                            this.plugin.settings.smartScrollMoveRadius = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-
-            new Setting(containerEl)
-                .setName("Scroll smoothness when moving cursor")
-                .setDesc("How fast or slow the scrolling animation is when you move the cursor.")
-                .addExtraButton((button) => {
-                    button
-                        .setIcon("reset")
-                        .setTooltip("Restore default")
-                        .onClick(async () => {
-                            this.plugin.settings.smartScrollMoveSmoothness =
-                                DEFAULT_SETTINGS.smartScrollMoveSmoothness;
-                            this.display();
-                            await this.plugin.saveSettings();
-                        });
-                })
-                .addSlider((slider) =>
-                    slider
-                        .setValue(this.plugin.settings.smartScrollMoveSmoothness)
-                        .setLimits(0, 100, 1)
-                        .setDynamicTooltip()
-                        .onChange(async (value) => {
-                            this.plugin.settings.smartScrollMoveSmoothness = value;
+                            this.plugin.settings.smartScrollSmoothness = value;
                             await this.plugin.saveSettings();
                         }),
                 );
