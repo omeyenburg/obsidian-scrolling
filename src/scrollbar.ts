@@ -16,13 +16,10 @@ export class Scrollbar {
         this.updateStyle();
 
         this.boundScrollHandler = this.scrollHandler.bind(this);
-
-        plugin.registerEvent(
-            plugin.app.workspace.on("active-leaf-change", this.attachScrollHandler.bind(this)),
-        );
     }
 
-    private attachScrollHandler() {
+    // Called in main
+    public activeLeafChangeHandler() {
         const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
         if (!view || !view.file) return;
 
