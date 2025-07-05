@@ -112,8 +112,6 @@ export class SmartScroll {
     }
 
     private calculateScrollIntensity(): void {
-        if (!this.plugin.settings.smartScrollDynamicAnimation) return;
-
         const time = performance.now();
         const elapsed = time - this.scrollLast;
 
@@ -133,16 +131,17 @@ export class SmartScroll {
         // If scrolling fast, skip animation steps
         // (Only if not scrolling inverted and scrolling without edit (otherwise run later))
         if (mode === "follow-cursor" && !this.recentEdit) {
-            this.calculateScrollIntensity();
+            if (dynamicAnimation) {
+                this.calculateScrollIntensity();
+            } else {
+                this.scrollIntensity = 0;
+            }
         }
 
         // Get cursor position
         const cursorEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
         if (!cursorEl) return;
         const cursor = cursorEl.getBoundingClientRect();
-
-        // Happens for a brief moment when entering a table
-        if (cursor.top < 0) return;
 
         // Old method: reliable except for tables
         // const cursor = editor.cm.coordsAtPos?.(editor.posToOffset(editor.getCursor()));
@@ -203,13 +202,15 @@ export class SmartScroll {
             this.calculateScrollIntensity();
         }
 
-        let steps = Math.round(1 + smoothness / 5);
+        let steps = Math.max(1, Math.ceil(2 * (smoothness / 100) * Math.sqrt(Math.abs(distance))));
 
-        // If scrolling fast, skip animation steps.
-        if (mode === "follow-cursor" && this.scrollIntensity > this.intensityThreshold) steps = 1;
+        // If scrolling fast, reduce animation steps.
+        if (mode === "follow-cursor" && this.scrollIntensity > this.intensityThreshold || Math.abs(distance) > scrollInfo.height) {
+            steps = Math.ceil(Math.sqrt(steps));
+        }
 
         const animate = (editor: Editor, dest: number, step_size: number, step: number) => {
-            if (!step) return;
+            if (step <= 0) return;
 
             editor.scrollTo(null, dest - step_size * (step - 1));
             this.animationFrame = window.requestAnimationFrame(() =>
