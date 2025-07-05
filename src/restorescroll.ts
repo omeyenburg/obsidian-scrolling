@@ -13,18 +13,26 @@ export class RestoreScroll {
                 setViewState(old) {
                     return async function (...args) {
                         const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
-                        if (!view || !view.file || !plugin.settings.restoreScrollEnabled) {
+                        if (!view || !plugin.settings.restoreScrollEnabled) {
                             return await old.apply(this, args);
                         }
 
+                        // Hide content until scrolling is done.
                         const content = view.leaf.view.containerEl;
                         content.style.visibility = "hidden";
 
                         const result = await old.apply(this, args);
 
-                        // Query last position.
-                        // No need to scroll if dest is zero.
+                        // File is available after old.apply was called.
+                        if (!view.file) {
+                            content.style.visibility = "visible";
+                            return result;
+                        }
+
+                        // Query last position
                         const dest = plugin.settings.restoreScrollPositions[view.file.path];
+
+                        // No need to scroll if dest is zero.
                         if (!dest) {
                             content.style.visibility = "visible";
                             return result;
