@@ -1,54 +1,50 @@
-.scrolling-global.scrolling-hidden * {
+/*
+ *
+ * name: Scrolling
+ * id: scrolling
+ *
+ */
+
+/* Hide scrollbars */
+.scrolling-hide-scrollbars .markdown-source-view,
+.scrolling-hide-scrollbars .cm-scroller {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.scrolling-global.scrolling-hidden *::-webkit-scrollbar {
+
+.scrolling-hide-scrollbars .markdown-source-view::-webkit-scrollbar,
+.scrolling-hide-scrollbars .cm-scroller::-webkit-scrollbar {
   display: none;
 }
 
-.scrolling-global.scrolling-transparent *::-webkit-scrollbar-thumb {
-  background-color: transparent;
+/* Hide scrollbar on element temporarily */
+.scrolling-transparent::-webkit-scrollbar,
+.scrolling-transparent::-webkit-scrollbar-thumb,
+.scrolling-transparent::-webkit-scrollbar-track {
+    background: transparent !important;
 }
 
-.scrolling-global.scrolling-width * {
-  scrollbar-width: var(--scrollbar-width);
-}
-.scrolling-global.scrolling-width *::-webkit-scrollbar {
-  width: var(--scrollbar-width);
-}
-
-.scrolling-markdown.scrolling-hidden .markdown-source-view,
-.scrolling-markdown.scrolling-hidden .cm-scroller {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.scrolling-markdown.scrolling-hidden .markdown-source-view::-webkit-scrollbar,
-.scrolling-markdown.scrolling-hidden .cm-scroller::-webkit-scrollbar {
-  display: none;
+/* Scrollbar width */
+.scrolling-width * {
+  scrollbar-width: var(--scrolling-scrollbar-width) !important;
+  scrollbar-height: var(--scrolling-scrollbar-width) !important;
 }
 
-.scrolling-markdown.scrolling-transparent .markdown-source-view::-webkit-scrollbar-thumb,
-.scrolling-markdown.scrolling-transparent .cm-scroller::-webkit-scrollbar-thumb {
-  background-color: transparent;
+.scrolling-width *::-webkit-scrollbar {
+  width: var(--scrolling-scrollbar-width) !important;
+  height: var(--scrolling-scrollbar-width) !important;
 }
 
-.scrolling-markdown.scrolling-width .markdown-source-view,
-.scrolling-markdown.scrolling-width .cm-scroller {
-  scrollbar-width: var(--scrolling-scrollbar-width);
-}
-.scrolling-markdown.scrolling-width .markdown-source-view::-webkit-scrollbar,
-.scrolling-markdown.scrolling-width .cm-scroller::-webkit-scrollbar {
-  width: var(--scrolling-scrollbar-width);
-}
-
-/* Add scrollbar to file tree */
+/* Horizontal scrollbar for file tree */
 .scrolling-filetree-horizontal .nav-files-container {
     overflow: auto;
 }
+
 .scrolling-filetree-horizontal .nav-files-container > div {
     min-width: max-content;
     min-height: max-content;
 }
+
 .scrolling-filetree-horizontal .tree-item-self .nav-file-title,
 .scrolling-filetree-horizontal .tree-item-self .nav-folder-title {
     flex-shrink: 0;
