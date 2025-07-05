@@ -1,19 +1,11 @@
 import { MarkdownView, TFile } from "obsidian";
 import type { default as ScrollingPlugin } from "./main";
 
-// NOTE: line and ch are not yet used, seems to work fine already without
-export interface PositionData {
-    line: number;
-    ch: number;
-    scrollTop: number;
-}
-
 export class RestoreScroll {
     private plugin: ScrollingPlugin;
 
     private recentLeafChange: boolean;
     private recentFileOpenEvent = false;
-    private positions: Map<string, PositionData> = new Map();
     private leafChangeTimeout: number;
 
     private static readonly LEAF_CHANGE_DEBOUNCE_MS = 500;
@@ -26,6 +18,12 @@ export class RestoreScroll {
         plugin.registerEvent(
             plugin.app.workspace.on("active-leaf-change", this.leafHandler.bind(this)),
         );
+
+        plugin.registerEvent(
+            plugin.app.workspace.on("quit", (tasks) =>
+                tasks.add(async () => await plugin.saveSettings()),
+            ),
+        );
     }
 
     private leafHandler(): void {
@@ -36,7 +34,6 @@ export class RestoreScroll {
         this.recentLeafChange = true;
         this.leafChangeTimeout = window.setTimeout(() => {
             this.recentLeafChange = false;
-            // if (container) container.style.visibility = "visible";
         }, RestoreScroll.LEAF_CHANGE_DEBOUNCE_MS);
     }
 
@@ -47,12 +44,9 @@ export class RestoreScroll {
         const markdownView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!markdownView) return;
 
-        const lastPosition = this.positions.get(file.path);
-        if (!lastPosition) return;
-
         // Query last position.
         // No need to scroll if dest is zero.
-        const dest = lastPosition.scrollTop;
+        const dest = this.plugin.settings.restoreScrollPositions[file.path];
         if (!dest) return;
 
         const editor = markdownView.editor;
@@ -107,14 +101,9 @@ export class RestoreScroll {
             )
                 return;
 
-            const cursor = editor.getCursor();
+            // const cursor = editor.getCursor();
             const scrollInfo = editor.getScrollInfo();
-
-            this.positions.set(file.path, {
-                line: cursor.line,
-                ch: cursor.ch,
-                scrollTop: scrollInfo.top,
-            });
+            this.plugin.settings.restoreScrollPositions[file.path] = scrollInfo.top;
         }, 500);
     }
 }
