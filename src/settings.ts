@@ -247,7 +247,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (!Platform.isMacOS) {
             new Setting(containerEl)
                 .setName("Scrollbar visibility")
-                .setDesc("When to show scrollbars in markdown files.")
+                .setDesc("When to show the scrollbar in markdown/pdf files.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -261,9 +261,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 })
                 .addDropdown((dropdown) =>
                     dropdown
-                        .addOption("hide", "Always hide scrollbars")
-                        .addOption("scroll", "Show scrollbars while scrolling")
-                        .addOption("show", "Always show scrollbars")
+                        .addOption("hide", "Always hide scrollbar")
+                        .addOption("scroll", "Show scrollbar while scrolling")
+                        .addOption("show", "Always show scrollbar")
                         .setValue(this.plugin.settings.scrollbarVisibility)
                         .onChange(async (value) => {
                             this.plugin.settings.scrollbarVisibility = value;
