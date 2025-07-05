@@ -126,16 +126,8 @@ export class SmartScroll {
         const mode = this.plugin.settings.smartScrollMode;
         if (mode === "disabled") return;
 
-        let radiusPercent;
-        let smoothness;
-        if (this.recentEdit) {
-            radiusPercent = this.plugin.settings.smartScrollEditRadius;
-            smoothness = this.plugin.settings.smartScrollEditSmoothness;
-        } else {
-            radiusPercent = this.plugin.settings.smartScrollMoveRadius;
-            smoothness = this.plugin.settings.smartScrollMoveSmoothness;
-        }
-
+        const radiusPercent = this.plugin.settings.smartScrollRadius;
+        const smoothness = this.plugin.settings.smartScrollSmoothness;
         const dynamicAnimation = this.plugin.settings.smartScrollDynamicAnimation;
 
         // If scrolling fast, skip animation steps
