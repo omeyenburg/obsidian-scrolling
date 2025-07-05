@@ -1,28 +1,30 @@
-import { Platform, MarkdownView } from "obsidian";
+import { Platform, FileView } from "obsidian";
 import type { default as ScrollingPlugin } from "./main";
 
 export class Scrollbar {
     private plugin: ScrollingPlugin;
 
+    private boundScrollHandler;
     private scrollEventSkip = false;
     private currentWidth: number | null;
+    private currentVisibility: string;
     private currentFileTreeHorizontal = false;
-    private boundScrollHandler;
+    private scrollTimeouts = new Map<HTMLElement, number>();
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
         this.updateStyle();
 
         this.boundScrollHandler = this.scrollHandler.bind(this);
-        this.attachScrollHandler();
+
         plugin.registerEvent(
             plugin.app.workspace.on("active-leaf-change", this.attachScrollHandler.bind(this)),
         );
     }
 
     private attachScrollHandler() {
-        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
+        const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
+        if (!view || !view.file) return;
 
         // Avoid scroll events after attach
         this.scrollEventSkip = true;
@@ -30,25 +32,38 @@ export class Scrollbar {
             this.scrollEventSkip = false;
         }, 250);
 
-        const editScroller = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
-        const viewScroller = view.contentEl.querySelector(".markdown-preview-view") as HTMLElement;
+        if (view.file.extension === "md") {
+            const editScroller = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
+            const viewScroller = view.contentEl.querySelector(
+                ".markdown-preview-view",
+            ) as HTMLElement;
 
-        // Hide scrollbars on elements
-        editScroller.classList.add("scrolling-transparent");
-        viewScroller.classList.add("scrolling-transparent");
+            // Hide scrollbars on elements
+            editScroller.classList.add("scrolling-transparent");
+            viewScroller.classList.add("scrolling-transparent");
 
-        editScroller.removeEventListener("scroll", this.boundScrollHandler);
-        viewScroller.removeEventListener("scroll", this.boundScrollHandler);
+            editScroller.removeEventListener("scroll", this.boundScrollHandler);
+            viewScroller.removeEventListener("scroll", this.boundScrollHandler);
 
-        this.plugin.registerDomEvent(editScroller, "scroll", this.boundScrollHandler);
-        this.plugin.registerDomEvent(viewScroller, "scroll", this.boundScrollHandler);
+            this.plugin.registerDomEvent(editScroller, "scroll", this.boundScrollHandler);
+            this.plugin.registerDomEvent(viewScroller, "scroll", this.boundScrollHandler);
+        } else if (view.file.extension === "pdf") {
+            const scroller = view.contentEl.querySelector(".pdf-viewer-container") as HTMLElement;
+
+            // Hide scrollbars on elements
+            scroller.classList.add("scrolling-transparent");
+
+            scroller.removeEventListener("scroll", this.boundScrollHandler);
+            scroller.addEventListener("scroll", this.boundScrollHandler);
+            this.plugin.register(() =>
+                scroller.removeEventListener("scroll", this.boundScrollHandler),
+            );
+        }
     }
 
-    private scrollTimeouts = new Map<HTMLElement, number>();
     private scrollHandler(event: Event): void {
-        if (this.scrollEventSkip) {
-            return;
-        }
+        if (this.scrollEventSkip) return;
+
         this.plugin.restoreScroll.saveScrollPosition();
 
         // Scrollbars styling doesnt work on MacOS.
@@ -93,7 +108,7 @@ export class Scrollbar {
             return;
         }
 
-        const hide = this.plugin.settings.scrollbarVisibility == "hide";
+        const visibility = this.plugin.settings.scrollbarVisibility;
 
         // Default width appears to be 12px.
         // Only linux supports this option, set to -1 to ignore width.
@@ -104,11 +119,13 @@ export class Scrollbar {
         // Only proceed if state changed.
         if (
             this.currentWidth == width &&
+            this.currentVisibility == visibility &&
             this.currentFileTreeHorizontal == fileTreeHorizontal
         )
             return;
 
         this.currentWidth = width;
+        this.currentVisibility = visibility;
         this.currentFileTreeHorizontal = fileTreeHorizontal;
 
         this.removeStyle();
@@ -117,18 +134,23 @@ export class Scrollbar {
             document.body.addClass("scrolling-filetree-horizontal");
         }
 
-        if (hide) {
-            document.body.addClass("scrolling-hidden");
-        } else if (width >= 0) {
-            document.body.addClass("scrolling-width");
+        if (visibility === "hide") {
+            document.body.addClass("scrolling-visibility-hide");
+        } else if (visibility === "scroll") {
+            document.body.addClass("scrolling-visibility-scroll");
+        }
+
+        if (width >= 0) {
+            document.body.addClass("scrolling-scrollbar-width");
             document.body.style.setProperty("--scrolling-scrollbar-width", `${width}px`);
         }
     }
 
     public removeStyle(): void {
         document.body.removeClasses([
-            "scrolling-hidden",
-            "scrolling-width",
+            "scrolling-scrollbar-width",
+            "scrolling-visibility-hide",
+            "scrolling-visibility-scroll",
             "scrolling-filetree-horizontal",
         ]);
 

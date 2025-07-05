@@ -56,7 +56,7 @@ Once enabled, go to **Settings → Community Plugins → Scrolling** to configur
 ### Scrollbar appearance
 
 - **Show horizontal scrollbar in file tree** (Default: disabled)<br>Enables horizontal scrolling and shows a scrollbar in the file tree.
-- **Scrollbar visibility** (Default: Always show scrollbars)<br>Show scrollbars always, while scrolling or never. *(Platform: Windows & Linux only)*
+- **Scrollbar visibility** (Default: Always show scrollbar)<br>When to show the scrollbar in markdown/pdf files: always, while scrolling or never. *(Platform: Windows & Linux only)*
 - **Scrollbar thickness** (Default: 12)<br>Sets the width of scrollbars in pixels. *(Platform: Linux only)*
 
 ### Mouse/Touchpad scrolling (Experimental)

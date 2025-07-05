@@ -3,34 +3,36 @@
  * name: Scrolling
  * id: scrolling
  *
+ * Classes for document body:
+ * .scrolling-scrollbar-width
+ * .scrolling-visibility-hide
+ * .scrolling-visibility-scroll
+ * .scrolling-filetree-horizontal
+ *
+ * Classes for elements supporting scrolling:
+ * .scrolling-transparent
+ *
+ * Variables:
+ * --scrolling-scrollbar-width
+ *
  */
 
-/* Hide scrollbars */
-.scrolling-hide-scrollbars .markdown-source-view,
-.scrolling-hide-scrollbars .cm-scroller {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.scrolling-hide-scrollbars .markdown-source-view::-webkit-scrollbar,
-.scrolling-hide-scrollbars .cm-scroller::-webkit-scrollbar {
+/* Hide specific scrollbars in files */
+.scrolling-visibility-hide .pdf-viewer-container::-webkit-scrollbar,
+.scrolling-visibility-hide .markdown-source-view::-webkit-scrollbar,
+.scrolling-visibility-hide .cm-scroller::-webkit-scrollbar {
   display: none;
 }
 
-/* Hide scrollbar on element temporarily */
-.scrolling-transparent::-webkit-scrollbar,
-.scrolling-transparent::-webkit-scrollbar-thumb,
-.scrolling-transparent::-webkit-scrollbar-track {
+/* Hide scrollbar on containers with scrolling-transparent class */
+.scrolling-visibility-scroll .scrolling-transparent::-webkit-scrollbar,
+.scrolling-visibility-scroll .scrolling-transparent::-webkit-scrollbar-thumb,
+.scrolling-visibility-scroll .scrolling-transparent::-webkit-scrollbar-track {
     background: transparent !important;
 }
 
 /* Scrollbar width */
-.scrolling-width * {
-  scrollbar-width: var(--scrolling-scrollbar-width) !important;
-  scrollbar-height: var(--scrolling-scrollbar-width) !important;
-}
-
-.scrolling-width *::-webkit-scrollbar {
+.scrolling-scrollbar-width *::-webkit-scrollbar {
   width: var(--scrolling-scrollbar-width) !important;
   height: var(--scrolling-scrollbar-width) !important;
 }
