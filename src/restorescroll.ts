@@ -29,6 +29,21 @@ export class RestoreScroll {
     private leafHandler(): void {
         if (!this.plugin.settings.restoreScrollEnabled) return;
 
+        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return;
+
+        let scroller: HTMLElement;
+        if (view.getMode() === "preview") {
+            scroller = view.containerEl.querySelector(".markdown-preview-view") as HTMLElement;
+            if (!scroller) return;
+        } else {
+            scroller = view.editor.cm.scrollDOM;
+        }
+
+        if (scroller.scrollTop == 0) {
+            scroller.scrollTop = 1;
+        }
+
         window.clearTimeout(this.leafChangeTimeout);
 
         this.recentLeafChange = true;
@@ -41,39 +56,46 @@ export class RestoreScroll {
         if (!this.plugin.settings.restoreScrollEnabled) return;
         if (!file) return;
 
-        const markdownView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!markdownView) return;
+        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return;
 
         // Query last position.
         // No need to scroll if dest is zero.
         const dest = this.plugin.settings.restoreScrollPositions[file.path];
         if (!dest) return;
 
-        const editor = markdownView.editor;
+        let scroller: HTMLElement;
+        if (view.getMode() === "preview") {
+            scroller = view.containerEl.querySelector(".markdown-preview-view") as HTMLElement;
+            if (!scroller) return;
+        } else {
+            scroller = view.editor.cm.scrollDOM;
+        }
 
         // If scrollTop is 0, assume that file is already loaded.
-        if (editor.cm.scrollDOM.scrollTop == 0) {
-            editor.cm.scrollDOM.scrollTop = dest;
+        if (scroller.scrollTop == 0) {
+            scroller.scrollTop = dest;
             return;
         }
 
+        // Prevent saving
         this.recentFileOpenEvent = true;
 
         // Hide until scrolling is finished
-        const container = markdownView.leaf.view.containerEl;
-        container.style.visibility = "hidden";
+        const content = view.leaf.view.containerEl;
+        content.style.visibility = "hidden";
 
         // Scroll to dest and wait until obsidian overrides it (dest != zero).
-        editor.cm.scrollDOM.scrollTop = dest;
+        scroller.scrollTop = dest;
 
         let i = 0;
         const scroll = () => {
-            if (i++ < RestoreScroll.SCROLL_RETRY_LIMIT && editor.cm.scrollDOM.scrollTop != 0) {
-                editor.cm.scrollDOM.scrollTop = dest;
+            if (i++ < RestoreScroll.SCROLL_RETRY_LIMIT && scroller.scrollTop != 0) {
+                scroller.scrollTop = dest;
                 window.requestAnimationFrame(scroll);
             } else {
-                editor.cm.scrollDOM.scrollTop = dest;
-                container.style.visibility = "visible";
+                scroller.scrollTop = dest;
+                content.style.visibility = "visible";
 
                 window.requestAnimationFrame(() => {
                     this.recentFileOpenEvent = false;
@@ -86,24 +108,31 @@ export class RestoreScroll {
     // Invoked on cursor movement and mouse scroll.
     public saveScrollPosition() {
         if (!this.plugin.settings.restoreScrollEnabled) return;
-        const activeEditor = this.plugin.app.workspace.activeEditor;
-        const editor = activeEditor?.editor;
-        const file = activeEditor?.file;
+
+        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view || !view.file) return;
 
         // Defer saving for 500 ms to prevent interference with opening files
         window.setTimeout(() => {
             if (
-                !file ||
-                !editor ||
                 this.recentLeafChange ||
                 this.recentFileOpenEvent ||
-                this.plugin.app.workspace.activeEditor?.file != file
+                this.plugin.app.workspace.activeEditor?.file != view.file
             )
                 return;
 
+            let scrollTop;
+
+            if (view.getMode() === "source") {
+                scrollTop = view.editor.getScrollInfo().top;
+            } else {
+                scrollTop = view.containerEl.querySelector(".markdown-preview-view")?.scrollTop;
+            }
+
             // const cursor = editor.getCursor();
-            const scrollInfo = editor.getScrollInfo();
-            this.plugin.settings.restoreScrollPositions[file.path] = scrollInfo.top;
+            if (scrollTop) {
+                this.plugin.settings.restoreScrollPositions[view.file.path] = scrollTop;
+            }
         }, 500);
     }
 }
