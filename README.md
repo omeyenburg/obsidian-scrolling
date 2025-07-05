@@ -42,14 +42,14 @@ Once enabled, go to **Settings → Community Plugins → Scrolling** to configur
 
 ### Smart scrolling
 
-- **Mode** (Default: Follow cursor)<br>- **Disabled**: Disables this feature.<br>- **Follow cursor**: Keeps the text cursor smoothly within a comfortable zone.<br>Also known as "Typewriter mode" or "Scrolloff".<br>- **Page jumping**: Reduces scrolling by jumping by whole pages at screen edges.<br>Best used with a trigger distance.
+- **Mode** (Default: Follow cursor)<br>- **Disabled**: Disables this feature.<br>- **Follow cursor**: Keeps the text cursor smoothly within a comfortable zone.<br>Also known as "Typewriter mode" or "Scrolloff".<br>- **Page jumping**: Reduces scrolling by jumping by whole pages at screen edges.
     - **Trigger distance** (Default: 75)<br>Defines at which distance from the center scrolling is triggered.
     - **Animation duration** (Default: 25)<br>Adjusts the speed of the scrolling animation.
     - **Dynamic animations** (Default: enabled)<br>If many scroll events happen quickly, skips animation frames to improve responsiveness.
-    - **Enable for mouse interactions** (Default: disabled)<br>Triggers scrolling when the text cursor is moved with the mouse.
-        - **Invoke on mouse selection** (Default: disabled)<br>Also triggers scrolling when the mouse selects text.
+    - **Trigger on mouse interactions** (Default: disabled)<br>Update when the text cursor is moved with the mouse.
+        - **Trigger on mouse selection** (Default: disabled)<br>Also update when the mouse selects text.
 
-### Remember Scroll Position
+### Remember scroll position
 
 - **Enabled** (Default: disabled)<br>Saves your scroll position before closing a file and restores it when opening the file again.
 
@@ -63,12 +63,12 @@ Once enabled, go to **Settings → Community Plugins → Scrolling** to configur
 
 - **Enabled** (Default: enabled)<br>Enables custom scroll behavior for mouse and touchpad input.
     - **Invert scroll direction** (Default: disabled)<br>Reverses the scroll direction.
-    - **Mouse scroll speed** (Default: 50)<br>Sets the scroll speed multiplier.
-    - **Mouse scroll smoothness** (Default: 75)<br>Determines mouse scroll smoothness.
+    - **Scroll speed** (Default: 50)<br>Defines how far the page scrolls on mouse wheel input.
+    - **Scroll smoothness** (Default: 75)<br>Determines the duration of the scrolling animation.
     - **Touchpad detection** (Default: enabled)<br>Detect touchpad input to provide smoother scrolling. *(Should work well with most devices)*
-        - **Touchpad scroll speed** (Default: 50)<br>Adjusts scroll speed when using a touchpad.
-        - **Touchpad smoothness** (Default: 75)<br>Controls scroll animation smoothness for touchpads.
-        - **Touchpad friction threshold** (Default: 20)<br>Sets the minimum scroll strength below which increased friction is applied for finer control.
+        - **Touchpad scroll speed** (Default: 50)<br>Adjusts how fast the page scrolls when usinga touchpad.
+        - **Touchpad scroll smoothness** (Default: 75)<br>Controls scroll animation smoothness for touchpads.
+        - **Touchpad friction threshold** (Default: 20)<br>Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.
 
 </details>
 

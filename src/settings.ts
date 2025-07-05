@@ -1,4 +1,5 @@
 import { Platform, PluginSettingTab, Setting } from "obsidian";
+
 import type { default as ScrollingPlugin } from "./main";
 
 export interface ScrollingPluginSettings {
@@ -108,7 +109,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                             });
                             div.createEl("br");
                             div.createEl("span", {
-                                text: "0% keeps the cursor perfectly centered, while 100% effectively disables this feature.",
+                                text: "0% keeps the cursor perfectly centered.",
                             });
                         } else {
                             div.createEl("span", {
@@ -142,10 +143,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
 
             new Setting(containerEl)
-                .setName("Animation duration")
-                .setDesc(
-                    "How fast or slow the scrolling animation is when editing moves the cursor.",
-                )
+                .setName("Animation smoothness")
+                .setDesc("Length of the scrolling animation.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -183,8 +182,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
 
             new Setting(containerEl)
-                .setName("Enable for mouse interactions")
-                .setDesc("Also apply this behavior when the cursor is moved using the mouse.")
+                .setName("Trigger on mouse interactions")
+                .setDesc("Update when the cursor is moved using the mouse.")
                 .addToggle((toggle) =>
                     toggle
                         .setValue(this.plugin.settings.smartScrollEnableMouse)
@@ -197,8 +196,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
             if (this.plugin.settings.smartScrollEnableMouse) {
                 new Setting(containerEl)
-                    .setName("Invoke on mouse selection")
-                    .setDesc("Trigger scrolling when text is selected using the mouse.")
+                    .setName("Trigger on mouse selection")
+                    .setDesc("Also update when text is selected using the mouse.")
                     .addToggle((toggle) =>
                         toggle
                             .setValue(this.plugin.settings.smartScrollEnableSelection)
@@ -211,12 +210,12 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
 
         containerEl.createEl("br");
-        new Setting(containerEl).setName("Remember Scroll Position").setHeading();
+        new Setting(containerEl).setName("Remember scroll position").setHeading();
 
         new Setting(containerEl)
             .setName("Enabled")
             .setDesc(
-                "Store scroll position before closing a file and continue where you left off when opening it again.",
+                "Save scroll position before closing a file and restore it when opening the file again.",
             )
             .addToggle((toggle) =>
                 toggle
@@ -226,7 +225,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
-
 
         containerEl.createEl("br");
         new Setting(containerEl).setName("Scrollbar appearance").setHeading();
@@ -308,7 +306,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName("Enabled")
-            .setDesc("Whether mouse/touchpad scrolling settings are applied.")
+            .setDesc("Enable custom mouse/touchpad scrolling behavior.")
             .addToggle((toggle) =>
                 toggle.setValue(this.plugin.settings.mouseEnabled).onChange(async (value) => {
                     this.plugin.settings.mouseEnabled = value;
@@ -320,7 +318,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (this.plugin.settings.mouseEnabled) {
             new Setting(containerEl)
                 .setName("Invert scroll direction")
-                .setDesc("Reverse the scroll direction.")
+                .setDesc("Reverse the scroll direction for mouse wheel and touchpad input.")
                 .addToggle((toggle) =>
                     toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
                         this.plugin.settings.mouseInvert = value;
@@ -328,8 +326,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
                 );
             new Setting(containerEl)
-                .setName("Mouse scroll speed")
-                .setDesc("Scroll speed multiplier for mouse wheel.")
+                .setName("Scroll speed")
+                .setDesc("How far the page scrolls per mouse wheel movement.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -352,8 +350,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
 
             new Setting(containerEl)
-                .setName("Mouse scroll smoothness")
-                .setDesc("How smooth scrolling with a mouse should be.")
+                .setName("Scroll smoothness")
+                .setDesc("Duration of the scrolling animation.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -382,7 +380,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         const div = frag.createDiv();
 
                         div.createEl("span", {
-                            text: "Detect touchpad input to provide smoother scrolling.",
+                            text: "Detect touchpad input and apply dedicated scrolling behavior.",
                         });
                         div.createEl("br");
                         div.createEl("span", {
@@ -404,7 +402,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 if (this.plugin.settings.mouseEnabled) {
                     new Setting(containerEl)
                         .setName("Touchpad scroll speed")
-                        .setDesc("Adjust scroll speed when using a touchpad.")
+                        .setDesc("How fast the page scrolls on touchpad movement.")
                         .addExtraButton((button) => {
                             button
                                 .setIcon("reset")
@@ -428,8 +426,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         );
 
                     new Setting(containerEl)
-                        .setName("Touchpad smoothness")
-                        .setDesc("Control the smoothness of touchpads.")
+                        .setName("Touchpad scroll smoothness")
+                        .setDesc("Scroll smoothness when using a touchpad.")
                         .addExtraButton((button) => {
                             button
                                 .setIcon("reset")
@@ -454,7 +452,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
                     new Setting(containerEl)
                         .setName("Touchpad friction threshold")
-                        .setDesc("Adjust how sensitive the touchpad is to slow, precise scrolling.")
+                        .setDesc("Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.")
                         .addExtraButton((button) => {
                             button
                                 .setIcon("reset")

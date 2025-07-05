@@ -1,4 +1,5 @@
 import { Platform, FileView } from "obsidian";
+
 import type { default as ScrollingPlugin } from "./main";
 
 export class Scrollbar {
