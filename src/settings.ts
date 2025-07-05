@@ -12,7 +12,6 @@ export interface ScrollingPluginSettings {
     restoreScrollEnabled: boolean;
     restoreScrollPositions: Record<string, number>;
 
-    scrollbarGlobal: boolean;
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
     scrollbarFileTreeHorizontal: boolean;
@@ -39,7 +38,6 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollEnabled: false,
     restoreScrollPositions: {},
 
-    scrollbarGlobal: false,
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
     scrollbarFileTreeHorizontal: false,
@@ -67,23 +65,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
-        new Setting(containerEl).setName("General").setHeading();
-
-        new Setting(containerEl)
-            .setName("Remember scroll position")
-            .setDesc(
-                "Store scroll position before closing a file and continue where you left off when opening it again.",
-            )
-            .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.restoreScrollEnabled)
-                    .onChange(async (value) => {
-                        this.plugin.settings.restoreScrollEnabled = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-        containerEl.createEl("br");
         new Setting(containerEl).setName("Smart scrolling").setHeading();
 
         new Setting(containerEl)
@@ -116,7 +97,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         if (this.plugin.settings.smartScrollMode !== "disabled") {
             new Setting(containerEl)
-                .setName("Scroll zone radius")
+                .setName("Trigger distance")
                 .setDesc(
                     createFragment((frag) => {
                         const div = frag.createDiv();
@@ -161,7 +142,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
 
             new Setting(containerEl)
-                .setName("Scroll smoothness")
+                .setName("Animation duration")
                 .setDesc(
                     "How fast or slow the scrolling animation is when editing moves the cursor.",
                 )
@@ -190,7 +171,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             new Setting(containerEl)
                 .setName("Dynamic animations")
                 .setDesc(
-                    "Skip animation frames if lots of scroll events occur for smoother animations.",
+                    "If many scroll events happen quickly, skip animation frames to improve responsiveness.",
                 )
                 .addToggle((toggle) =>
                     toggle
@@ -202,8 +183,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
 
             new Setting(containerEl)
-                .setName("Invoke on mouse-driven cursor movement")
-                .setDesc("Apply this feature when the text cursor is moved with the mouse.")
+                .setName("Enable for mouse interactions")
+                .setDesc("Also apply this behavior when the cursor is moved using the mouse.")
                 .addToggle((toggle) =>
                     toggle
                         .setValue(this.plugin.settings.smartScrollEnableMouse)
@@ -217,7 +198,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             if (this.plugin.settings.smartScrollEnableMouse) {
                 new Setting(containerEl)
                     .setName("Invoke on mouse selection")
-                    .setDesc("Also trigger, when the mouse has selected text.")
+                    .setDesc("Trigger scrolling when text is selected using the mouse.")
                     .addToggle((toggle) =>
                         toggle
                             .setValue(this.plugin.settings.smartScrollEnableSelection)
@@ -228,6 +209,24 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     );
             }
         }
+
+        containerEl.createEl("br");
+        new Setting(containerEl).setName("Remember Scroll Position").setHeading();
+
+        new Setting(containerEl)
+            .setName("Enabled")
+            .setDesc(
+                "Store scroll position before closing a file and continue where you left off when opening it again.",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.restoreScrollEnabled)
+                    .onChange(async (value) => {
+                        this.plugin.settings.restoreScrollEnabled = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
 
         containerEl.createEl("br");
         new Setting(containerEl).setName("Scrollbar appearance").setHeading();
@@ -248,7 +247,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (!Platform.isMacOS) {
             new Setting(containerEl)
                 .setName("Scrollbar visibility")
-                .setDesc("When to show scrollbars.")
+                .setDesc("When to show scrollbars in markdown files.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
@@ -274,31 +273,10 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         }),
                 );
 
-            if (this.plugin.settings.scrollbarVisibility != "scroll") {
-                new Setting(containerEl)
-                    .setName("Apply appearance to all scrollbars")
-                    .setDesc(
-                        "Whether scrollbar appearance settings should apply to all scrollbars or only markdown files.",
-                    )
-                    .addToggle((toggle) =>
-                        toggle
-                            .setValue(this.plugin.settings.scrollbarGlobal)
-                            .onChange(async (value) => {
-                                this.plugin.settings.scrollbarGlobal = value;
-                                this.plugin.scrollbar.updateStyle();
-                                // this.display();
-                                await this.plugin.saveSettings();
-                            }),
-                    );
-            } else {
-                this.plugin.settings.scrollbarGlobal = false;
-                this.plugin.scrollbar.updateStyle();
-            }
-
             if (Platform.isLinux && this.plugin.settings.scrollbarVisibility !== "hide") {
                 new Setting(containerEl)
                     .setName("Scrollbar thickness")
-                    .setDesc("Width in pixels.")
+                    .setDesc("Width of scrollbars in pixels.")
                     .addExtraButton((button) => {
                         button
                             .setIcon("reset")
@@ -476,9 +454,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
                     new Setting(containerEl)
                         .setName("Touchpad friction threshold")
-                        .setDesc(
-                            "The minimum scroll strength below which increased friction is applied for finer control.",
-                        )
+                        .setDesc("Adjust how sensitive the touchpad is to slow, precise scrolling.")
                         .addExtraButton((button) => {
                             button
                                 .setIcon("reset")
