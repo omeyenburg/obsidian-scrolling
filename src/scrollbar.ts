@@ -35,6 +35,7 @@ export class Scrollbar {
             const viewScroller = view.contentEl.querySelector(
                 ".markdown-preview-view",
             ) as HTMLElement;
+            if (!editScroller || !!viewScroller) return;
 
             // Hide scrollbars on elements
             editScroller.classList.add("scrolling-transparent");
@@ -47,6 +48,7 @@ export class Scrollbar {
             this.plugin.registerDomEvent(viewScroller, "scroll", this.boundScrollHandler);
         } else if (view.file.extension === "pdf") {
             const scroller = view.contentEl.querySelector(".pdf-viewer-container") as HTMLElement;
+            if (!scroller) return;
 
             // Hide scrollbars on elements
             scroller.classList.add("scrolling-transparent");
