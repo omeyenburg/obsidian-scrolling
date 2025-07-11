@@ -4,7 +4,9 @@ import { around } from "monkey-around";
 import { default as ScrollingPlugin } from "./main";
 
 export class RestoreScroll {
-    private plugin: ScrollingPlugin;
+    private readonly plugin: ScrollingPlugin;
+
+    private static readonly RESTORE_RETRY_LIMIT = 10;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -55,7 +57,7 @@ export class RestoreScroll {
                         let iterations = 0;
                         const scroll = () => {
                             if (
-                                iterations++ < 10 &&
+                                iterations++ < RestoreScroll.RESTORE_RETRY_LIMIT &&
                                 scroller.scrollHeight == scroller.clientHeight
                             ) {
                                 window.requestAnimationFrame(scroll);
