@@ -3,7 +3,7 @@ import { Platform, FileView } from "obsidian";
 import type { default as ScrollingPlugin } from "./main";
 
 export class Scrollbar {
-    private plugin: ScrollingPlugin;
+    private readonly plugin: ScrollingPlugin;
 
     private boundScrollHandler;
     private scrollEventSkip = false;
@@ -11,6 +11,9 @@ export class Scrollbar {
     private currentVisibility: string;
     private currentFileTreeHorizontal = false;
     private scrollTimeouts = new Map<HTMLElement, number>();
+
+    private static readonly SCROLLBAR_IDLE_TIMEOUT = 500;
+    private static readonly FILE_OPEN_SCROLL_EVENT_DELAY = 250;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -20,6 +23,7 @@ export class Scrollbar {
     }
 
     // Called in main
+    // TODO: move to main
     public activeLeafChangeHandler() {
         const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
         if (!view || !view.file) return;
@@ -28,14 +32,14 @@ export class Scrollbar {
         this.scrollEventSkip = true;
         window.setTimeout(() => {
             this.scrollEventSkip = false;
-        }, 250);
+        }, Scrollbar.FILE_OPEN_SCROLL_EVENT_DELAY);
 
         if (view.file.extension === "md") {
             const editScroller = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
             const viewScroller = view.contentEl.querySelector(
                 ".markdown-preview-view",
             ) as HTMLElement;
-            if (!editScroller || !!viewScroller) return;
+            if (!editScroller || !viewScroller) return;
 
             // Hide scrollbars on elements
             editScroller.classList.add("scrolling-transparent");
@@ -85,7 +89,7 @@ export class Scrollbar {
         const timeoutId = window.setTimeout(() => {
             el.classList.add("scrolling-transparent");
             this.scrollTimeouts.delete(el);
-        }, 500);
+        }, Scrollbar.SCROLLBAR_IDLE_TIMEOUT);
 
         this.scrollTimeouts.set(el, timeoutId);
     }

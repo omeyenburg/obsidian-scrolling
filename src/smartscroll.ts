@@ -5,7 +5,7 @@ import { Transaction } from "@codemirror/state";
 import type { default as ScrollingPlugin } from "./main";
 
 export class SmartScroll {
-    private plugin: ScrollingPlugin;
+    private readonly plugin: ScrollingPlugin;
 
     private recentEdit = false;
     private recentMouseUp = false;
@@ -14,8 +14,8 @@ export class SmartScroll {
     private lastLine = 0;
     private animationFrame: number;
 
-    private readonly intensityDecayRate = 0.01;
-    private readonly intensityThreshold = 3;
+    private static readonly INTENSITY_DECAY_RATE = 0.01;
+    private static readonly INTENSITY_THRESHOLD = 3;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -118,7 +118,7 @@ export class SmartScroll {
 
         this.scrollLast = time;
         this.scrollIntensity =
-            Math.max(0, this.scrollIntensity - elapsed * this.intensityDecayRate) + 1;
+            Math.max(0, this.scrollIntensity - elapsed * SmartScroll.INTENSITY_DECAY_RATE) + 1;
     }
 
     private invokeScroll(editor: Editor, scrollDirection: number): void {
@@ -157,9 +157,9 @@ export class SmartScroll {
         let invert;
         if (mode === "page-jump") {
             invert = -1;
+            radius *= 0.9;
         } else {
             invert = 1;
-            radius *= 0.9;
         }
 
         const center = scrollInfo.height / 2;
@@ -203,7 +203,7 @@ export class SmartScroll {
         let steps = Math.max(1, Math.ceil(2 * (smoothness / 100) * Math.sqrt(Math.abs(distance))));
 
         // If scrolling fast, reduce animation steps.
-        if (mode === "follow-cursor" && this.scrollIntensity > this.intensityThreshold || Math.abs(distance) > scrollInfo.height) {
+        if (mode === "follow-cursor" && this.scrollIntensity > SmartScroll.INTENSITY_THRESHOLD || Math.abs(distance) > scrollInfo.height) {
             steps = Math.ceil(Math.sqrt(steps));
         }
 

@@ -1,7 +1,7 @@
 import type { default as ScrollingPlugin } from "./main";
 
 export class MouseScroll {
-    private plugin: ScrollingPlugin;
+    private readonly plugin: ScrollingPlugin;
 
     private touchpadLastUse = 0;
     private touchpadFriction = 0;
@@ -10,6 +10,12 @@ export class MouseScroll {
     private mouseLastUse = 0;
     private mouseTarget: number;
     private mouseAnimationFrame: number;
+
+    private static readonly MAX_FRICTION = 0.98;
+    private static readonly MIN_VELOCITY = 0.1;
+    private static readonly COMMON_MOUSE_DELTAS = [120, 197.18010794176823];
+    private static readonly TOUCHPAD_GRACE_PERIOD = 1000;
+    private static readonly TOUCHPAD_DELTA_THRESHOLD = 50;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -60,8 +66,7 @@ export class MouseScroll {
         }
 
         // Mice often return multiples of certain deltas.
-        const commonDeltas = [120, 197.18010794176823];
-        for (const delta of commonDeltas) {
+        for (const delta of MouseScroll.COMMON_MOUSE_DELTAS) {
             if ((event.deltaY / delta) % 1 == 0) {
                 this.touchpadLastUse = 0;
                 return false;
@@ -77,13 +82,13 @@ export class MouseScroll {
         }
 
         // Small, fractional, non-zero delta
-        if (event.deltaY % 1 !== 0 && Math.abs(event.deltaY) < 50) {
+        if (event.deltaY % 1 !== 0 && Math.abs(event.deltaY) < MouseScroll.TOUCHPAD_DELTA_THRESHOLD) {
             this.touchpadLastUse = now;
             return true;
         }
 
         // Grace period
-        if (now - this.touchpadLastUse < 1000) {
+        if (now - this.touchpadLastUse < MouseScroll.TOUCHPAD_GRACE_PERIOD) {
             this.touchpadLastUse = now;
             return true;
         }
@@ -139,9 +144,6 @@ export class MouseScroll {
         const frictionThreshold = this.plugin.settings.touchpadFrictionThreshold;
         const invert = this.plugin.settings.mouseInvert ? -1 : 1;
 
-        const maxFriction = 0.98;
-        const minVelocity = 0.1;
-
         if (this.touchpadVelocity * change < 0) {
             this.touchpadScrolling = false;
         }
@@ -149,12 +151,12 @@ export class MouseScroll {
         this.touchpadVelocity += change * speed * invert;
 
         const animate = () => {
-            if (Math.abs(this.touchpadVelocity) > minVelocity) {
+            if (Math.abs(this.touchpadVelocity) > MouseScroll.MIN_VELOCITY) {
                 el.scrollTop += this.touchpadVelocity;
                 this.touchpadVelocity *= this.touchpadFriction;
                 this.touchpadFriction = Math.max(
                     0,
-                    Math.min(maxFriction, this.touchpadFriction + 0.05),
+                    Math.min(MouseScroll.MAX_FRICTION, this.touchpadFriction + 0.05),
                 );
                 window.requestAnimationFrame(animate);
             } else {

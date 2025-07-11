@@ -55,7 +55,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 };
 
 export class ScrollingSettingTab extends PluginSettingTab {
-    plugin: ScrollingPlugin;
+    readonly plugin: ScrollingPlugin;
 
     constructor(plugin: ScrollingPlugin) {
         super(plugin.app, plugin);
