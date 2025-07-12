@@ -1,80 +1,79 @@
 # Scrolling
 
-A plugin for [Obsidian](https://obsidian.md/) that enhances scrolling behavior with smart cursor tracking and smooth scroll animations.
+A plugin for [Obsidian](https://obsidian.md/) that improves scrolling by following the cursor, remembering the scroll position and more.
 
-Feel free to contribute or leave a star if you find this plugin useful ⭐
+Feel free to contribute or leave a star if you like this plugin :)
+
+---
 
 ## Features
 
 Each feature can be toggled and configured individually via the plugin settings.
 
-- **Smart Scrolling**<br>Scrolls automatically while editing or navigating in a file. (Similar to "Typewriter mode" and Vim's `scrolloff` option)
-- **Remember Scroll Position**<br>Stores your position in a file when closing and restores it when opening.
-- **Scrollbar Customization**<br>Lets you change the appearance and behavior of scrollbars.
-- **Mouse & Touchpad Scrolling**<br>Allows you to customize mouse wheel and touchpad scrolling.
+#### Follow Cursor
+
+- Scrolls automatically while editing or navigating in a file.
+- Also known as _typewriter mode_ or _`scrolloff`_ in vim.
+
+#### Remember Scroll Position
+
+- Saves your scroll position when closing a file.
+- Restores it when reopening the file later.
+
+#### Scrollbar Customization
+
+- Change the appearance of scrollbars.
+- Add or remove individual scrollbars.
+- Show scrollbars only when necessary.
+
+#### Mouse & Touchpad Scrolling
+
+- Customize mouse wheel and touchpad behavior.
+
+---
 
 ## Installation
 
 1. In Obsidian, open **Settings → Community Plugins**.
-2. Make sure Safe Mode is turned off to enable plugin installation
-3. Click Browse, then search for **"Scrolling"** or open directly:<br>**obsidian://show-plugin?id=scrolling**
-4. Click Install, then Enable the plugin.
+2. Make sure Safe Mode is turned off to enable plugin installation.
+3. Click **Browse**, then search for **"Scrolling"** or open directly:<br>**obsidian://show-plugin?id=scrolling**
+4. Click **Install**, then **Enable** the plugin.
+5. You can configure this plugin under **Settings → Community Plugins → Scrolling**.
 
 ### Manual installation
 
-1. Make sure you have git and npm installed.
-2. Open your vault in your terminal and navigate into *.obsidian/plugins*.
-3. Run `git clone https://github.com/omeyenburg/obsidian-scrolling.git`.
-4. Navigate into obsidian-scrolling and run `npm install` and `npm run build`.
-5. Enable the plugin under community plugins.
+1. Open your vault in your terminal and navigate into *.obsidian/plugins*.
+2. Clone the repo:
+   ```
+   git clone https://github.com/omeyenburg/obsidian-scrolling.git
+   ```
+3. Build the plugin:
+   ```
+   cd obsidian-scrolling
+   npm install
+   npm run build
+   ```
+4. Enable the plugin under **Community Plugins**.
 
-## Requirements
+### Requirements
 
 - Obsidian: Version 1.2.7 or higher
 - Platform: Desktop only
 
-## Usage
+## Changelog
 
-Once enabled, go to **Settings → Community Plugins → Scrolling** to configure the plugin.
-
-<details>
-<summary><strong>Configuration Reference</strong> (click to expand)</summary>
-
-### Smart scrolling
-
-- **Mode** (Default: Follow cursor)<br>- **Disabled**: Disables this feature.<br>- **Follow cursor**: Keeps the text cursor smoothly within a comfortable zone.<br>Also known as "Typewriter mode" or "Scrolloff".<br>- **Page jumping**: Reduces scrolling by jumping by whole pages at screen edges.
-    - **Trigger distance** (Default: 75)<br>Defines at which distance from the center scrolling is triggered.
-    - **Animation duration** (Default: 25)<br>Adjusts the speed of the scrolling animation.
-    - **Dynamic animations** (Default: enabled)<br>If many scroll events happen quickly, skips animation frames to improve responsiveness.
-    - **Trigger on mouse interactions** (Default: disabled)<br>Update when the text cursor is moved with the mouse.
-        - **Trigger on mouse selection** (Default: disabled)<br>Also update when the mouse selects text.
-
-### Remember scroll position
-
-- **Enabled** (Default: disabled)<br>Saves your scroll position before closing a file and restores it when opening the file again.
-
-### Scrollbar appearance
-
-- **Show horizontal scrollbar in file tree** (Default: disabled)<br>Enables horizontal scrolling and shows a scrollbar in the file tree.
-- **Scrollbar visibility** (Default: Always show scrollbar)<br>When to show the scrollbar in markdown/pdf files: always, while scrolling or never. *(Platform: Windows & Linux only)*
-- **Scrollbar thickness** (Default: 12)<br>Sets the width of scrollbars in pixels. *(Platform: Linux only)*
-
-### Mouse/Touchpad scrolling (Experimental)
-
-- **Enabled** (Default: enabled)<br>Enables custom scroll behavior for mouse and touchpad input.
-    - **Invert scroll direction** (Default: disabled)<br>Reverses the scroll direction.
-    - **Scroll speed** (Default: 50)<br>Defines how far the page scrolls on mouse wheel input.
-    - **Scroll smoothness** (Default: 75)<br>Determines the duration of the scrolling animation.
-    - **Touchpad detection** (Default: enabled)<br>Detect touchpad input to provide smoother scrolling. *(Should work well with most devices)*
-        - **Touchpad scroll speed** (Default: 50)<br>Adjusts how fast the page scrolls when usinga touchpad.
-        - **Touchpad scroll smoothness** (Default: 75)<br>Controls scroll animation smoothness for touchpads.
-        - **Touchpad friction threshold** (Default: 20)<br>Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.
-
-</details>
+See [Releases](https://github.com/omeyenburg/obsidian-scrolling/releases) for version history.
 
 ## Contributing
 
 Contributions are welcome! Feel free to open an issue or submit a pull request.
+
+To start developing:
+1. Follow the [Manual installation](#manual-installation) steps.
+2. Run the plugin in development mode, which will automatically rebuild the plugin on file changes:
+   ```
+   npm run dev
+   ```
 
 ## Similar projects
 
