@@ -1,73 +1,61 @@
-import { MarkdownView, WorkspaceLeaf } from "obsidian";
+import { MarkdownView, WorkspaceLeaf, TAbstractFile, EditorRange } from "obsidian";
 import { around } from "monkey-around";
 
 import { default as ScrollingPlugin } from "./main";
 
+interface EphemeralState {
+    timestamp: number;
+    scroll?: number;
+    cursor?: EditorRange;
+}
+
 export class RestoreScroll {
     private readonly plugin: ScrollingPlugin;
 
-    private static readonly RESTORE_RETRY_LIMIT = 10;
+    private emphemeralStates: Record<string, EphemeralState> = {};
+    private emphemeralStatesSaved = true;
+
+    private static readonly CACHE_FILE =
+        ".obsidian/plugins/obsidian-scrolling/emphemeral-states.json";
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
+        plugin.registerEvent(plugin.app.vault.on("rename", this.renameFileCallback.bind(this)));
+        plugin.registerEvent(plugin.app.vault.on("delete", this.deleteFileCallback.bind(this)));
+        plugin.registerEvent(plugin.app.workspace.on("quit", this.saveData.bind(this)));
+
+        const self = this;
         plugin.register(
             around(WorkspaceLeaf.prototype, {
                 setViewState(old) {
                     return async function (...args) {
-                        const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
-                        if (!view || !plugin.settings.restoreScrollEnabled) {
-                            return await old.apply(this, args);
-                        }
-
-                        // Hide content until scrolling is done.
-                        const content = view.leaf.view.containerEl;
-                        content.style.visibility = "hidden";
+                        self.saveData();
 
                         const result = await old.apply(this, args);
 
-                        // File is available after old.apply was called.
-                        if (!view.file) {
-                            content.style.visibility = "visible";
-                            return result;
-                        }
+                        const linkUsed = plugin.app.workspace.containerEl.querySelector('span.is-flashing');
+                        const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+                        if (linkUsed || !view || !view.file || !plugin.settings.restoreScrollEnabled) return result;
 
-                        // Query last position
-                        const dest = plugin.settings.restoreScrollPositions[view.file.path];
+                        const emphemeralState = self.emphemeralStates[view.file.path];
+                        if (!emphemeralState) return result;
 
-                        // No need to scroll if dest is zero.
-                        if (!dest) {
-                            content.style.visibility = "visible";
-                            return result;
-                        }
+                        const { cursor, scroll } = emphemeralState;
 
-                        let scroller: HTMLElement;
-                        if (view.getMode() === "preview") {
-                            scroller = view.containerEl.querySelector(
-                                ".markdown-preview-view",
-                            ) as HTMLElement;
-                            if (!scroller) {
-                                content.style.visibility = "visible";
-                                return result;
+                        if (plugin.settings.restoreScrollMode === "cursor") {
+                            if (cursor) {
+                                view.setEphemeralState({
+                                    cursor: cursor,
+                                });
+
+                                view.editor.scrollIntoView(cursor, true);
                             }
                         } else {
-                            scroller = view.editor.cm.scrollDOM;
+                            view.setEphemeralState({
+                                scroll: scroll,
+                            });
                         }
-
-                        let iterations = 0;
-                        const scroll = () => {
-                            if (
-                                iterations++ < RestoreScroll.RESTORE_RETRY_LIMIT &&
-                                scroller.scrollHeight == scroller.clientHeight
-                            ) {
-                                window.requestAnimationFrame(scroll);
-                                return;
-                            }
-
-                            scroller.scrollTop = dest;
-                            content.style.visibility = "visible";
-                        };
-                        scroll();
 
                         return result;
                     };
@@ -76,8 +64,34 @@ export class RestoreScroll {
         );
     }
 
-    // Invoked on cursor movement and mouse scroll.
-    public saveScrollPosition() {
+    private async deleteFileCallback(file: TAbstractFile) {
+        delete this.emphemeralStates[file.path];
+    }
+
+    private async renameFileCallback(file: TAbstractFile, old: string) {
+        this.emphemeralStates[file.path] = this.emphemeralStates[old];
+        delete this.emphemeralStates[old];
+    }
+
+    private async saveData() {
+        if (this.emphemeralStatesSaved) return;
+        this.emphemeralStatesSaved = true;
+
+        const data = JSON.stringify(this.emphemeralStates);
+        this.plugin.app.vault.adapter.write(RestoreScroll.CACHE_FILE, data);
+    }
+
+    // Called on plugin load
+    public async loadData() {
+        const exists = await this.plugin.app.vault.adapter.exists(RestoreScroll.CACHE_FILE);
+        if (exists) {
+            const data = await this.plugin.app.vault.adapter.read(RestoreScroll.CACHE_FILE);
+            this.emphemeralStates = JSON.parse(data);
+        }
+    }
+
+    // Invoked on cursor movement and mouse scroll
+    public storeState() {
         if (!this.plugin.settings.restoreScrollEnabled) return;
 
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
@@ -85,17 +99,17 @@ export class RestoreScroll {
 
         if (this.plugin.app.workspace.activeEditor?.file != view.file) return;
 
-        let scrollTop;
+        const timestamp = Date.now();
+        const { cursor, scroll } = view.getEphemeralState() as {
+            cursor?: EditorRange;
+            scroll?: number;
+        };
 
-        if (view.getMode() === "source") {
-            scrollTop = view.editor.getScrollInfo().top;
-        } else {
-            scrollTop = view.containerEl.querySelector(".markdown-preview-view")?.scrollTop;
-        }
-
-        // const cursor = editor.getCursor();
-        if (scrollTop) {
-            this.plugin.settings.restoreScrollPositions[view.file.path] = scrollTop;
-        }
+        this.emphemeralStatesSaved = false;
+        this.emphemeralStates[view.file.path] = {
+            timestamp,
+            cursor,
+            scroll,
+        };
     }
 }

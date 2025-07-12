@@ -13,7 +13,7 @@ export class Scrollbar {
     private scrollTimeouts = new Map<HTMLElement, number>();
 
     private static readonly SCROLLBAR_IDLE_TIMEOUT = 500;
-    private static readonly FILE_OPEN_SCROLL_EVENT_DELAY = 250;
+    private static readonly FILE_OPEN_SCROLL_EVENT_DELAY = 500;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -68,7 +68,7 @@ export class Scrollbar {
     private scrollHandler(event: Event): void {
         if (this.scrollEventSkip) return;
 
-        this.plugin.restoreScroll.saveScrollPosition();
+        this.plugin.restoreScroll.storeState();
 
         // Scrollbars styling doesnt work on MacOS.
         if (Platform.isMacOS) return;

@@ -11,7 +11,7 @@ export interface ScrollingPluginSettings {
     followCursorDynamicAnimation: boolean;
 
     restoreScrollEnabled: boolean;
-    restoreScrollPositions: Record<string, number>;
+    restoreScrollMode: string;
 
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
@@ -37,7 +37,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     followCursorEnableSelection: false,
 
     restoreScrollEnabled: false,
-    restoreScrollPositions: {},
+    restoreScrollMode: "scroll",
 
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
@@ -187,7 +187,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
 
         containerEl.createEl("br");
-        new Setting(containerEl).setName("Remember scroll position").setHeading();
+        new Setting(containerEl).setName("Remember scroll/cursor position").setHeading();
 
         new Setting(containerEl)
             .setName("Enabled")
@@ -199,6 +199,31 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.restoreScrollEnabled)
                     .onChange(async (value) => {
                         this.plugin.settings.restoreScrollEnabled = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        new Setting(containerEl)
+            .setName("Restore mode")
+            .setDesc("Choose between restoring the scroll position or cursor position.")
+            .addExtraButton((button) => {
+                button
+                    .setIcon("reset")
+                    .setTooltip("Restore default")
+                    .onClick(async () => {
+                        this.plugin.settings.restoreScrollMode =
+                            DEFAULT_SETTINGS.restoreScrollMode;
+                        this.display();
+                        await this.plugin.saveSettings();
+                    });
+            })
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("scroll", "Scroll position")
+                    .addOption("cursor", "Cursor position")
+                    .setValue(this.plugin.settings.restoreScrollMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.restoreScrollMode = value;
                         await this.plugin.saveSettings();
                     }),
             );

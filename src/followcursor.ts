@@ -94,7 +94,9 @@ export class FollowCursor {
         // Only proceed if its a cursor event.
         if (!update.selectionSet) return;
 
-        this.plugin.restoreScroll.saveScrollPosition();
+        if (this.plugin.settings.restoreScrollMode === "cursor") {
+            this.plugin.restoreScroll.storeState();
+        }
 
         // Get the editor
         const editor = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
