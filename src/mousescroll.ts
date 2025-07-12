@@ -43,7 +43,8 @@ export class MouseScroll {
                 el.scrollHeight > el.clientHeight;
 
             if (allowsScrollY) {
-                const delta = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
+                const delta =
+                    event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
 
                 if (this.plugin.settings.touchpadEnabled && this.isTouchpad(event)) {
                     this.scrollWithTouchpad(el, delta);
@@ -82,7 +83,10 @@ export class MouseScroll {
         }
 
         // Small, fractional, non-zero delta
-        if (event.deltaY % 1 !== 0 && Math.abs(event.deltaY) < MouseScroll.TOUCHPAD_DELTA_THRESHOLD) {
+        if (
+            event.deltaY % 1 !== 0 &&
+            Math.abs(event.deltaY) < MouseScroll.TOUCHPAD_DELTA_THRESHOLD
+        ) {
             this.touchpadLastUse = now;
             return true;
         }
