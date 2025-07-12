@@ -4,7 +4,7 @@ import { Transaction } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "./main";
 
-export class SmartScroll {
+export class FollowCursor {
     private readonly plugin: ScrollingPlugin;
 
     private recentEdit = false;
@@ -104,8 +104,8 @@ export class SmartScroll {
 
         // Also cancel if mouse up, unless this setting allows it.
         if (
-            (!this.plugin.settings.smartScrollEnableSelection && editor.somethingSelected()) ||
-            (this.recentMouseUp && !this.plugin.settings.smartScrollEnableMouse)
+            (!this.plugin.settings.followCursorEnableSelection && editor.somethingSelected()) ||
+            (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse)
         )
             return;
 
@@ -118,25 +118,22 @@ export class SmartScroll {
 
         this.scrollLast = time;
         this.scrollIntensity =
-            Math.max(0, this.scrollIntensity - elapsed * SmartScroll.INTENSITY_DECAY_RATE) + 1;
+            Math.max(0, this.scrollIntensity - elapsed * FollowCursor.INTENSITY_DECAY_RATE) + 1;
     }
 
     private invokeScroll(editor: Editor, scrollDirection: number): void {
-        const mode = this.plugin.settings.smartScrollMode;
-        if (mode === "disabled") return;
+        if (!this.plugin.settings.followCursorEnabled) return;
 
-        const radiusPercent = this.plugin.settings.smartScrollRadius;
-        const smoothness = this.plugin.settings.smartScrollSmoothness;
-        const dynamicAnimation = this.plugin.settings.smartScrollDynamicAnimation;
+        const radiusPercent = this.plugin.settings.followCursorRadius;
+        const smoothness = this.plugin.settings.followCursorSmoothness;
+        const dynamicAnimation = this.plugin.settings.followCursorDynamicAnimation;
 
         // If scrolling fast, skip animation steps
         // (Only if not scrolling inverted and scrolling without edit (otherwise run later))
-        if (mode === "follow-cursor" && !this.recentEdit) {
-            if (dynamicAnimation) {
-                this.calculateScrollIntensity();
-            } else {
-                this.scrollIntensity = 0;
-            }
+        if (!this.recentEdit && dynamicAnimation) {
+            this.calculateScrollIntensity();
+        } else {
+            this.scrollIntensity = 0;
         }
 
         // Get cursor position
@@ -153,39 +150,17 @@ export class SmartScroll {
         const currentVerticalPosition = scrollInfo.top;
         let radius = ((scrollInfo.height / 2) * radiusPercent) / 100;
 
-        // Invert the scroll effect
-        let invert;
-        if (mode === "page-jump") {
-            invert = -1;
-            radius *= 0.9;
-        } else {
-            invert = 1;
-        }
-
         const center = scrollInfo.height / 2;
         const centerOffset = cursorVerticalPosition - center;
 
         let goal;
         let distance;
-        if (
-            centerOffset < -radius ||
-            (mode === "page-jump" &&
-                scrollDirection === -1 &&
-                cursor.top < viewOffset + lineHeight * 2)
-        ) {
-            goal = currentVerticalPosition + centerOffset + radius * invert;
-            distance = centerOffset + radius * invert;
-        } else if (
-            centerOffset > radius ||
-            (mode === "page-jump" &&
-                scrollDirection === 1 &&
-                cursor.top > scrollInfo.height + viewOffset - lineHeight * 2)
-        ) {
-            goal = currentVerticalPosition + centerOffset - radius * invert;
-            if (mode === "page-jump" && radiusPercent === 100) {
-                goal -= editor.cm.defaultLineHeight;
-            }
-            distance = centerOffset - radius * invert;
+        if (centerOffset < -radius) {
+            goal = currentVerticalPosition + centerOffset + radius;
+            distance = centerOffset + radius;
+        } else if (centerOffset > radius) {
+            goal = currentVerticalPosition + centerOffset - radius;
+            distance = centerOffset - radius;
         } else {
             return;
         }
@@ -196,14 +171,17 @@ export class SmartScroll {
         window.cancelAnimationFrame(this.animationFrame);
 
         // Calculate scroll intensity to skip animation steps.
-        if (dynamicAnimation && mode === "follow-cursor" && this.recentEdit) {
+        if (dynamicAnimation && this.recentEdit) {
             this.calculateScrollIntensity();
         }
 
         let steps = Math.max(1, Math.ceil(2 * (smoothness / 100) * Math.sqrt(Math.abs(distance))));
 
         // If scrolling fast, reduce animation steps.
-        if (mode === "follow-cursor" && this.scrollIntensity > SmartScroll.INTENSITY_THRESHOLD || Math.abs(distance) > scrollInfo.height) {
+        if (
+            this.scrollIntensity > FollowCursor.INTENSITY_THRESHOLD ||
+            Math.abs(distance) > scrollInfo.height
+        ) {
             steps = Math.ceil(Math.sqrt(steps));
         }
 

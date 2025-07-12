@@ -3,12 +3,12 @@ import { Platform, PluginSettingTab, Setting } from "obsidian";
 import type { default as ScrollingPlugin } from "./main";
 
 export interface ScrollingPluginSettings {
-    smartScrollMode: string; // disabled, follow-cursor, page-jump
-    smartScrollRadius: number;
-    smartScrollSmoothness: number;
-    smartScrollEnableMouse: boolean;
-    smartScrollEnableSelection: boolean;
-    smartScrollDynamicAnimation: boolean;
+    followCursorEnabled: boolean;
+    followCursorRadius: number;
+    followCursorSmoothness: number;
+    followCursorEnableMouse: boolean;
+    followCursorEnableSelection: boolean;
+    followCursorDynamicAnimation: boolean;
 
     restoreScrollEnabled: boolean;
     restoreScrollPositions: Record<string, number>;
@@ -29,12 +29,12 @@ export interface ScrollingPluginSettings {
 }
 
 export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
-    smartScrollMode: "follow-cursor",
-    smartScrollRadius: 75,
-    smartScrollSmoothness: 25,
-    smartScrollDynamicAnimation: true,
-    smartScrollEnableMouse: false,
-    smartScrollEnableSelection: false,
+    followCursorEnabled: true,
+    followCursorRadius: 75,
+    followCursorSmoothness: 25,
+    followCursorDynamicAnimation: true,
+    followCursorEnableMouse: false,
+    followCursorEnableSelection: false,
 
     restoreScrollEnabled: false,
     restoreScrollPositions: {},
@@ -66,58 +66,35 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const containerEl = this.containerEl;
         containerEl.empty();
 
-        new Setting(containerEl).setName("Smart scrolling").setHeading();
+        new Setting(containerEl).setName("Follow Cursor").setHeading();
 
         new Setting(containerEl)
-            .setName("Mode")
-            .setDesc(
-                createFragment((frag) => {
-                    const div = frag.createDiv();
-
-                    div.createEl("span", {
-                        text: "Follow cursor: Keep cursor smoothly near the center. (Typewriter mode)",
-                    });
-                    div.createEl("br");
-                    div.createEl("span", {
-                        text: "Page jumping: Reduce scrolling by jumping whole pages at screen edges.",
-                    });
-                }),
-            )
-            .addDropdown((dropdown) =>
-                dropdown
-                    .addOption("disabled", "Disabled")
-                    .addOption("follow-cursor", "Follow cursor")
-                    .addOption("page-jump", "Page jumping")
-                    .setValue(this.plugin.settings.smartScrollMode)
+            .setName("Enabled")
+            .setDesc("Keep the cursor near the center.")
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.followCursorEnabled)
                     .onChange(async (value) => {
-                        this.plugin.settings.smartScrollMode = value;
+                        this.plugin.settings.followCursorEnabled = value;
                         this.display();
                         await this.plugin.saveSettings();
                     }),
             );
 
-        if (this.plugin.settings.smartScrollMode !== "disabled") {
+        if (this.plugin.settings.followCursorEnabled) {
             new Setting(containerEl)
                 .setName("Trigger distance")
                 .setDesc(
                     createFragment((frag) => {
                         const div = frag.createDiv();
 
-                        if (this.plugin.settings.smartScrollMode === "follow-cursor") {
-                            div.createEl("span", {
-                                text: "How far the cursor can move from the center before scrolling.",
-                            });
-                            div.createEl("br");
-                            div.createEl("span", {
-                                text: "0% keeps the cursor perfectly centered.",
-                            });
-                        } else {
-                            div.createEl("span", {
-                                text: "How far the cursor can move before jumping.",
-                            });
-                            div.createEl("br");
-                            div.createEl("span", { text: "Lower values might appear buggy." });
-                        }
+                        div.createEl("span", {
+                            text: "How far the cursor can move from the center before scrolling.",
+                        });
+                        div.createEl("br");
+                        div.createEl("span", {
+                            text: "0% keeps the cursor perfectly centered.",
+                        });
                     }),
                 )
                 .addExtraButton((button) => {
@@ -125,44 +102,44 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.smartScrollRadius =
-                                DEFAULT_SETTINGS.smartScrollRadius;
+                            this.plugin.settings.followCursorRadius =
+                                DEFAULT_SETTINGS.followCursorRadius;
                             this.display();
                             await this.plugin.saveSettings();
                         });
                 })
                 .addSlider((slider) =>
                     slider
-                        .setValue(this.plugin.settings.smartScrollRadius)
+                        .setValue(this.plugin.settings.followCursorRadius)
                         .setLimits(0, 100, 1)
                         .setDynamicTooltip()
                         .onChange(async (value) => {
-                            this.plugin.settings.smartScrollRadius = value;
+                            this.plugin.settings.followCursorRadius = value;
                             await this.plugin.saveSettings();
                         }),
                 );
 
             new Setting(containerEl)
-                .setName("Animation smoothness")
+                .setName("Animation duration")
                 .setDesc("Length of the scrolling animation.")
                 .addExtraButton((button) => {
                     button
                         .setIcon("reset")
                         .setTooltip("Restore default")
                         .onClick(async () => {
-                            this.plugin.settings.smartScrollSmoothness =
-                                DEFAULT_SETTINGS.smartScrollSmoothness;
+                            this.plugin.settings.followCursorSmoothness =
+                                DEFAULT_SETTINGS.followCursorSmoothness;
                             this.display();
                             await this.plugin.saveSettings();
                         });
                 })
                 .addSlider((slider) =>
                     slider
-                        .setValue(this.plugin.settings.smartScrollSmoothness)
+                        .setValue(this.plugin.settings.followCursorSmoothness)
                         .setLimits(0, 100, 1)
                         .setDynamicTooltip()
                         .onChange(async (value) => {
-                            this.plugin.settings.smartScrollSmoothness = value;
+                            this.plugin.settings.followCursorSmoothness = value;
                             await this.plugin.saveSettings();
                         }),
                 );
@@ -174,9 +151,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 )
                 .addToggle((toggle) =>
                     toggle
-                        .setValue(this.plugin.settings.smartScrollDynamicAnimation)
+                        .setValue(this.plugin.settings.followCursorDynamicAnimation)
                         .onChange(async (value) => {
-                            this.plugin.settings.smartScrollDynamicAnimation = value;
+                            this.plugin.settings.followCursorDynamicAnimation = value;
                             await this.plugin.saveSettings();
                         }),
                 );
@@ -186,23 +163,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setDesc("Update when the cursor is moved using the mouse.")
                 .addToggle((toggle) =>
                     toggle
-                        .setValue(this.plugin.settings.smartScrollEnableMouse)
+                        .setValue(this.plugin.settings.followCursorEnableMouse)
                         .onChange(async (value) => {
-                            this.plugin.settings.smartScrollEnableMouse = value;
+                            this.plugin.settings.followCursorEnableMouse = value;
                             this.display();
                             await this.plugin.saveSettings();
                         }),
                 );
 
-            if (this.plugin.settings.smartScrollEnableMouse) {
+            if (this.plugin.settings.followCursorEnableMouse) {
                 new Setting(containerEl)
                     .setName("Trigger on mouse selection")
                     .setDesc("Also update when text is selected using the mouse.")
                     .addToggle((toggle) =>
                         toggle
-                            .setValue(this.plugin.settings.smartScrollEnableSelection)
+                            .setValue(this.plugin.settings.followCursorEnableSelection)
                             .onChange(async (value) => {
-                                this.plugin.settings.smartScrollEnableSelection = value;
+                                this.plugin.settings.followCursorEnableSelection = value;
                                 await this.plugin.saveSettings();
                             }),
                     );
@@ -452,7 +429,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
                     new Setting(containerEl)
                         .setName("Touchpad friction threshold")
-                        .setDesc("Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.")
+                        .setDesc(
+                            "Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.",
+                        )
                         .addExtraButton((button) => {
                             button
                                 .setIcon("reset")
