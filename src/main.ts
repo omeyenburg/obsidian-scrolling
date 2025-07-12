@@ -22,9 +22,8 @@ export default class ScrollingPlugin extends Plugin {
         this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
 
-        this.registerEvent(
-            this.app.workspace.on("quit", (tasks) => tasks.add(() => this.saveSettings())),
-        );
+        // Save scroll positions
+        this.registerEvent(this.app.workspace.on("quit", this.saveSettings.bind(this)));
 
         this.registerEvent(
             this.app.workspace.on("active-leaf-change", this.activeLeafChangeHandler.bind(this)),
@@ -49,6 +48,8 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async saveSettings() {
-        await this.saveData(this.settings);
+        try {
+            await this.saveData(this.settings);
+        } catch (e) {}
     }
 }
