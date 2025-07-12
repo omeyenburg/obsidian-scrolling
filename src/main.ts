@@ -9,21 +9,21 @@ import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
 
-    mousescroll: MouseScroll;
     restoreScroll: RestoreScroll;
+    followcursor: FollowCursor;
+    mousescroll: MouseScroll;
     scrollbar: Scrollbar;
 
     async onload() {
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this));
 
-        new FollowCursor(this);
-        this.mousescroll = new MouseScroll(this);
         this.restoreScroll = new RestoreScroll(this);
+        this.followcursor = new FollowCursor(this);
+        this.mousescroll = new MouseScroll(this);
         this.scrollbar = new Scrollbar(this);
 
-        // Save scroll positions
-        this.registerEvent(this.app.workspace.on("quit", this.saveSettings.bind(this)));
+        this.restoreScroll.loadData();
 
         this.registerEvent(
             this.app.workspace.on("active-leaf-change", this.activeLeafChangeHandler.bind(this)),
@@ -48,8 +48,6 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async saveSettings() {
-        try {
-            await this.saveData(this.settings);
-        } catch (e) {}
+        await this.saveData(this.settings);
     }
 }

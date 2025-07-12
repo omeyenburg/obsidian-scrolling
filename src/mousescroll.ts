@@ -26,7 +26,7 @@ export class MouseScroll {
     }
 
     // Called in main
-    public activeLeafChangeHandler() {
+    public activeLeafChangeHandler(): void {
         this.touchpadVelocity = 0;
     }
 
