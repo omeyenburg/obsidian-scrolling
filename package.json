@@ -4,9 +4,9 @@
   "description": "Improve scrolling and keep your cursor exactly where you want it.",
   "main": "main.js",
   "scripts": {
-    "dev": "node esbuild.config.mjs",
-    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "version": "node version-bump.mjs"
+    "dev": "node scripts/esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node scripts/esbuild.config.mjs production",
+    "version": "node scripts/version-bump.mjs"
   },
   "keywords": [
     "mouse",
