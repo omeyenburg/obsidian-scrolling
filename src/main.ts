@@ -32,7 +32,7 @@ export default class ScrollingPlugin extends Plugin {
         console.log("ScrollingPlugin loaded");
     }
 
-    private activeLeafChangeHandler() {
+    async activeLeafChangeHandler() {
         this.scrollbar.activeLeafChangeHandler();
         this.mousescroll.activeLeafChangeHandler();
     }

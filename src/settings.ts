@@ -11,7 +11,8 @@ export interface ScrollingPluginSettings {
     followCursorDynamicAnimation: boolean;
 
     restoreScrollEnabled: boolean;
-    restoreScrollMode: string;
+    restoreScrollCursor: boolean;
+    restoreScrollAllFiles: boolean;
 
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
@@ -37,7 +38,8 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     followCursorEnableSelection: false,
 
     restoreScrollEnabled: false,
-    restoreScrollMode: "scroll",
+    restoreScrollCursor: false,
+    restoreScrollAllFiles: false,
 
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
@@ -187,7 +189,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
 
         containerEl.createEl("br");
-        new Setting(containerEl).setName("Remember scroll/cursor position").setHeading();
+        new Setting(containerEl).setName("Remember scroll position").setHeading();
 
         new Setting(containerEl)
             .setName("Enabled")
@@ -204,26 +206,25 @@ export class ScrollingSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName("Restore mode")
-            .setDesc("Choose between restoring the scroll position or cursor position.")
-            .addExtraButton((button) => {
-                button
-                    .setIcon("reset")
-                    .setTooltip("Restore default")
-                    .onClick(async () => {
-                        this.plugin.settings.restoreScrollMode =
-                            DEFAULT_SETTINGS.restoreScrollMode;
-                        this.display();
-                        await this.plugin.saveSettings();
-                    });
-            })
-            .addDropdown((dropdown) =>
-                dropdown
-                    .addOption("scroll", "Scroll position")
-                    .addOption("cursor", "Cursor position")
-                    .setValue(this.plugin.settings.restoreScrollMode)
+            .setName("Restore cursor position instead")
+            .setDesc("Try to restore cursor position first and use scroll position only as fallback.")
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.restoreScrollCursor)
                     .onChange(async (value) => {
-                        this.plugin.settings.restoreScrollMode = value;
+                        this.plugin.settings.restoreScrollCursor = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        new Setting(containerEl)
+            .setName("Restore in other files")
+            .setDesc("Save and restore scroll position in markdown preview, image and pdf files.")
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.restoreScrollAllFiles)
+                    .onChange(async (value) => {
+                        this.plugin.settings.restoreScrollAllFiles = value;
                         await this.plugin.saveSettings();
                     }),
             );

@@ -26,11 +26,11 @@ export class MouseScroll {
     }
 
     // Called in main
-    public activeLeafChangeHandler(): void {
+    public async activeLeafChangeHandler() {
         this.touchpadVelocity = 0;
     }
 
-    private wheelHandler(event: WheelEvent): void {
+    private async wheelHandler(event: WheelEvent) {
         if (!this.plugin.settings.mouseEnabled) return;
         if (!event.deltaY) return;
 

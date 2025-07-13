@@ -1,4 +1,4 @@
-import { Editor, MarkdownView } from "obsidian";
+import { debounce, Editor, MarkdownView } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 
@@ -94,24 +94,25 @@ export class FollowCursor {
         // Only proceed if its a cursor event.
         if (!update.selectionSet) return;
 
-        if (this.plugin.settings.restoreScrollMode === "cursor") {
-            this.plugin.restoreScroll.storeState();
+        // Get the editor
+        const markdownView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!markdownView?.editor) return;
+
+        if (this.plugin.settings.restoreScrollMode === "cursor" && markdownView.file) {
+            this.plugin.restoreScroll.storeStateDebounced(markdownView.file);
         }
 
-        // Get the editor
-        const editor = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
-        if (!editor) return;
-
-        const scrollDirection = this.getScrollDirection(editor);
+        const scrollDirection = this.getScrollDirection(markdownView.editor);
 
         // Also cancel if mouse up, unless this setting allows it.
         if (
-            (!this.plugin.settings.followCursorEnableSelection && editor.somethingSelected()) ||
+            (!this.plugin.settings.followCursorEnableSelection &&
+                markdownView.editor.somethingSelected()) ||
             (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse)
         )
             return;
 
-        this.invokeScroll(editor, scrollDirection);
+        this.invokeScroll(markdownView.editor, scrollDirection);
     }
 
     private calculateScrollIntensity(): void {
