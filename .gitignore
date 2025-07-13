@@ -17,4 +17,4 @@ node_modules
 # Generated files
 main.js
 data.json
-emphemeral-states.json
+ephemeral-states.json

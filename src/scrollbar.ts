@@ -1,4 +1,4 @@
-import { Platform, FileView } from "obsidian";
+import { Platform, FileView, debounce } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -14,6 +14,18 @@ export class Scrollbar {
 
     private static readonly SCROLLBAR_IDLE_TIMEOUT = 500;
     private static readonly FILE_OPEN_SCROLL_EVENT_DELAY = 500;
+    private static readonly IMAGE_EXTENSIONS = new Set([
+        "png",
+        "jpg",
+        "jpeg",
+        "gif",
+        "svg",
+        "webp",
+        "bmp",
+        "ico",
+        "apng",
+        "avif",
+    ]);
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -23,8 +35,7 @@ export class Scrollbar {
     }
 
     // Called in main
-    // TODO: move to main
-    public activeLeafChangeHandler() {
+    public async activeLeafChangeHandler() {
         const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
         if (!view || !view.file) return;
 
@@ -62,13 +73,29 @@ export class Scrollbar {
             this.plugin.register(() =>
                 scroller.removeEventListener("scroll", this.boundScrollHandler),
             );
+        } else if (Scrollbar.IMAGE_EXTENSIONS.has(view.file.extension.toLowerCase())) {
+            const scroller = view.contentEl.querySelector(".image-container")
+                ?.parentElement as HTMLElement;
+            if (!scroller) return;
+
+            // Hide scrollbars on elements
+            scroller.classList.add("scrolling-transparent");
+
+            scroller.removeEventListener("scroll", this.boundScrollHandler);
+            scroller.addEventListener("scroll", this.boundScrollHandler);
+            this.plugin.register(() =>
+                scroller.removeEventListener("scroll", this.boundScrollHandler),
+            );
         }
     }
 
-    private scrollHandler(event: Event): void {
+    private async scrollHandler(event: Event) {
         if (this.scrollEventSkip) return;
 
-        this.plugin.restoreScroll.storeState();
+        const file = this.plugin.app.workspace.getActiveFile();
+        if (file) {
+            this.plugin.restoreScroll.storeStateDebounced(file);
+        }
 
         // Scrollbars styling doesnt work on MacOS.
         if (Platform.isMacOS) return;
@@ -94,7 +121,7 @@ export class Scrollbar {
         this.scrollTimeouts.set(el, timeoutId);
     }
 
-    public updateStyle(): void {
+    public async updateStyle() {
         // Styling scrollbars doesnt work on MacOS.
         // Only handle horizontal file tree scrollbar.
         if (Platform.isMacOS) {
