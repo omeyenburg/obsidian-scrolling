@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Plugin, TFile } from "obsidian";
 
 import { FollowCursor } from "./followcursor";
 import { MouseScroll } from "./mousescroll";
@@ -44,7 +44,14 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const loaded = await this.loadData();
+        const settings: Partial<ScrollingPluginSettings> = {};
+
+        for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof ScrollingPluginSettings)[]) {
+            settings[key] = loaded[key] ?? DEFAULT_SETTINGS[key];
+        }
+
+        this.settings = settings as ScrollingPluginSettings;
     }
 
     async saveSettings() {
