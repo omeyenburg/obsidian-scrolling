@@ -1,4 +1,4 @@
-import { Plugin, TFile } from "obsidian";
+import { Plugin } from "obsidian";
 
 import { FollowCursor } from "./followcursor";
 import { MouseScroll } from "./mousescroll";

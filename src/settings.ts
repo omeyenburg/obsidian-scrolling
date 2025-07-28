@@ -1,4 +1,13 @@
-import { Platform, PluginSettingTab, Setting } from "obsidian";
+import {
+    Platform,
+    PluginSettingTab,
+    Setting,
+    Notice,
+    setIcon,
+    TFile,
+    TAbstractFile,
+    normalizePath,
+} from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -13,6 +22,7 @@ export interface ScrollingPluginSettings {
     restoreScrollEnabled: boolean;
     restoreScrollCursor: boolean;
     restoreScrollAllFiles: boolean;
+    restoreScrollStoreFile: string;
 
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
@@ -40,6 +50,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollEnabled: false,
     restoreScrollCursor: false,
     restoreScrollAllFiles: false,
+    restoreScrollStoreFile: ".obsidian/plugins/obsidian-scrolling/scrolling-positions.json",
 
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
@@ -58,6 +69,8 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
 export class ScrollingSettingTab extends PluginSettingTab {
     readonly plugin: ScrollingPlugin;
+
+    private proposedRestoreScrollStoreFile: string | null = null;
 
     constructor(plugin: ScrollingPlugin) {
         super(plugin.app, plugin);
@@ -207,7 +220,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName("Restore cursor position instead")
-            .setDesc("Try to restore cursor position first and use scroll position only as fallback.")
+            .setDesc(
+                "Try to restore cursor position first and use scroll position only as fallback.",
+            )
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.restoreScrollCursor)
@@ -217,7 +232,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
 
-        new Setting(containerEl)
+        const x = new Setting(containerEl)
             .setName("Restore in other files")
             .setDesc("Save and restore scroll position in markdown preview, image and pdf files.")
             .addToggle((toggle) =>
@@ -228,6 +243,111 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+
+        const confirmStoreFile = async () => {
+            if (this.proposedRestoreScrollStoreFile === null) {
+                new Notice("Nothing changed");
+                return;
+            }
+
+            // Check empty/invalid paths before normalizing.
+            if (
+                !this.proposedRestoreScrollStoreFile ||
+                this.proposedRestoreScrollStoreFile.trim() === "" ||
+                this.proposedRestoreScrollStoreFile === "." ||
+                this.proposedRestoreScrollStoreFile === ".."
+            ) {
+                new Notice("Invalid file path!");
+                return;
+            }
+
+            // Assuming this.plugin.settings.restoreScrollStoreFile is valid
+            const newFile = normalizePath(this.proposedRestoreScrollStoreFile);
+            const oldFile = normalizePath(this.plugin.settings.restoreScrollStoreFile);
+            const adapter = this.plugin.app.vault.adapter;
+
+            if (!newFile) {
+                new Notice("Invalid file path!");
+                return;
+            }
+
+            const folder = newFile.substring(0, newFile.lastIndexOf("/"));
+            if (!folder || !(await adapter.exists(folder))) {
+                new Notice(`Directory does not exist: ${folder}`);
+                return;
+            }
+
+            if (await adapter.exists(newFile)) {
+                new Notice(`File already exists: ${newFile}`);
+                return;
+            }
+
+            if (oldFile && (await adapter.exists(oldFile))) {
+                try {
+                    await adapter.rename(oldFile, newFile);
+                } catch (e) {
+                    new Notice("Invalid file path!");
+                    return;
+                }
+            }
+
+            new Notice(`Renamed storage file to: ${newFile}`);
+
+            this.plugin.settings.restoreScrollStoreFile = newFile;
+            this.proposedRestoreScrollStoreFile = null;
+            await this.plugin.saveSettings();
+        };
+
+        new Setting(containerEl)
+            .setName("Storage file path")
+            .setDesc("Where to store scrolling & cursor positions.")
+            .addText((input) => {
+                input
+                    .setValue(this.plugin.settings.restoreScrollStoreFile)
+                    .onChange(async (value) => {
+                        this.proposedRestoreScrollStoreFile = value;
+                    });
+
+                // Submit new file path when pressing enter
+                const handleKeydown = (e: KeyboardEvent) => {
+                    if (e.key === "Enter") confirmStoreFile();
+                };
+                input.inputEl.addEventListener("keydown", handleKeydown);
+                this.plugin.register(() =>
+                    input.inputEl.removeEventListener("keydown", handleKeydown),
+                );
+
+                // Try vertical layout
+                let parentEl;
+                if (input.inputEl.parentElement) {
+                    parentEl = input.inputEl.parentElement;
+                    parentEl.style.display = "flex";
+                    parentEl.style.alignItems = "flex-end";
+                    parentEl.style.flexDirection = "column";
+                    parentEl.style.marginBottom = "-1.5em";
+                } else {
+                    parentEl = containerEl;
+                }
+
+                const buttonRow = parentEl.createDiv({ cls: "setting-item-control" });
+                buttonRow.style.display = "flex";
+
+                // Reset button
+                const resetButton = buttonRow.createDiv({
+                    cls: "clickable-icon extra-setting-button",
+                });
+                resetButton.setAttr("aria-label", "Restore last");
+                setIcon(resetButton, "reset");
+                resetButton.onclick = async () => {
+                    if (this.proposedRestoreScrollStoreFile === null) return;
+                    input.setValue(this.plugin.settings.restoreScrollStoreFile);
+                    this.proposedRestoreScrollStoreFile = null;
+                };
+
+                // Submit new file path with confirm button
+                const confirmButton = buttonRow.createEl("button", { text: "Confirm" });
+                confirmButton.onclick = confirmStoreFile;
+            });
 
         containerEl.createEl("br");
         new Setting(containerEl).setName("Scrollbar appearance").setHeading();

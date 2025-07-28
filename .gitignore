@@ -17,4 +17,4 @@ node_modules
 # Generated files
 main.js
 data.json
-ephemeral-states.json
+scrolling-positions.json
