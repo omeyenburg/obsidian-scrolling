@@ -27,8 +27,6 @@ export class RestoreScroll {
 
     private static readonly STORE_INTERVAL = 50;
     private static readonly FILE_SAVE_INTERVAL = 50;
-    private static readonly CACHE_FILE =
-        ".obsidian/plugins/obsidian-scrolling/ephemeral-states.json";
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -77,7 +75,6 @@ export class RestoreScroll {
                             view.getMode() === "source" &&
                             (scroll || (cursor && plugin.settings.restoreScrollCursor))
                         ) {
-                            console.log("restore", cursor, scroll)
                             if (cursor && plugin.settings.restoreScrollCursor) {
                                 view.setEphemeralState({
                                     cursor: cursor,
@@ -133,14 +130,14 @@ export class RestoreScroll {
 
     private async saveData() {
         const data = JSON.stringify(this.ephemeralStates);
-        this.plugin.app.vault.adapter.write(RestoreScroll.CACHE_FILE, data);
+        this.plugin.app.vault.adapter.write(this.plugin.settings.restoreScrollStoreFile, data);
     }
 
     // Called on plugin load
     public async loadData() {
-        const exists = await this.plugin.app.vault.adapter.exists(RestoreScroll.CACHE_FILE);
+        const exists = await this.plugin.app.vault.adapter.exists(this.plugin.settings.restoreScrollStoreFile);
         if (exists) {
-            const data = await this.plugin.app.vault.adapter.read(RestoreScroll.CACHE_FILE);
+            const data = await this.plugin.app.vault.adapter.read(this.plugin.settings.restoreScrollStoreFile);
             try {
                 this.ephemeralStates = JSON.parse(data);
             } catch (e) {
@@ -165,7 +162,6 @@ export class RestoreScroll {
         let scrollTop;
         const timestamp = Date.now();
         if (view instanceof MarkdownView && view.getMode() == "source") {
-            console.log("store s")
             scrollTop = view.editor.getScrollInfo().top;
             const { cursor, scroll } = view.getEphemeralState() as {
                 cursor?: EditorRange;
@@ -179,7 +175,6 @@ export class RestoreScroll {
                 scrollTop,
             };
         } else if (this.plugin.settings.restoreScrollAllFiles) {
-            console.log("store")
             const type = view.getViewType();
             if (type === "markdown") {
                 scrollTop = view.containerEl.querySelector(".markdown-preview-view")?.scrollTop;
