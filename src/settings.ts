@@ -1,4 +1,4 @@
-import { Platform, PluginSettingTab, Setting, Notice, setIcon, normalizePath } from "obsidian";
+import { Platform, PluginSettingTab, Setting, SliderComponent, setIcon } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -90,13 +90,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.settingsEnabled = true;
     }
 
-    createSetting(
-        name: string,
-        desc?: string,
-        opts?: {
-            onReset?: () => void;
-        },
-    ): Setting {
+    createSetting(name: string, desc?: string, onReset?: () => void): Setting {
         const setting = new Setting(this.containerEl).setName(name);
 
         if (desc) {
@@ -119,16 +113,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
             }
         }
 
-        if (opts?.onReset) {
+        if (onReset) {
             setting.addExtraButton((button) => {
-                button
-                    .setIcon("reset")
-                    .setTooltip("Restore default")
-                    .onClick(async () => {
-                        opts.onReset!();
-                        this.display();
-                        await this.plugin.saveSettings();
-                    });
+                button.setIcon("reset").onClick(async () => {
+                    onReset();
+                    this.display();
+                    await this.plugin.saveSettings();
+                });
+
+                if (this.settingsEnabled) button.setTooltip("Restore default");
             });
         }
 
@@ -140,6 +133,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
             window.setTimeout(() => {
                 setting.components.forEach((comp) => {
                     comp.setDisabled(true);
+                });
+            }, 1);
+        } else {
+            // Show tooltip on all enabled sliders
+            window.setTimeout(() => {
+                setting.components.forEach((comp) => {
+                    if (comp instanceof SliderComponent) {
+                        comp.setDynamicTooltip();
+                    }
                 });
             }, 1);
         }
@@ -163,30 +165,27 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.createSetting(
             "Trigger distance",
             "How far the cursor can move from the center before scrolling.\n0% keeps the cursor perfectly centered.",
-            {
-                onReset: () =>
-                    (this.plugin.settings.followCursorRadius = DEFAULT_SETTINGS.followCursorRadius),
-            },
+            () => (this.plugin.settings.followCursorRadius = DEFAULT_SETTINGS.followCursorRadius),
         ).addSlider((slider) =>
             slider
                 .setValue(this.plugin.settings.followCursorRadius)
                 .setLimits(0, 100, 1)
-                .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.followCursorRadius = value;
                     await this.plugin.saveSettings();
                 }),
         );
 
-        this.createSetting("Animation duration", "Length of the scrolling animation.", {
-            onReset: () =>
+        this.createSetting(
+            "Animation duration",
+            "Length of the scrolling animation.",
+            () =>
                 (this.plugin.settings.followCursorSmoothness =
                     DEFAULT_SETTINGS.followCursorSmoothness),
-        }).addSlider((slider) =>
+        ).addSlider((slider) =>
             slider
                 .setValue(this.plugin.settings.followCursorSmoothness)
                 .setLimits(0, 100, 1)
-                .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.followCursorSmoothness = value;
                     await this.plugin.saveSettings();
@@ -315,7 +314,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             const resetButton = buttonRow.createDiv({
                 cls: "clickable-icon extra-setting-button",
             });
-            resetButton.setAttr("aria-label", "Restore last");
+            if (this.settingsEnabled) resetButton.setAttr("aria-label", "Restore last");
             setIcon(resetButton, "reset");
             resetButton.onclick = async () => {
                 if (this.proposedRestoreScrollStoreFile === null) return;
@@ -350,12 +349,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
             this.createSetting(
                 "Scrollbar visibility",
                 "When to show the scrollbar in markdown/pdf files.",
-                {
-                    onReset: () => {
-                        this.plugin.settings.scrollbarVisibility =
-                            DEFAULT_SETTINGS.scrollbarVisibility;
-                        this.plugin.scrollbar.updateStyle();
-                    },
+                () => {
+                    this.plugin.settings.scrollbarVisibility = DEFAULT_SETTINGS.scrollbarVisibility;
+                    this.plugin.scrollbar.updateStyle();
                 },
             ).addDropdown((dropdown) =>
                 dropdown
@@ -374,16 +370,13 @@ export class ScrollingSettingTab extends PluginSettingTab {
             if (Platform.isLinux) {
                 this.settingsEnabled = this.plugin.settings.scrollbarVisibility !== "hide";
 
-                this.createSetting("Scrollbar thickness", "Width of scrollbars in pixels.", {
-                    onReset: () => {
-                        this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
-                        this.plugin.scrollbar.updateStyle();
-                    },
+                this.createSetting("Scrollbar thickness", "Width of scrollbars in pixels.", () => {
+                    this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
+                    this.plugin.scrollbar.updateStyle();
                 }).addSlider((slider) =>
                     slider
                         .setValue(this.plugin.settings.scrollbarWidth)
                         .setLimits(0, 30, 1)
-                        .setDynamicTooltip()
                         .onChange(async (value) => {
                             this.plugin.settings.scrollbarWidth = value;
                             this.plugin.scrollbar.updateStyle();
@@ -418,27 +411,28 @@ export class ScrollingSettingTab extends PluginSettingTab {
             }),
         );
 
-        this.createSetting("Scroll speed", "How far the page scrolls per mouse wheel movement.", {
-            onReset: () => (this.plugin.settings.mouseSpeed = DEFAULT_SETTINGS.mouseSpeed),
-        }).addSlider((slider) =>
+        this.createSetting(
+            "Scroll speed",
+            "How far the page scrolls per mouse wheel movement.",
+            () => (this.plugin.settings.mouseSpeed = DEFAULT_SETTINGS.mouseSpeed),
+        ).addSlider((slider) =>
             slider
                 .setValue(this.plugin.settings.mouseSpeed)
                 .setLimits(1, 100, 1)
-                .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.mouseSpeed = value;
                     await this.plugin.saveSettings();
                 }),
         );
 
-        this.createSetting("Scroll smoothness", "Duration of the scrolling animation.", {
-            onReset: () =>
-                (this.plugin.settings.mouseSmoothness = DEFAULT_SETTINGS.mouseSmoothness),
-        }).addSlider((slider) =>
+        this.createSetting(
+            "Scroll smoothness",
+            "Duration of the scrolling animation.",
+            () => (this.plugin.settings.mouseSmoothness = DEFAULT_SETTINGS.mouseSmoothness),
+        ).addSlider((slider) =>
             slider
                 .setValue(this.plugin.settings.mouseSmoothness)
                 .setLimits(0, 100, 1)
-                .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.mouseSmoothness = value;
                     await this.plugin.saveSettings();
@@ -461,15 +455,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.createSetting(
             "Touchpad scroll speed",
             "How fast the page scrolls on touchpad movement.",
-            {
-                onReset: () =>
-                    (this.plugin.settings.touchpadSpeed = DEFAULT_SETTINGS.touchpadSpeed),
-            },
+            () => (this.plugin.settings.touchpadSpeed = DEFAULT_SETTINGS.touchpadSpeed),
         ).addSlider((slider) =>
             slider
                 .setValue(this.plugin.settings.touchpadSpeed)
                 .setLimits(1, 100, 1)
-                .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.touchpadSpeed = value;
                     await this.plugin.saveSettings();
@@ -479,15 +469,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.createSetting(
             "Touchpad scroll smoothness",
             "Scroll smoothness when using a touchpad.",
-            {
-                onReset: () =>
-                    (this.plugin.settings.touchpadSmoothness = DEFAULT_SETTINGS.touchpadSmoothness),
-            },
+            () => (this.plugin.settings.touchpadSmoothness = DEFAULT_SETTINGS.touchpadSmoothness),
         ).addSlider((slider) =>
             slider
                 .setValue(this.plugin.settings.touchpadSmoothness)
                 .setLimits(0, 100, 1)
-                .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.touchpadSmoothness = value;
                     await this.plugin.saveSettings();
@@ -497,16 +483,13 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.createSetting(
             "Touchpad friction threshold",
             "Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.",
-            {
-                onReset: () =>
-                    (this.plugin.settings.touchpadFrictionThreshold =
-                        DEFAULT_SETTINGS.touchpadFrictionThreshold),
-            },
+            () =>
+                (this.plugin.settings.touchpadFrictionThreshold =
+                    DEFAULT_SETTINGS.touchpadFrictionThreshold),
         ).addSlider((slider) =>
             slider
                 .setValue(this.plugin.settings.touchpadFrictionThreshold)
                 .setLimits(1, 100, 1)
-                .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.touchpadFrictionThreshold = value;
                     await this.plugin.saveSettings();
