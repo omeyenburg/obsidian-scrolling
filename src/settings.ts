@@ -269,60 +269,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
             }),
         );
 
-        const confirmStoreFile = async () => {
-            if (this.proposedRestoreScrollStoreFile === null) {
-                new Notice("Nothing changed");
-                return;
-            }
-
-            // Check empty/invalid paths before normalizing.
-            if (
-                !this.proposedRestoreScrollStoreFile ||
-                this.proposedRestoreScrollStoreFile.trim() === "" ||
-                this.proposedRestoreScrollStoreFile === "." ||
-                this.proposedRestoreScrollStoreFile === ".."
-            ) {
-                new Notice("Invalid file path!");
-                return;
-            }
-
-            // Assuming this.plugin.settings.restoreScrollStoreFile is valid
-            const newFile = normalizePath(this.proposedRestoreScrollStoreFile);
-            const oldFile = normalizePath(this.plugin.settings.restoreScrollStoreFile);
-            const adapter = this.plugin.app.vault.adapter;
-
-            if (!newFile) {
-                new Notice("Invalid file path!");
-                return;
-            }
-
-            const folder = newFile.substring(0, newFile.lastIndexOf("/"));
-            if (!folder || !(await adapter.exists(folder))) {
-                new Notice(`Directory does not exist: ${folder}`);
-                return;
-            }
-
-            if (await adapter.exists(newFile)) {
-                new Notice(`File already exists: ${newFile}`);
-                return;
-            }
-
-            if (oldFile && (await adapter.exists(oldFile))) {
-                try {
-                    await adapter.rename(oldFile, newFile);
-                } catch (e) {
-                    new Notice("Invalid file path!");
-                    return;
-                }
-            }
-
-            new Notice(`Renamed storage file to: ${newFile}`);
-
-            this.plugin.settings.restoreScrollStoreFile = newFile;
-            this.proposedRestoreScrollStoreFile = null;
-            await this.plugin.saveSettings();
-        };
-
         this.createSetting(
             "Storage file path",
             "Where to store scrolling & cursor positions.",
@@ -331,9 +277,21 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 this.proposedRestoreScrollStoreFile = value;
             });
 
+            const onConfirm = async () => {
+                const newFile = await this.plugin.restoreScroll.renameStoreFile(
+                    this.proposedRestoreScrollStoreFile,
+                );
+
+                if (newFile) {
+                    this.plugin.settings.restoreScrollStoreFile = newFile;
+                    this.proposedRestoreScrollStoreFile = null;
+                    await this.plugin.saveSettings();
+                }
+            };
+
             // Submit new file path when pressing enter
             const handleKeydown = (e: KeyboardEvent) => {
-                if (e.key === "Enter") confirmStoreFile();
+                if (e.key === "Enter") onConfirm();
             };
             input.inputEl.addEventListener("keydown", handleKeydown);
             this.plugin.register(() => input.inputEl.removeEventListener("keydown", handleKeydown));
@@ -367,7 +325,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
             // Submit new file path with confirm button
             const confirmButton = buttonRow.createEl("button", { text: "Confirm" });
-            confirmButton.onclick = confirmStoreFile;
+            confirmButton.onclick = onConfirm;
             confirmButton.disabled = !this.settingsEnabled;
         });
     }

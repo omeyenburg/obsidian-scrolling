@@ -1,11 +1,13 @@
 import {
-    MarkdownView,
-    FileView,
-    WorkspaceLeaf,
-    TFile,
-    TAbstractFile,
     EditorRange,
+    FileView,
+    MarkdownView,
+    Notice,
+    TAbstractFile,
+    TFile,
+    WorkspaceLeaf,
     debounce,
+    normalizePath,
 } from "obsidian";
 import { around } from "monkey-around";
 
@@ -135,9 +137,13 @@ export class RestoreScroll {
 
     // Called on plugin load
     public async loadData() {
-        const exists = await this.plugin.app.vault.adapter.exists(this.plugin.settings.restoreScrollStoreFile);
+        const exists = await this.plugin.app.vault.adapter.exists(
+            this.plugin.settings.restoreScrollStoreFile,
+        );
         if (exists) {
-            const data = await this.plugin.app.vault.adapter.read(this.plugin.settings.restoreScrollStoreFile);
+            const data = await this.plugin.app.vault.adapter.read(
+                this.plugin.settings.restoreScrollStoreFile,
+            );
             try {
                 this.ephemeralStates = JSON.parse(data);
             } catch (e) {
@@ -190,5 +196,52 @@ export class RestoreScroll {
                 scrollTop,
             };
         }
+    }
+
+    public async renameStoreFile(newPath: string | null): Promise<string | undefined> {
+        if (newPath === null) {
+            new Notice("Path unchanged.");
+            return;
+        }
+
+        // Check empty/invalid paths before normalizing.
+        if (!newPath || newPath.trim() === "" || newPath === "." || newPath === "..") {
+            new Notice("Invalid file path!");
+            return;
+        }
+
+        // Assuming this.plugin.settings.restoreScrollStoreFile is valid
+        const newNormalizedPath = normalizePath(newPath);
+        const oldNormalizedPath = normalizePath(this.plugin.settings.restoreScrollStoreFile);
+
+        if (!newNormalizedPath) {
+            new Notice("Invalid file path!");
+            return;
+        }
+
+        const adapter = this.plugin.app.vault.adapter;
+
+        const folder = newNormalizedPath.substring(0, newNormalizedPath.lastIndexOf("/"));
+        if (!folder || !(await adapter.exists(folder))) {
+            new Notice(`Directory does not exist: ${folder}`);
+            return;
+        }
+
+        if (await adapter.exists(newNormalizedPath)) {
+            new Notice(`File already exists: ${newNormalizedPath}`);
+            return;
+        }
+
+        if (oldNormalizedPath && (await adapter.exists(oldNormalizedPath))) {
+            try {
+                await adapter.rename(oldNormalizedPath, newNormalizedPath);
+            } catch (e) {
+                new Notice("Invalid file path!");
+                return;
+            }
+        }
+
+        new Notice(`Renamed storage file to: ${newNormalizedPath}`);
+        return newNormalizedPath;
     }
 }
