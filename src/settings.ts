@@ -61,6 +61,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 export class ScrollingSettingTab extends PluginSettingTab {
     readonly plugin: ScrollingPlugin;
 
+    private settingsEnabled = true;
     private proposedRestoreScrollStoreFile: string | null = null;
 
     constructor(plugin: ScrollingPlugin) {
@@ -74,22 +75,25 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.followCursorSettings();
         containerEl.createEl("br");
+
         this.rememberScrollSettings();
         containerEl.createEl("br");
+
         this.scrollbarSettings();
         containerEl.createEl("br");
+
         this.mouseScrollSettings();
     }
 
     createHeading(heading: string): void {
         new Setting(this.containerEl).setName(heading).setHeading();
+        this.settingsEnabled = true;
     }
 
     createSetting(
         name: string,
         desc?: string,
         opts?: {
-            disabled?: boolean;
             onReset?: () => void;
         },
     ): Setting {
@@ -128,6 +132,18 @@ export class ScrollingSettingTab extends PluginSettingTab {
             });
         }
 
+        if (!this.settingsEnabled) {
+            setting.infoEl.style.opacity = "0.4";
+            setting.controlEl.style.opacity = "0.4";
+            setting.controlEl.style.filter = "grayscale(100%)";
+
+            window.setTimeout(() => {
+                setting.components.forEach((comp) => {
+                    comp.setDisabled(true);
+                });
+            }, 1);
+        }
+
         return setting;
     }
 
@@ -142,80 +158,79 @@ export class ScrollingSettingTab extends PluginSettingTab {
             }),
         );
 
-        if (this.plugin.settings.followCursorEnabled) {
-            this.createSetting(
-                "Trigger distance",
-                "How far the cursor can move from the center before scrolling.\n0% keeps the cursor perfectly centered.",
-                {
-                    onReset: () =>
-                        (this.plugin.settings.followCursorRadius =
-                            DEFAULT_SETTINGS.followCursorRadius),
-                },
-            ).addSlider((slider) =>
-                slider
-                    .setValue(this.plugin.settings.followCursorRadius)
-                    .setLimits(0, 100, 1)
-                    .setDynamicTooltip()
-                    .onChange(async (value) => {
-                        this.plugin.settings.followCursorRadius = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
+        this.settingsEnabled = this.plugin.settings.followCursorEnabled;
 
-            this.createSetting("Animation duration", "Length of the scrolling animation.", {
+        this.createSetting(
+            "Trigger distance",
+            "How far the cursor can move from the center before scrolling.\n0% keeps the cursor perfectly centered.",
+            {
                 onReset: () =>
-                    (this.plugin.settings.followCursorSmoothness =
-                        DEFAULT_SETTINGS.followCursorSmoothness),
-            }).addSlider((slider) =>
-                slider
-                    .setValue(this.plugin.settings.followCursorSmoothness)
-                    .setLimits(0, 100, 1)
-                    .setDynamicTooltip()
-                    .onChange(async (value) => {
-                        this.plugin.settings.followCursorSmoothness = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
+                    (this.plugin.settings.followCursorRadius = DEFAULT_SETTINGS.followCursorRadius),
+            },
+        ).addSlider((slider) =>
+            slider
+                .setValue(this.plugin.settings.followCursorRadius)
+                .setLimits(0, 100, 1)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.followCursorRadius = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
 
-            this.createSetting(
-                "Dynamic animations",
-                "If many scroll events happen quickly, skip animation frames to improve responsiveness.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.followCursorDynamicAnimation)
-                    .onChange(async (value) => {
-                        this.plugin.settings.followCursorDynamicAnimation = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
+        this.createSetting("Animation duration", "Length of the scrolling animation.", {
+            onReset: () =>
+                (this.plugin.settings.followCursorSmoothness =
+                    DEFAULT_SETTINGS.followCursorSmoothness),
+        }).addSlider((slider) =>
+            slider
+                .setValue(this.plugin.settings.followCursorSmoothness)
+                .setLimits(0, 100, 1)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.followCursorSmoothness = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
 
-            this.createSetting(
-                "Trigger on mouse interactions",
-                "Update when the cursor is moved using the mouse.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.followCursorEnableMouse)
-                    .onChange(async (value) => {
-                        this.plugin.settings.followCursorEnableMouse = value;
-                        this.display();
-                        await this.plugin.saveSettings();
-                    }),
-            );
+        this.createSetting(
+            "Dynamic animations",
+            "If many scroll events happen quickly, skip animation frames to improve responsiveness.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.followCursorDynamicAnimation)
+                .onChange(async (value) => {
+                    this.plugin.settings.followCursorDynamicAnimation = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
 
-            if (this.plugin.settings.followCursorEnableMouse) {
-                this.createSetting(
-                    "Trigger on mouse selection",
-                    "Also update when text is selected using the mouse.",
-                ).addToggle((toggle) =>
-                    toggle
-                        .setValue(this.plugin.settings.followCursorEnableSelection)
-                        .onChange(async (value) => {
-                            this.plugin.settings.followCursorEnableSelection = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-            }
-        }
+        this.createSetting(
+            "Trigger on mouse interactions",
+            "Update when the cursor is moved using the mouse.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.followCursorEnableMouse)
+                .onChange(async (value) => {
+                    this.plugin.settings.followCursorEnableMouse = value;
+                    this.display();
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
+
+        this.createSetting(
+            "Trigger on mouse selection",
+            "Also update when text is selected using the mouse.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.followCursorEnableSelection)
+                .onChange(async (value) => {
+                    this.plugin.settings.followCursorEnableSelection = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
     }
 
     private rememberScrollSettings() {
@@ -227,9 +242,12 @@ export class ScrollingSettingTab extends PluginSettingTab {
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.restoreScrollEnabled).onChange(async (value) => {
                 this.plugin.settings.restoreScrollEnabled = value;
+                this.display();
                 await this.plugin.saveSettings();
             }),
         );
+
+        this.settingsEnabled = this.plugin.settings.restoreScrollEnabled;
 
         this.createSetting(
             "Restore cursor position instead",
@@ -350,6 +368,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             // Submit new file path with confirm button
             const confirmButton = buttonRow.createEl("button", { text: "Confirm" });
             confirmButton.onclick = confirmStoreFile;
+            confirmButton.disabled = !this.settingsEnabled;
         });
     }
 
@@ -394,7 +413,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
 
-            if (Platform.isLinux && this.plugin.settings.scrollbarVisibility !== "hide") {
+            if (Platform.isLinux) {
+                this.settingsEnabled = this.plugin.settings.scrollbarVisibility !== "hide";
+
                 this.createSetting("Scrollbar thickness", "Width of scrollbars in pixels.", {
                     onReset: () => {
                         this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
@@ -427,119 +448,111 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        if (this.plugin.settings.mouseEnabled) {
-            this.createSetting(
-                "Invert scroll direction",
-                "Reverse the scroll direction for mouse wheel and touchpad input.",
-            ).addToggle((toggle) =>
-                toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
-                    this.plugin.settings.mouseInvert = value;
+        this.settingsEnabled = this.plugin.settings.mouseEnabled;
+
+        this.createSetting(
+            "Invert scroll direction",
+            "Reverse the scroll direction for mouse wheel and touchpad input.",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
+                this.plugin.settings.mouseInvert = value;
+                await this.plugin.saveSettings();
+            }),
+        );
+
+        this.createSetting("Scroll speed", "How far the page scrolls per mouse wheel movement.", {
+            onReset: () => (this.plugin.settings.mouseSpeed = DEFAULT_SETTINGS.mouseSpeed),
+        }).addSlider((slider) =>
+            slider
+                .setValue(this.plugin.settings.mouseSpeed)
+                .setLimits(1, 100, 1)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.mouseSpeed = value;
                     await this.plugin.saveSettings();
                 }),
-            );
+        );
 
-            this.createSetting(
-                "Scroll speed",
-                "How far the page scrolls per mouse wheel movement.",
-                {
-                    onReset: () => (this.plugin.settings.mouseSpeed = DEFAULT_SETTINGS.mouseSpeed),
-                },
-            ).addSlider((slider) =>
-                slider
-                    .setValue(this.plugin.settings.mouseSpeed)
-                    .setLimits(1, 100, 1)
-                    .setDynamicTooltip()
-                    .onChange(async (value) => {
-                        this.plugin.settings.mouseSpeed = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
+        this.createSetting("Scroll smoothness", "Duration of the scrolling animation.", {
+            onReset: () =>
+                (this.plugin.settings.mouseSmoothness = DEFAULT_SETTINGS.mouseSmoothness),
+        }).addSlider((slider) =>
+            slider
+                .setValue(this.plugin.settings.mouseSmoothness)
+                .setLimits(0, 100, 1)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.mouseSmoothness = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
 
-            this.createSetting("Scroll smoothness", "Duration of the scrolling animation.", {
+        this.createSetting(
+            "Touchpad detection",
+            "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.touchpadEnabled).onChange(async (value) => {
+                this.plugin.settings.touchpadEnabled = value;
+                this.display();
+                await this.plugin.saveSettings();
+            }),
+        );
+
+        this.settingsEnabled &&= this.plugin.settings.touchpadEnabled;
+
+        this.createSetting(
+            "Touchpad scroll speed",
+            "How fast the page scrolls on touchpad movement.",
+            {
                 onReset: () =>
-                    (this.plugin.settings.mouseSmoothness = DEFAULT_SETTINGS.mouseSmoothness),
-            }).addSlider((slider) =>
-                slider
-                    .setValue(this.plugin.settings.mouseSmoothness)
-                    .setLimits(0, 100, 1)
-                    .setDynamicTooltip()
-                    .onChange(async (value) => {
-                        this.plugin.settings.mouseSmoothness = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Touchpad detection",
-                "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
-            ).addToggle((toggle) =>
-                toggle.setValue(this.plugin.settings.touchpadEnabled).onChange(async (value) => {
-                    this.plugin.settings.touchpadEnabled = value;
-                    this.display();
+                    (this.plugin.settings.touchpadSpeed = DEFAULT_SETTINGS.touchpadSpeed),
+            },
+        ).addSlider((slider) =>
+            slider
+                .setValue(this.plugin.settings.touchpadSpeed)
+                .setLimits(1, 100, 1)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.touchpadSpeed = value;
                     await this.plugin.saveSettings();
                 }),
-            );
+        );
 
-            if (this.plugin.settings.touchpadEnabled) {
-                if (this.plugin.settings.mouseEnabled) {
-                    this.createSetting(
-                        "Touchpad scroll speed",
-                        "How fast the page scrolls on touchpad movement.",
-                        {
-                            onReset: () =>
-                                (this.plugin.settings.touchpadSpeed =
-                                    DEFAULT_SETTINGS.touchpadSpeed),
-                        },
-                    ).addSlider((slider) =>
-                        slider
-                            .setValue(this.plugin.settings.touchpadSpeed)
-                            .setLimits(1, 100, 1)
-                            .setDynamicTooltip()
-                            .onChange(async (value) => {
-                                this.plugin.settings.touchpadSpeed = value;
-                                await this.plugin.saveSettings();
-                            }),
-                    );
+        this.createSetting(
+            "Touchpad scroll smoothness",
+            "Scroll smoothness when using a touchpad.",
+            {
+                onReset: () =>
+                    (this.plugin.settings.touchpadSmoothness = DEFAULT_SETTINGS.touchpadSmoothness),
+            },
+        ).addSlider((slider) =>
+            slider
+                .setValue(this.plugin.settings.touchpadSmoothness)
+                .setLimits(0, 100, 1)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.touchpadSmoothness = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
 
-                    this.createSetting(
-                        "Touchpad scroll smoothness",
-                        "Scroll smoothness when using a touchpad.",
-                        {
-                            onReset: () =>
-                                (this.plugin.settings.touchpadSmoothness =
-                                    DEFAULT_SETTINGS.touchpadSmoothness),
-                        },
-                    ).addSlider((slider) =>
-                        slider
-                            .setValue(this.plugin.settings.touchpadSmoothness)
-                            .setLimits(0, 100, 1)
-                            .setDynamicTooltip()
-                            .onChange(async (value) => {
-                                this.plugin.settings.touchpadSmoothness = value;
-                                await this.plugin.saveSettings();
-                            }),
-                    );
-
-                    this.createSetting(
-                        "Touchpad friction threshold",
-                        "Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.",
-                        {
-                            onReset: () =>
-                                (this.plugin.settings.touchpadFrictionThreshold =
-                                    DEFAULT_SETTINGS.touchpadFrictionThreshold),
-                        },
-                    ).addSlider((slider) =>
-                        slider
-                            .setValue(this.plugin.settings.touchpadFrictionThreshold)
-                            .setLimits(1, 100, 1)
-                            .setDynamicTooltip()
-                            .onChange(async (value) => {
-                                this.plugin.settings.touchpadFrictionThreshold = value;
-                                await this.plugin.saveSettings();
-                            }),
-                    );
-                }
-            }
-        }
+        this.createSetting(
+            "Touchpad friction threshold",
+            "Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.",
+            {
+                onReset: () =>
+                    (this.plugin.settings.touchpadFrictionThreshold =
+                        DEFAULT_SETTINGS.touchpadFrictionThreshold),
+            },
+        ).addSlider((slider) =>
+            slider
+                .setValue(this.plugin.settings.touchpadFrictionThreshold)
+                .setLimits(1, 100, 1)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.touchpadFrictionThreshold = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
     }
 }
