@@ -4,6 +4,12 @@ import { Transaction } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "./main";
 
+interface ScrollInfo {
+    top: number;
+    left: number;
+    height: number;
+}
+
 export class FollowCursor {
     private readonly plugin: ScrollingPlugin;
 
@@ -15,6 +21,7 @@ export class FollowCursor {
 
     private static readonly INTENSITY_DECAY_RATE = 0.01;
     private static readonly INTENSITY_THRESHOLD = 3;
+    private static readonly MOUSE_UP_TIMEOUT = 100;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -33,7 +40,7 @@ export class FollowCursor {
         // Already wasted too much time with this.
         window.setTimeout(() => {
             this.recentMouseUp = false;
-        }, 100);
+        }, FollowCursor.MOUSE_UP_TIMEOUT);
     }
 
     public editHandler(editor: Editor): void {
@@ -71,31 +78,19 @@ export class FollowCursor {
             this.plugin.restoreScroll.storeStateDebounced(markdownView.file);
         }
 
-        // Also cancel if mouse up, unless this setting allows it.
-        if (
-            (!this.plugin.settings.followCursorEnableSelection &&
-                markdownView.editor.somethingSelected()) ||
-            (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse)
-        )
-            return;
+        // Cancel if selecting, unless this setting allows it.
+        if (!this.plugin.settings.followCursorEnableSelection)
+            if (markdownView.editor.somethingSelected()) return;
+
+        // Cancel if mouse up, unless this setting allows it.
+        if (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse) return;
 
         this.invokeScroll(markdownView.editor);
-    }
-
-    private calculateScrollIntensity(): void {
-        const time = performance.now();
-        const elapsed = time - this.scrollLastEvent;
-
-        this.scrollLastEvent = time;
-        this.scrollIntensity =
-            Math.max(0, this.scrollIntensity - elapsed * FollowCursor.INTENSITY_DECAY_RATE) + 1;
     }
 
     private invokeScroll(editor: Editor): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
-        const radiusPercent = this.plugin.settings.followCursorRadius;
-        const smoothness = this.plugin.settings.followCursorSmoothness;
         const dynamicAnimation = this.plugin.settings.followCursorDynamicAnimation;
 
         // If scrolling fast, skip animation steps
@@ -109,61 +104,87 @@ export class FollowCursor {
         // Get cursor position from active line
         const cursorEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
         if (!cursorEl) return;
+
         const cursor = cursorEl.getBoundingClientRect();
-
         const lineHeight = editor.cm.defaultLineHeight;
-
         const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
-        let cursorVerticalPosition = cursor.top + lineHeight - viewOffset;
 
-        const scrollInfo = editor.getScrollInfo() as { top: number; left: number; height: number };
-        const currentVerticalPosition = scrollInfo.top;
+        const cursorVerticalPosition = cursor.top + lineHeight - viewOffset;
+        const scrollInfo = editor.getScrollInfo() as ScrollInfo;
+
+        const signedGoalDistance = this.calculateGoalDistance(cursorVerticalPosition, scrollInfo);
+        if (signedGoalDistance === 0) return;
+
+        const goal = scrollInfo.top + signedGoalDistance;
+        const steps = this.calculateSteps(signedGoalDistance, scrollInfo.height);
+
+        const animate = (editor: Editor, goal: number, stepSize: number, step: number) => {
+            if (step <= 0) return;
+
+            editor.scrollTo(null, goal - stepSize * (step - 1));
+            this.animationFrame = window.requestAnimationFrame(() =>
+                animate(editor, goal, stepSize, step - 1),
+            );
+        };
+
+        window.cancelAnimationFrame(this.animationFrame);
+        animate(editor, goal, signedGoalDistance / steps, steps);
+    }
+
+    private calculateScrollIntensity(): void {
+        const time = performance.now();
+        const elapsed = time - this.scrollLastEvent;
+
+        this.scrollLastEvent = time;
+        this.scrollIntensity =
+            Math.max(0, this.scrollIntensity - elapsed * FollowCursor.INTENSITY_DECAY_RATE) + 1;
+    }
+
+    private calculateGoalDistance(cursorVerticalPosition: number, scrollInfo: ScrollInfo) {
+        const radiusPercent = this.plugin.settings.followCursorRadius;
+
         let radius = ((scrollInfo.height / 2) * radiusPercent) / 100;
 
         const center = scrollInfo.height / 2;
         const centerOffset = cursorVerticalPosition - center;
 
-        let goal: number;
-        let distance: number;
+        let signedGoalDistance: number;
         if (centerOffset < -radius) {
-            goal = currentVerticalPosition + centerOffset + radius;
-            distance = centerOffset + radius;
+            signedGoalDistance = centerOffset + radius;
         } else if (centerOffset > radius) {
-            goal = currentVerticalPosition + centerOffset - radius;
-            distance = centerOffset - radius;
+            signedGoalDistance = centerOffset - radius;
         } else {
-            return;
+            return 0;
         }
 
         // Can't scroll by fractions.
-        if (Math.abs(distance) < 1) return;
+        if (Math.abs(signedGoalDistance) < 1) return 0;
 
-        window.cancelAnimationFrame(this.animationFrame);
+        return signedGoalDistance;
+    }
+
+    private calculateSteps(signedGoalDistance: number, scrollerHeight: number): number {
+        const smoothness = this.plugin.settings.followCursorSmoothness;
+        const dynamicAnimation = this.plugin.settings.followCursorDynamicAnimation;
+
+        let steps = Math.max(
+            1,
+            Math.ceil(2 * (smoothness / 100) * Math.sqrt(Math.abs(signedGoalDistance))),
+        );
 
         // Calculate scroll intensity to skip animation steps.
         if (dynamicAnimation && this.recentEdit) {
             this.calculateScrollIntensity();
         }
 
-        let steps = Math.max(1, Math.ceil(2 * (smoothness / 100) * Math.sqrt(Math.abs(distance))));
-
         // If scrolling fast, reduce animation steps.
         if (
             this.scrollIntensity > FollowCursor.INTENSITY_THRESHOLD ||
-            Math.abs(distance) > scrollInfo.height
+            Math.abs(signedGoalDistance) > scrollerHeight
         ) {
             steps = Math.ceil(Math.sqrt(steps));
         }
 
-        const animate = (editor: Editor, dest: number, step_size: number, step: number) => {
-            if (step <= 0) return;
-
-            editor.scrollTo(null, dest - step_size * (step - 1));
-            this.animationFrame = window.requestAnimationFrame(() =>
-                animate(editor, dest, step_size, step - 1),
-            );
-        };
-
-        animate(editor, goal, distance / steps, steps);
+        return steps;
     }
 }

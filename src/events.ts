@@ -43,7 +43,7 @@ export class Events {
 
         plugin.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
 
-        // Supress first invocation
+        // Suppress first invocation
         let initialEditorChange = plugin.app.workspace.on("editor-change", () => {
             plugin.app.workspace.offref(initialEditorChange);
             plugin.registerEvent(
@@ -59,7 +59,7 @@ export class Events {
                 setViewState(old) {
                     return async function (...args) {
                         const result = await old.apply(this, args);
-                        await self.fileLoadHandler();
+                        self.viewStateHandler();
                         return result;
                     };
                 },
@@ -161,8 +161,8 @@ export class Events {
         this.plugin.followcursor.cursorHandler(update);
     }
 
-    private fileLoadHandler(): void {
-        this.plugin.restoreScroll.fileOpenHandler();
+    private viewStateHandler(): void {
+        this.plugin.restoreScroll.viewStateHandler();
     }
 
     private wheelHandler(event: WheelEvent): void {
