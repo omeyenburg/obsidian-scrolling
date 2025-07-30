@@ -15,12 +15,12 @@ export class LineWidth {
         ) {
             document.body.removeClass("scrolling-line-width-enabled");
         } else if (this.plugin.settings.lineWidthMode === "percentage") {
-            document.body.addClass("scrolling-line-width-enabled");
             const lineWidth = this.plugin.settings.lineWidthPercentage;
+            document.body.addClass("scrolling-line-width-enabled");
             document.body.style.setProperty("--scrolling-line-width", `${lineWidth}%`);
         } else {
-            document.body.addClass("scrolling-line-width-enabled");
             const lineWidth = this.plugin.settings.lineWidthCharacters;
+            document.body.addClass("scrolling-line-width-enabled");
             document.body.style.setProperty("--scrolling-line-width", `${lineWidth}ch`);
         }
     }

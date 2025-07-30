@@ -1,5 +1,5 @@
 import { Editor, MarkdownView } from "obsidian";
-import { EditorView, ViewUpdate } from "@codemirror/view";
+import { ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "./main";
@@ -9,39 +9,22 @@ export class FollowCursor {
 
     private recentEdit = false;
     private recentMouseUp = false;
+    private animationFrame = 0;
     private scrollIntensity = 0;
-    private scrollLast = 0;
-    private lastLine = 0;
-    private animationFrame: number;
+    private scrollLastEvent = 0;
 
     private static readonly INTENSITY_DECAY_RATE = 0.01;
     private static readonly INTENSITY_THRESHOLD = 3;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
-
-        // Handles editing events (first invokation must be supressed)
-        let initialEditorChange = plugin.app.workspace.on("editor-change", () => {
-            plugin.app.workspace.offref(initialEditorChange);
-            plugin.registerEvent(
-                plugin.app.workspace.on("editor-change", this.editHandler.bind(this)),
-            );
-        });
-        plugin.registerEvent(initialEditorChange);
-
-        // Additional context for the cursor handler
-        plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this));
-        plugin.registerDomEvent(document, "keydown", this.keyHandler.bind(this));
-
-        // Handles mouse events
-        plugin.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
     }
 
-    private keyHandler(): void {
+    public keyHandler(): void {
         this.recentMouseUp = false;
     }
 
-    private mouseUpHandler(): void {
+    public mouseUpHandler(): void {
         this.recentMouseUp = true;
 
         // recentMouseUp will be reset either when a key is pressed or 100 ms pass.
@@ -53,27 +36,13 @@ export class FollowCursor {
         }, 100);
     }
 
-    private getScrollDirection(editor: Editor): -1 | 0 | 1 {
-        // Cursor movement direction: -1 (up), 0 (same line), 1 (down)
-        const lastLine = this.lastLine;
-        this.lastLine = editor.getCursor().line;
-
-        if (lastLine < this.lastLine) {
-            return 1;
-        } else if (lastLine > this.lastLine) {
-            return -1;
-        }
-        return 0;
-    }
-
-    private editHandler(editor: Editor): void {
+    public editHandler(editor: Editor): void {
         this.recentEdit = true; // Will be reset by cursorHandler
 
-        const scrollDirection = this.getScrollDirection(editor);
-        this.invokeScroll(editor, scrollDirection);
+        this.invokeScroll(editor);
     }
 
-    private cursorHandler(update: ViewUpdate): void {
+    public cursorHandler(update: ViewUpdate): void {
         // Always cancel if event was caused by mouse down/movement.
         // This only checks if this update was caused by a mouse down event,
         // but can't detect mouse up.
@@ -102,8 +71,6 @@ export class FollowCursor {
             this.plugin.restoreScroll.storeStateDebounced(markdownView.file);
         }
 
-        const scrollDirection = this.getScrollDirection(markdownView.editor);
-
         // Also cancel if mouse up, unless this setting allows it.
         if (
             (!this.plugin.settings.followCursorEnableSelection &&
@@ -112,19 +79,19 @@ export class FollowCursor {
         )
             return;
 
-        this.invokeScroll(markdownView.editor, scrollDirection);
+        this.invokeScroll(markdownView.editor);
     }
 
     private calculateScrollIntensity(): void {
         const time = performance.now();
-        const elapsed = time - this.scrollLast;
+        const elapsed = time - this.scrollLastEvent;
 
-        this.scrollLast = time;
+        this.scrollLastEvent = time;
         this.scrollIntensity =
             Math.max(0, this.scrollIntensity - elapsed * FollowCursor.INTENSITY_DECAY_RATE) + 1;
     }
 
-    private invokeScroll(editor: Editor, scrollDirection: number): void {
+    private invokeScroll(editor: Editor): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
         const radiusPercent = this.plugin.settings.followCursorRadius;
@@ -139,7 +106,7 @@ export class FollowCursor {
             this.scrollIntensity = 0;
         }
 
-        // Get cursor position
+        // Get cursor position from active line
         const cursorEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
         if (!cursorEl) return;
         const cursor = cursorEl.getBoundingClientRect();
@@ -156,8 +123,8 @@ export class FollowCursor {
         const center = scrollInfo.height / 2;
         const centerOffset = cursorVerticalPosition - center;
 
-        let goal;
-        let distance;
+        let goal: number;
+        let distance: number;
         if (centerOffset < -radius) {
             goal = currentVerticalPosition + centerOffset + radius;
             distance = centerOffset + radius;

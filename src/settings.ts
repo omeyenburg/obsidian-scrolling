@@ -110,15 +110,14 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 const lines = desc.split("\n");
 
                 setting.setDesc(
-                    createFragment((frag) => {
-                        const div = frag.createDiv();
+                    createFragment((frag) =>
                         lines.forEach((line, index) => {
-                            div.createEl("span", { text: line });
+                            frag.createEl("span", { text: line });
                             if (index < lines.length - 1) {
-                                div.createEl("br");
+                                frag.createEl("br");
                             }
-                        });
-                    }),
+                        }),
+                    ),
                 );
             } else {
                 setting.setDesc(desc);
@@ -149,6 +148,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             }, 1);
         } else {
             // Show tooltip on all enabled sliders
+            // (removing later is not possible)
             window.setTimeout(() => {
                 setting.components.forEach((comp) => {
                     if (comp instanceof SliderComponent) {
@@ -284,7 +284,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             "Storage file path",
             "Where to store scrolling & cursor positions.",
         ).addText((input) => {
-            input.setValue(this.plugin.settings.restoreScrollStoreFile).onChange(async (value) => {
+            input.setValue(this.plugin.settings.restoreScrollStoreFile).onChange((value) => {
                 this.proposedRestoreScrollStoreFile = value;
             });
 
@@ -328,7 +328,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             });
             if (this.settingsEnabled) resetButton.setAttr("aria-label", "Restore last");
             setIcon(resetButton, "reset");
-            resetButton.onclick = async () => {
+            resetButton.onclick = () => {
                 if (this.proposedRestoreScrollStoreFile === null) return;
                 input.setValue(this.plugin.settings.restoreScrollStoreFile);
                 this.proposedRestoreScrollStoreFile = null;
@@ -400,7 +400,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private linewidthSettings() {
-        const readableLineWidthEnabled = this.plugin.linewidth.isReadableLineWidthEnabled()
+        const readableLineWidthEnabled = this.plugin.linewidth.isReadableLineWidthEnabled();
 
         // In case readableLineWidth was toggled
         this.plugin.linewidth.updateLineWidth();
