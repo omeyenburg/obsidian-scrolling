@@ -19,6 +19,10 @@ export interface ScrollingPluginSettings {
     scrollbarWidth: number;
     scrollbarFileTreeHorizontal: boolean;
 
+    lineWidthMode: string;
+    lineWidthPercentage: number;
+    lineWidthCharacters: number;
+
     mouseEnabled: boolean;
     mouseInvert: boolean;
     mouseSpeed: number;
@@ -46,6 +50,10 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
     scrollbarFileTreeHorizontal: false,
+
+    lineWidthMode: "disabled",
+    lineWidthPercentage: 50,
+    lineWidthCharacters: 70,
 
     mouseEnabled: true,
     mouseInvert: false,
@@ -82,11 +90,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.scrollbarSettings();
         containerEl.createEl("br");
 
+        this.linewidthSettings();
+        containerEl.createEl("br");
+
         this.mouseScrollSettings();
     }
 
-    createHeading(heading: string): void {
-        new Setting(this.containerEl).setName(heading).setHeading();
+    createHeading(name: string, desc?: string): void {
+        const heading = new Setting(this.containerEl).setName(name).setHeading();
+        if (desc) heading.setDesc(desc);
         this.settingsEnabled = true;
     }
 
@@ -384,6 +396,78 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         }),
                 );
             }
+        }
+    }
+
+    private linewidthSettings() {
+        const readableLineWidthEnabled = this.plugin.linewidth.isReadableLineWidthEnabled()
+
+        // In case readableLineWidth was toggled
+        this.plugin.linewidth.updateLineWidth();
+
+        if (readableLineWidthEnabled)
+            this.createHeading(
+                "Line width",
+                "Please disable 'Readable line length' in the editor settings to use this feature!",
+            );
+        else this.createHeading("Line width");
+
+        this.settingsEnabled = !readableLineWidthEnabled;
+
+        this.createSetting("Mode", "Choose how to control the maximum line width.").addDropdown(
+            (dropdown) => {
+                dropdown
+                    .addOption("disabled", "Disabled")
+                    .addOption("percentage", "Percentage (%)")
+                    .addOption("characters", "Characters (ch)")
+                    .setValue(this.plugin.settings.lineWidthMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.lineWidthMode = value;
+                        this.plugin.linewidth.updateLineWidth();
+                        this.display();
+                        await this.plugin.saveSettings();
+                    });
+            },
+        );
+
+        if (this.plugin.settings.lineWidthMode === "percentage") {
+            this.createSetting(
+                "Maximum line width",
+                "Maximum line width as percentage (%).",
+                () => {
+                    this.plugin.settings.lineWidthPercentage = DEFAULT_SETTINGS.lineWidthPercentage;
+                    this.plugin.linewidth.updateLineWidth();
+                },
+            ).addSlider((slider) =>
+                slider
+                    .setValue(this.plugin.settings.lineWidthPercentage)
+                    .setLimits(20, 100, 1)
+                    .onChange(async (value) => {
+                        this.plugin.settings.lineWidthPercentage = value;
+                        this.plugin.linewidth.updateLineWidth();
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        } else {
+            this.settingsEnabled &&= this.plugin.settings.lineWidthMode === "characters";
+
+            this.createSetting(
+                "Maximum line width",
+                "Maximum line width as character count (ch).",
+                () => {
+                    this.plugin.settings.lineWidthCharacters = DEFAULT_SETTINGS.lineWidthCharacters;
+                    this.plugin.linewidth.updateLineWidth();
+                },
+            ).addSlider((slider) =>
+                slider
+                    .setValue(this.plugin.settings.lineWidthCharacters)
+                    .setLimits(30, 200, 1)
+                    .onChange(async (value) => {
+                        this.plugin.settings.lineWidthCharacters = value;
+                        this.plugin.linewidth.updateLineWidth();
+                        await this.plugin.saveSettings();
+                    }),
+            );
         }
     }
 
