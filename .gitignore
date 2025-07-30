@@ -14,7 +14,10 @@ node_modules
 # MacOS Finder view states
 .DS_Store
 
-# Generated files
+# Generated project files
 main.js
 data.json
 scrolling-positions.json
+
+# Tests
+coverage/
