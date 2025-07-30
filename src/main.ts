@@ -1,5 +1,6 @@
 import { Plugin } from "obsidian";
 
+import { Events } from "./events";
 import { FollowCursor } from "./followcursor";
 import { MouseScroll } from "./mousescroll";
 import { Scrollbar } from "./scrollbar";
@@ -10,11 +11,11 @@ import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
 
-    restoreScroll: RestoreScroll;
-    followcursor: FollowCursor;
-    mousescroll: MouseScroll;
-    scrollbar: Scrollbar;
-    linewidth: LineWidth;
+    restoreScroll!: RestoreScroll;
+    followcursor!: FollowCursor;
+    mousescroll!: MouseScroll;
+    scrollbar!: Scrollbar;
+    linewidth!: LineWidth;
 
     async onload() {
         await this.loadSettings();
@@ -26,18 +27,11 @@ export default class ScrollingPlugin extends Plugin {
         this.scrollbar = new Scrollbar(this);
         this.linewidth = new LineWidth(this);
 
-        this.restoreScroll.loadData();
+        new Events(this);
 
-        this.registerEvent(
-            this.app.workspace.on("active-leaf-change", this.activeLeafChangeHandler.bind(this)),
-        );
+        await this.restoreScroll.loadData();
 
         console.log("ScrollingPlugin loaded");
-    }
-
-    async activeLeafChangeHandler() {
-        this.scrollbar.activeLeafChangeHandler();
-        this.mousescroll.activeLeafChangeHandler();
     }
 
     async onunload() {
@@ -47,14 +41,13 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async loadSettings() {
-        const loaded = await this.loadData();
-        const settings: Partial<ScrollingPluginSettings> = {};
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
-        for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof ScrollingPluginSettings)[]) {
-            settings[key] = loaded[key] ?? DEFAULT_SETTINGS[key];
+        for (const key in this.settings) {
+            if (!(key in DEFAULT_SETTINGS)) {
+                delete this.settings[key];
+            }
         }
-
-        this.settings = settings as ScrollingPluginSettings;
     }
 
     async saveSettings() {

@@ -19,18 +19,13 @@ export class MouseScroll {
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
-
-        plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
-            passive: false,
-        });
     }
 
-    // Called in main
-    public async activeLeafChangeHandler() {
+    public leafChangeHandler() {
         this.touchpadVelocity = 0;
     }
 
-    private async wheelHandler(event: WheelEvent) {
+    public wheelHandler(event: WheelEvent) {
         if (!this.plugin.settings.mouseEnabled) return;
         if (!event.deltaY) return;
 

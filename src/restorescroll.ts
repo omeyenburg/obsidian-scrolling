@@ -5,11 +5,9 @@ import {
     Notice,
     TAbstractFile,
     TFile,
-    WorkspaceLeaf,
     debounce,
     normalizePath,
 } from "obsidian";
-import { around } from "monkey-around";
 
 import { default as ScrollingPlugin } from "./main";
 
@@ -23,7 +21,8 @@ interface EphemeralState {
 export class RestoreScroll {
     private readonly plugin: ScrollingPlugin;
 
-    public storeStateDebounced;
+    public storeStateDebounced: (file: TFile) => void;
+    private writeStateFileDebounced: () => void;
 
     private ephemeralStates: Record<string, EphemeralState> = {};
 
@@ -33,110 +32,96 @@ export class RestoreScroll {
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
-        plugin.registerEvent(plugin.app.vault.on("rename", this.renameFileCallback.bind(this)));
-        plugin.registerEvent(plugin.app.vault.on("delete", this.deleteFileCallback.bind(this)));
-        plugin.registerEvent(plugin.app.workspace.on("quit", this.saveData.bind(this)));
-
         this.storeStateDebounced = debounce(
             this.storeState.bind(this),
             RestoreScroll.STORE_INTERVAL,
             false,
         );
-        const saveStateDebounced = debounce(
-            this.saveData.bind(this),
+        this.writeStateFileDebounced = debounce(
+            this.writeStateFile.bind(this),
             RestoreScroll.FILE_SAVE_INTERVAL,
             true,
         );
-
-        const self = this;
-        plugin.register(
-            around(WorkspaceLeaf.prototype, {
-                setViewState(old) {
-                    return async function (...args) {
-                        saveStateDebounced();
-                        const result = await old.apply(this, args);
-
-                        const linkUsed =
-                            plugin.app.workspace.containerEl.querySelector("span.is-flashing");
-                        const view = plugin.app.workspace.getActiveViewOfType(FileView);
-                        if (
-                            linkUsed ||
-                            !view ||
-                            !view.file ||
-                            !plugin.settings.restoreScrollEnabled
-                        )
-                            return result;
-
-                        const ephemeralState = self.ephemeralStates[view.file.path];
-                        if (!ephemeralState) return result;
-                        const { cursor, scroll, scrollTop } = ephemeralState;
-
-                        const type = view.getViewType();
-                        if (
-                            view instanceof MarkdownView &&
-                            view.getMode() === "source" &&
-                            (scroll || (cursor && plugin.settings.restoreScrollCursor))
-                        ) {
-                            if (cursor && plugin.settings.restoreScrollCursor) {
-                                view.setEphemeralState({
-                                    cursor: cursor,
-                                });
-
-                                view.editor.scrollIntoView(cursor, true);
-                            } else {
-                                view.setEphemeralState({
-                                    scroll: scroll,
-                                });
-                            }
-                        } else if (scrollTop && plugin.settings.restoreScrollAllFiles) {
-                            window.requestAnimationFrame(() => {
-                                if (type === "markdown") {
-                                    const scroller =
-                                        view.containerEl.querySelector(".markdown-preview-view");
-                                    if (scroller) {
-                                        scroller.scrollTop = scrollTop;
-                                    }
-                                } else if (type === "pdf") {
-                                    const scroller =
-                                        view.containerEl.querySelector(".pdf-viewer-container");
-                                    if (scroller) {
-                                        scroller.scrollTop = scrollTop;
-                                    }
-                                } else if (type === "image") {
-                                    const scroller =
-                                        view.containerEl.querySelector(
-                                            ".image-container",
-                                        )?.parentElement;
-                                    if (scroller) {
-                                        scroller.scrollTop = scrollTop;
-                                    }
-                                }
-                            });
-                        }
-
-                        return result;
-                    };
-                },
-            }),
-        );
     }
 
-    private async deleteFileCallback(file: TAbstractFile) {
+    public scrollHandler(): void {
+        const file = this.plugin.app.workspace.getActiveFile();
+        if (file) {
+            this.plugin.restoreScroll.storeStateDebounced(file);
+        }
+    }
+
+    public fileOpenHandler(): void {
+        this.writeStateFileDebounced();
+
+        const linkUsed = this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
+        const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
+        if (linkUsed || !view || !view.file || !this.plugin.settings.restoreScrollEnabled) return;
+
+        const ephemeralState = this.ephemeralStates[view.file.path];
+        if (!ephemeralState) return;
+        const { cursor, scroll, scrollTop } = ephemeralState;
+
+        const type = view.getViewType();
+        if (
+            view instanceof MarkdownView &&
+            view.getMode() === "source" &&
+            (scroll || (cursor && this.plugin.settings.restoreScrollCursor))
+        ) {
+            if (cursor && this.plugin.settings.restoreScrollCursor) {
+                view.setEphemeralState({
+                    cursor: cursor,
+                });
+
+                view.editor.scrollIntoView(cursor, true);
+            } else {
+                view.setEphemeralState({
+                    scroll: scroll,
+                });
+            }
+        } else if (scrollTop && this.plugin.settings.restoreScrollAllFiles) {
+            window.requestAnimationFrame(() => {
+                if (type === "markdown") {
+                    const scroller = view.containerEl.querySelector(".markdown-preview-view");
+                    if (scroller) {
+                        scroller.scrollTop = scrollTop;
+                    }
+                } else if (type === "pdf") {
+                    const scroller = view.containerEl.querySelector(".pdf-viewer-container");
+                    if (scroller) {
+                        scroller.scrollTop = scrollTop;
+                    }
+                } else if (type === "image") {
+                    const scroller =
+                        view.containerEl.querySelector(".image-container")?.parentElement;
+                    if (scroller) {
+                        scroller.scrollTop = scrollTop;
+                    }
+                }
+            });
+        }
+    }
+
+    public deleteFileHandler(file: TAbstractFile): void {
         delete this.ephemeralStates[file.path];
     }
 
-    private async renameFileCallback(file: TAbstractFile, old: string) {
+    public renameFileHandler(file: TAbstractFile, old: string): void {
         this.ephemeralStates[file.path] = this.ephemeralStates[old];
         delete this.ephemeralStates[old];
     }
 
-    private async saveData() {
+    public quitHandler(): void {
+        this.writeStateFile();
+    }
+
+    private writeStateFile(): void {
         const data = JSON.stringify(this.ephemeralStates);
         this.plugin.app.vault.adapter.write(this.plugin.settings.restoreScrollStoreFile, data);
     }
 
     // Called on plugin load
-    public async loadData() {
+    public async loadData(): Promise<void> {
         const exists = await this.plugin.app.vault.adapter.exists(
             this.plugin.settings.restoreScrollStoreFile,
         );
@@ -153,7 +138,7 @@ export class RestoreScroll {
     }
 
     // Invoked on cursor movement and mouse scroll
-    private async storeState(file: TFile) {
+    private storeState(file: TFile): void {
         if (!this.plugin.settings.restoreScrollEnabled) return;
 
         const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
