@@ -1,4 +1,4 @@
-import { debounce, Editor, MarkdownView } from "obsidian";
+import { Editor, MarkdownView } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 

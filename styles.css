@@ -8,12 +8,14 @@
  * .scrolling-visibility-hide
  * .scrolling-visibility-scroll
  * .scrolling-filetree-horizontal
+ * .scrolling-linewidth-enabled
  *
  * Classes for elements supporting scrolling:
  * .scrolling-transparent
  *
  * Variables:
  * --scrolling-scrollbar-width
+ * --scrolling-line-width
  *
  */
 
@@ -50,4 +52,11 @@
 .scrolling-filetree-horizontal .tree-item-self .nav-file-title,
 .scrolling-filetree-horizontal .tree-item-self .nav-folder-title {
     flex-shrink: 0;
+}
+
+/* Line width */
+.scrolling-line-width-enabled .cm-sizer,
+.scrolling-line-width-enabled .markdown-preview-sizer {
+    max-width: var(--scrolling-line-width) !important;
+    margin: auto;
 }
