@@ -51,7 +51,7 @@ export class RestoreScroll {
         }
     }
 
-    public fileOpenHandler(): void {
+    public viewStateHandler(): void {
         this.writeStateFileDebounced();
 
         const linkUsed = this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");

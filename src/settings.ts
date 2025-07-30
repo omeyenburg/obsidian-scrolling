@@ -87,10 +87,10 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.rememberScrollSettings();
         containerEl.createEl("br");
 
-        this.scrollbarSettings();
+        this.linewidthSettings();
         containerEl.createEl("br");
 
-        this.linewidthSettings();
+        this.scrollbarSettings();
         containerEl.createEl("br");
 
         this.mouseScrollSettings();
@@ -405,12 +405,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
         // In case readableLineWidth was toggled
         this.plugin.linewidth.updateLineWidth();
 
-        if (readableLineWidthEnabled)
+        if (readableLineWidthEnabled) {
+            this.plugin.settings.lineWidthMode = "disabled";
             this.createHeading(
-                "Line width",
-                "Please disable 'Readable line length' in the editor settings to use this feature!",
+                "Line length",
+                "This feature is unavailable while 'Readable line length' is enabled in the editor settings. Disable it to use this feature.",
             );
-        else this.createHeading("Line width");
+        } else {
+            this.createHeading("Line width");
+        }
 
         this.settingsEnabled = !readableLineWidthEnabled;
 
@@ -418,8 +421,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
             (dropdown) => {
                 dropdown
                     .addOption("disabled", "Disabled")
-                    .addOption("percentage", "Percentage (%)")
                     .addOption("characters", "Characters (ch)")
+                    .addOption("percentage", "Percentage (%)")
                     .setValue(this.plugin.settings.lineWidthMode)
                     .onChange(async (value) => {
                         this.plugin.settings.lineWidthMode = value;
@@ -432,8 +435,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         if (this.plugin.settings.lineWidthMode === "percentage") {
             this.createSetting(
-                "Maximum line width",
-                "Maximum line width as percentage (%).",
+                "Maximum line length",
+                "Maximum line length as percentage of the window width (%).",
                 () => {
                     this.plugin.settings.lineWidthPercentage = DEFAULT_SETTINGS.lineWidthPercentage;
                     this.plugin.linewidth.updateLineWidth();
@@ -452,8 +455,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
             this.settingsEnabled &&= this.plugin.settings.lineWidthMode === "characters";
 
             this.createSetting(
-                "Maximum line width",
-                "Maximum line width as character count (ch).",
+                "Maximum line length",
+                "Maximum line length as character count (ch).",
                 () => {
                     this.plugin.settings.lineWidthCharacters = DEFAULT_SETTINGS.lineWidthCharacters;
                     this.plugin.linewidth.updateLineWidth();
