@@ -263,9 +263,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        this.settingsEnabled =
-            this.plugin.settings.restoreScrollMode === "cursor" ||
-            this.plugin.settings.restoreScrollMode === "scroll";
+        this.settingsEnabled = ["scroll", "cursor"].includes(
+            this.plugin.settings.restoreScrollMode,
+        );
 
         this.createSetting(
             "Restore position in other files",
@@ -281,11 +281,13 @@ export class ScrollingSettingTab extends PluginSettingTab {
             "Store positions in file",
             "Store scroll & cursor positions locally in a file to persist when closing Obsidian.",
         ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.restoreScrollFileEnabled).onChange(async (value) => {
-                this.plugin.settings.restoreScrollFileEnabled = value;
-                this.display();
-                await this.plugin.saveSettings();
-            }),
+            toggle
+                .setValue(this.plugin.settings.restoreScrollFileEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.restoreScrollFileEnabled = value;
+                    this.display();
+                    await this.plugin.saveSettings();
+                }),
         );
 
         this.settingsEnabled &&= this.plugin.settings.restoreScrollFileEnabled;

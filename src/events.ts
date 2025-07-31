@@ -59,6 +59,7 @@ export class Events {
         plugin.registerEvent(plugin.app.vault.on("delete", this.deleteFileHandler.bind(this)));
         plugin.registerEvent(plugin.app.vault.on("rename", this.renameFileHandler.bind(this)));
         plugin.registerEvent(plugin.app.workspace.on("quit", this.quitHandler.bind(this)));
+        plugin.registerEvent(plugin.app.workspace.on("file-open", this.openFileHandler.bind(this)));
         plugin.registerEvent(
             plugin.app.workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
         );
@@ -70,7 +71,7 @@ export class Events {
                 setViewState(old) {
                     return async function (...args) {
                         const result = await old.apply(this, args);
-                        self.viewStateHandler();
+                        self.plugin.restoreScroll.viewStateHandler(this.view);
                         return result;
                     };
                 },
@@ -81,7 +82,7 @@ export class Events {
             around(View.prototype, {
                 setEphemeralState(old) {
                     return async function (...args) {
-                        self.plugin.restoreScroll.ephemeralStateHandler(args)
+                        self.plugin.restoreScroll.ephemeralStateHandler(this, args);
                         const result = await old.apply(this, args);
                         return result;
                     };
@@ -156,6 +157,10 @@ export class Events {
         this.plugin.restoreScroll.scrollHandler();
     }
 
+    private openFileHandler(): void {
+        this.plugin.restoreScroll.openFileHandler();
+    }
+
     private deleteFileHandler(file: TAbstractFile): void {
         this.plugin.restoreScroll.deleteFileHandler(file);
     }
@@ -183,10 +188,6 @@ export class Events {
 
     private cursorHandler(update: ViewUpdate): void {
         this.plugin.followcursor.cursorHandler(update);
-    }
-
-    private viewStateHandler(): void {
-        this.plugin.restoreScroll.viewStateHandler();
     }
 
     private wheelHandler(event: WheelEvent): void {
