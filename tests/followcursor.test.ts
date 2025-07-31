@@ -9,6 +9,9 @@ const mockPlugin = {
     },
 };
 
+// Mock performance.now
+jest.useFakeTimers();
+
 describe("MouseScroll", () => {
     let followcursor: FollowCursor;
 
@@ -85,6 +88,32 @@ describe("MouseScroll", () => {
                 Math.sqrt(Math.max(1, Math.ceil(2 * (100 / 100) * Math.sqrt(100)))),
             );
             expect(result).toBe(expectedReduction);
+        });
+    });
+
+    describe("calculateScrollIntensity", () => {
+        test("increases scroll intensity with low delta", () => {
+            const t0 = performance.now();
+            followcursor["scrollLastEvent"] = t0;
+            followcursor["scrollIntensity"] = 2;
+
+            jest.advanceTimersByTime(10);
+            followcursor["calculateScrollIntensity"]();
+
+            expect(followcursor["scrollIntensity"]).toBeGreaterThan(2);
+            expect(followcursor["scrollLastEvent"]).toBeGreaterThan(t0);
+        });
+
+        test("decreases scroll intensity with high delta", () => {
+            const t0 = performance.now();
+            followcursor["scrollLastEvent"] = t0;
+            followcursor["scrollIntensity"] = 2;
+
+            jest.advanceTimersByTime(500);
+            followcursor["calculateScrollIntensity"]();
+
+            expect(followcursor["scrollIntensity"]).toBeLessThan(2);
+            expect(followcursor["scrollLastEvent"]).toBeGreaterThan(t0);
         });
     });
 });
