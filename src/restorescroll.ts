@@ -1,4 +1,5 @@
 import {
+    View,
     EditorRange,
     FileView,
     MarkdownView,
@@ -22,6 +23,9 @@ export class RestoreScroll {
     private readonly plugin: ScrollingPlugin;
 
     private ephemeralStates: Record<string, EphemeralState> = {};
+
+    private skipViewSet = false;
+    private expectEphemeralState = false;
 
     public readonly storeStateDebounced: (file?: TFile) => void;
     public readonly writeStateFileDebounced: () => void;
@@ -53,59 +57,78 @@ export class RestoreScroll {
         }
     }
 
-    public ephemeralStateHandler(args: [{ focus?: boolean }]) {
-        if (this.plugin.settings.restoreScrollMode === "scroll" && args[0]) {
+    public openFileHandler(): void {
+        this.expectEphemeralState = true;
+    }
+
+    public ephemeralStateHandler(
+        view: View,
+        args: [{ cursor?: EditorRange; scroll?: number; focus?: boolean }],
+    ) {
+        // Only proceed if there was a file open event.
+        if (!this.expectEphemeralState || !args[0]) return;
+        this.expectEphemeralState = false;
+
+
+        // Cancel any further calculations if link has been used.
+        const linkUsed = this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
+        if (linkUsed || this.plugin.settings.restoreScrollMode === "top") {
+            this.skipViewSet = true;
+            return;
+        }
+
+        // Only works in markdown source mode.
+        if (!(view instanceof MarkdownView) || !view.file) return;
+        if (view.getMode() !== "source") return;
+        this.skipViewSet = true;
+
+        const ephemeralState = this.ephemeralStates[view.file.path];
+        if (!ephemeralState) return;
+        const { cursor, scroll } = ephemeralState;
+
+        if (this.plugin.settings.restoreScrollMode === "bottom") {
+            delete args[0].cursor;
             args[0].focus = false;
+            args[0].scroll = Infinity;
+        }else if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
+            delete args[0].scroll;
+            args[0].focus = true;
+            args[0].cursor = cursor;
+            window.requestAnimationFrame(() => view.editor.scrollIntoView(cursor, true));
+        } else {
+            delete args[0].cursor;
+            args[0].focus = false;
+            args[0].scroll = scroll;
         }
     }
 
-    public viewStateHandler(): void {
+    public viewStateHandler(view: View): void {
         this.writeStateFileDebounced();
 
-        const linkUsed = this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
-        const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
-        if (linkUsed || !view || !view.file || this.plugin.settings.restoreScrollMode === "top")
-            return;
+        if (this.skipViewSet) return;
+        this.skipViewSet = false;
 
         if (this.plugin.settings.restoreScrollMode === "top") return;
-        if (this.plugin.settings.restoreScrollMode === "bottom") {
-            view.setEphemeralState({ scroll: Infinity });
-            return;
-        }
+
+        // Must be file view
+        if (!view || !(view instanceof FileView) || !view.file) return;
 
         const ephemeralState = this.ephemeralStates[view.file.path];
         if (!ephemeralState) return;
         const { cursor, scroll, scrollTop } = ephemeralState;
 
-        const type = view.getViewType();
         if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
             if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
-                view.setEphemeralState({ cursor: cursor, focus: true });
+                view.setEphemeralState({ cursor, focus: true });
                 view.editor.scrollIntoView(cursor, true);
             } else {
-                view.setEphemeralState({
-                    cursor: cursor,
-                    scroll: scroll,
-                });
+                view.setEphemeralState({ cursor, scroll });
             }
         } else if (scrollTop && this.plugin.settings.restoreScrollAllFiles) {
             window.requestAnimationFrame(() => {
-                if (type === "markdown") {
-                    const scroller = view.containerEl.querySelector(".markdown-preview-view");
-                    if (scroller) {
-                        scroller.scrollTop = scrollTop;
-                    }
-                } else if (type === "pdf") {
-                    const scroller = view.containerEl.querySelector(".pdf-viewer-container");
-                    if (scroller) {
-                        scroller.scrollTop = scrollTop;
-                    }
-                } else if (type === "image") {
-                    const scroller =
-                        view.containerEl.querySelector(".image-container")?.parentElement;
-                    if (scroller) {
-                        scroller.scrollTop = scrollTop;
-                    }
+                const scroller = this.getScroller(view);
+                if (scroller) {
+                    scroller.scrollTop = scrollTop;
                 }
             });
         }
@@ -154,18 +177,12 @@ export class RestoreScroll {
         if (mode === "top" || mode === "bottom") return;
 
         const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
-        if (
-            !view ||
-            !view.file ||
-            this.plugin.app.workspace.getActiveFile() != view.file ||
-            (file && view.file != file)
-        )
-            return;
+        if (!view || !view.file || view.file !== this.plugin.app.workspace.getActiveFile()) return;
+        if (file && view.file !== file) return;
 
-        let scrollTop: number;
         const timestamp = Date.now();
         if (view instanceof MarkdownView && view.getMode() == "source") {
-            scrollTop = view.editor.getScrollInfo().top;
+            const scrollTop = view.editor.getScrollInfo().top;
             const { cursor, scroll } = view.getEphemeralState() as {
                 cursor?: EditorRange;
                 scroll?: number;
@@ -178,20 +195,23 @@ export class RestoreScroll {
                 scrollTop,
             };
         } else if (this.plugin.settings.restoreScrollAllFiles) {
-            const type = view.getViewType();
-            if (type === "markdown") {
-                scrollTop = view.containerEl.querySelector(".markdown-preview-view")?.scrollTop;
-            } else if (type === "pdf") {
-                scrollTop = view.containerEl.querySelector(".pdf-viewer-container")?.scrollTop;
-            } else if (type === "image") {
-                scrollTop =
-                    view.containerEl.querySelector(".image-container")?.parentElement?.scrollTop;
+            const scrollTop = this.getScroller(view)?.scrollTop;
+            if (scrollTop) {
+                this.ephemeralStates[view.file.path] = { timestamp, scrollTop };
             }
+        }
+    }
 
-            this.ephemeralStates[view.file.path] = {
-                timestamp,
-                scrollTop,
-            };
+    private getScroller(view: FileView): HTMLElement | null {
+        switch (view.getViewType()) {
+            case "markdown":
+                return view.containerEl.querySelector(".markdown-preview-view");
+            case "pdf":
+                return view.containerEl.querySelector(".pdf-viewer-container");
+            case "image":
+                return view.containerEl.querySelector(".image-container")?.parentElement;
+            default:
+                return null;
         }
     }
 
