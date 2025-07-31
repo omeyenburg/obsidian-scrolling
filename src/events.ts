@@ -6,9 +6,10 @@ import type { default as ScrollingPlugin } from "./main";
 
 export class Events {
     private readonly plugin: ScrollingPlugin;
-    private readonly scrollHandler;
 
     private scrollEventSkip = false;
+
+    private readonly scrollHandler: (event: Event) => void;
 
     private static readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
     private static readonly IMAGE_EXTENSIONS = new Set([

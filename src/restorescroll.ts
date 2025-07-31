@@ -21,25 +21,26 @@ interface EphemeralState {
 export class RestoreScroll {
     private readonly plugin: ScrollingPlugin;
 
-    public storeStateDebounced: (file: TFile) => void;
-    private writeStateFileDebounced: () => void;
-
     private ephemeralStates: Record<string, EphemeralState> = {};
 
-    private static readonly STORE_DELAY = 30;
-    private static readonly FILE_SAVE_DELAY = 50;
+    public readonly storeStateDebounced: (file: TFile) => void;
+    public readonly writeStateFileDebounced: () => void;
+
+    // Prime numbers :)
+    private static readonly STORE_INTERVAL = 97;
+    private static readonly FILE_WRITE_INTERVAL = 293;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
         this.storeStateDebounced = debounce(
             this.storeState.bind(this),
-            RestoreScroll.STORE_DELAY,
+            RestoreScroll.STORE_INTERVAL,
             false,
         );
         this.writeStateFileDebounced = debounce(
             this.writeStateFile.bind(this),
-            RestoreScroll.FILE_SAVE_DELAY,
+            RestoreScroll.FILE_WRITE_INTERVAL,
             true,
         );
     }
@@ -48,6 +49,7 @@ export class RestoreScroll {
         const file = this.plugin.app.workspace.getActiveFile();
         if (file) {
             this.plugin.restoreScroll.storeStateDebounced(file);
+            this.plugin.restoreScroll.writeStateFileDebounced();
         }
     }
 

@@ -82,7 +82,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         this.followCursorSettings();
-        this.rememberScrollSettings();
+        this.restoreScrollSettings();
         this.linewidthSettings();
         this.scrollbarSettings();
         this.mouseScrollSettings();
@@ -238,7 +238,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
     }
 
-    private rememberScrollSettings() {
+    private restoreScrollSettings() {
         this.containerEl.createEl("br");
         this.createHeading("Remember scroll position");
 
@@ -255,18 +255,22 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.settingsEnabled = this.plugin.settings.restoreScrollEnabled;
 
-        this.createSetting(
-            "Restore cursor position instead",
-            "Try to restore cursor position first and use scroll position only as fallback.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.restoreScrollCursor).onChange(async (value) => {
-                this.plugin.settings.restoreScrollCursor = value;
-                await this.plugin.saveSettings();
-            }),
-        );
+        if (Platform.isDesktop) {
+            this.createSetting(
+                "Restore cursor position instead",
+                "Try to restore cursor position first and use scroll position only as fallback.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.restoreScrollCursor)
+                    .onChange(async (value) => {
+                        this.plugin.settings.restoreScrollCursor = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
 
         this.createSetting(
-            "Restore in other files",
+            "Restore position in other files",
             "Save and restore scroll position in markdown preview, image and pdf files.",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.restoreScrollAllFiles).onChange(async (value) => {
