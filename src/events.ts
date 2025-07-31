@@ -1,4 +1,4 @@
-import { Editor, FileView, TAbstractFile, WorkspaceLeaf } from "obsidian";
+import { Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
 
@@ -28,20 +28,18 @@ export class Events {
         this.plugin = plugin;
         this.scrollHandler = this.unboundScrollHandler.bind(this);
 
+        /* MouseScroll */
+        if (Platform.isDesktop) {
+            plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
+                passive: false,
+            });
+        }
+
+        /* FollowCursor */
         plugin.registerDomEvent(document, "keydown", this.keyHandler.bind(this));
-        plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this));
-        plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
-            passive: false,
-        });
-
-        plugin.registerEvent(plugin.app.vault.on("delete", this.deleteFileHandler.bind(this)));
-        plugin.registerEvent(plugin.app.vault.on("rename", this.renameFileHandler.bind(this)));
-        plugin.registerEvent(plugin.app.workspace.on("quit", this.quitHandler.bind(this)));
-        plugin.registerEvent(
-            plugin.app.workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
-        );
-
-        plugin.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
+        if (Platform.isDesktop) {
+            plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this));
+        }
 
         // Suppress first invocation
         let initialEditorChange = plugin.app.workspace.on("editor-change", () => {
@@ -51,6 +49,16 @@ export class Events {
             );
         });
         plugin.registerEvent(initialEditorChange);
+
+        plugin.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
+
+        /* RestoreScroll */
+        plugin.registerEvent(plugin.app.vault.on("delete", this.deleteFileHandler.bind(this)));
+        plugin.registerEvent(plugin.app.vault.on("rename", this.renameFileHandler.bind(this)));
+        plugin.registerEvent(plugin.app.workspace.on("quit", this.quitHandler.bind(this)));
+        plugin.registerEvent(
+            plugin.app.workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
+        );
 
         // Wrap WorkspaceLeaf.setViewState
         const self = this;

@@ -82,17 +82,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         this.followCursorSettings();
-        containerEl.createEl("br");
-
         this.rememberScrollSettings();
-        containerEl.createEl("br");
-
         this.linewidthSettings();
-        containerEl.createEl("br");
-
         this.scrollbarSettings();
-        containerEl.createEl("br");
-
         this.mouseScrollSettings();
     }
 
@@ -216,35 +208,38 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        this.createSetting(
-            "Trigger on mouse interactions",
-            "Update when the cursor is moved using the mouse.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.followCursorEnableMouse)
-                .onChange(async (value) => {
-                    this.plugin.settings.followCursorEnableMouse = value;
-                    this.display();
-                    await this.plugin.saveSettings();
-                }),
-        );
+        if (Platform.isDesktop) {
+            this.createSetting(
+                "Trigger on mouse interactions",
+                "Update when the cursor is moved using the mouse.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.followCursorEnableMouse)
+                    .onChange(async (value) => {
+                        this.plugin.settings.followCursorEnableMouse = value;
+                        this.display();
+                        await this.plugin.saveSettings();
+                    }),
+            );
 
-        this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
+            this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
 
-        this.createSetting(
-            "Trigger on mouse selection",
-            "Also update when text is selected using the mouse.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.followCursorEnableSelection)
-                .onChange(async (value) => {
-                    this.plugin.settings.followCursorEnableSelection = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
+            this.createSetting(
+                "Trigger on mouse selection",
+                "Also update when text is selected using the mouse.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.followCursorEnableSelection)
+                    .onChange(async (value) => {
+                        this.plugin.settings.followCursorEnableSelection = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
     }
 
     private rememberScrollSettings() {
+        this.containerEl.createEl("br");
         this.createHeading("Remember scroll position");
 
         this.createSetting(
@@ -308,7 +303,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             this.plugin.register(() => input.inputEl.removeEventListener("keydown", handleKeydown));
 
             // Try vertical layout
-            let parentEl;
+            let parentEl: HTMLElement;
             if (input.inputEl.parentElement) {
                 parentEl = input.inputEl.parentElement;
                 parentEl.style.display = "flex";
@@ -342,20 +337,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private scrollbarSettings() {
+        this.containerEl.createEl("br");
         this.createHeading("Scrollbar appearance");
 
-        this.createSetting(
-            "Show horizontal scrollbar in file tree",
-            "Allow horizontal scrolling in the file tree and add a horizontal scrollbar.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.scrollbarFileTreeHorizontal)
-                .onChange(async (value) => {
-                    this.plugin.settings.scrollbarFileTreeHorizontal = value;
-                    this.plugin.scrollbar.updateStyle();
-                    await this.plugin.saveSettings();
-                }),
-        );
+        if (Platform.isDesktop) {
+            this.createSetting(
+                "Show horizontal scrollbar in file tree",
+                "Allow horizontal scrolling in the file tree and add a horizontal scrollbar.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.scrollbarFileTreeHorizontal)
+                    .onChange(async (value) => {
+                        this.plugin.settings.scrollbarFileTreeHorizontal = value;
+                        this.plugin.scrollbar.updateStyle();
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
 
         if (!Platform.isMacOS) {
             this.createSetting(
@@ -400,11 +398,14 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private linewidthSettings() {
+        if (Platform.isMobile) return;
+
         const readableLineWidthEnabled = this.plugin.linewidth.isReadableLineWidthEnabled();
 
         // In case readableLineWidth was toggled
         this.plugin.linewidth.updateLineWidth();
 
+        this.containerEl.createEl("br");
         if (readableLineWidthEnabled) {
             this.plugin.settings.lineWidthMode = "disabled";
             this.createHeading(
@@ -475,6 +476,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private mouseScrollSettings() {
+        if (Platform.isMobile) return;
+
+        this.containerEl.createEl("br");
         this.createHeading("Mouse/Touchpad scrolling (Experimental)");
 
         this.createSetting("Enabled", "Enable custom mouse/touchpad scrolling behavior.").addToggle(

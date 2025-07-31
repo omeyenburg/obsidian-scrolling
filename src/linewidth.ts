@@ -1,3 +1,5 @@
+import { Platform } from "obsidian";
+
 import type { default as ScrollingPlugin } from "./main";
 
 export class LineWidth {
@@ -9,6 +11,8 @@ export class LineWidth {
     }
 
     public updateLineWidth(): void {
+        if (Platform.isMobile) return;
+
         if (
             this.plugin.settings.lineWidthMode === "disabled" ||
             this.isReadableLineWidthEnabled()
