@@ -1,4 +1,4 @@
-import { Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf } from "obsidian";
+import { View, Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
 
@@ -38,9 +38,6 @@ export class Events {
 
         /* FollowCursor */
         plugin.registerDomEvent(document, "keydown", this.keyHandler.bind(this));
-        if (Platform.isDesktop) {
-            plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this));
-        }
 
         // Suppress first invocation
         let initialEditorChange = plugin.app.workspace.on("editor-change", () => {
@@ -52,6 +49,11 @@ export class Events {
         plugin.registerEvent(initialEditorChange);
 
         plugin.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
+
+        /* FollowCursor & RestoreScroll */
+        if (Platform.isDesktop) {
+            plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this));
+        }
 
         /* RestoreScroll */
         plugin.registerEvent(plugin.app.vault.on("delete", this.deleteFileHandler.bind(this)));
@@ -69,6 +71,18 @@ export class Events {
                     return async function (...args) {
                         const result = await old.apply(this, args);
                         self.viewStateHandler();
+                        return result;
+                    };
+                },
+            }),
+        );
+
+        plugin.register(
+            around(View.prototype, {
+                setEphemeralState(old) {
+                    return async function (...args) {
+                        self.plugin.restoreScroll.ephemeralStateHandler(args)
+                        const result = await old.apply(this, args);
                         return result;
                     };
                 },
@@ -160,6 +174,7 @@ export class Events {
 
     private mouseUpHandler(): void {
         this.plugin.followcursor.mouseUpHandler();
+        this.plugin.restoreScroll.storeStateDebounced();
     }
 
     private editHandler(editor: Editor): void {

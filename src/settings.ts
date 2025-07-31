@@ -10,10 +10,10 @@ export interface ScrollingPluginSettings {
     followCursorEnableSelection: boolean;
     followCursorDynamicAnimation: boolean;
 
-    restoreScrollEnabled: boolean;
-    restoreScrollCursor: boolean;
+    restoreScrollMode: string; // scroll, cursor, top, bottom
     restoreScrollAllFiles: boolean;
-    restoreScrollStoreFile: string;
+    restoreScrollFileEnabled: boolean;
+    restoreScrollFilePath: string;
 
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
@@ -42,10 +42,10 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     followCursorEnableMouse: false,
     followCursorEnableSelection: false,
 
-    restoreScrollEnabled: false,
-    restoreScrollCursor: false,
+    restoreScrollMode: "scroll",
     restoreScrollAllFiles: false,
-    restoreScrollStoreFile: ".obsidian/plugins/obsidian-scrolling/scrolling-positions.json",
+    restoreScrollFileEnabled: true,
+    restoreScrollFilePath: ".obsidian/plugins/obsidian-scrolling/scrolling-positions.json",
 
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
@@ -240,34 +240,32 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
     private restoreScrollSettings() {
         this.containerEl.createEl("br");
-        this.createHeading("Remember scroll position");
+        this.createHeading(
+            "Remember scroll position",
+            "Save scroll position or cursor position before closing a file and restore it when opening the file again.",
+        );
 
         this.createSetting(
             "Enabled",
-            "Save scroll position before closing a file and restore it when opening the file again.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.restoreScrollEnabled).onChange(async (value) => {
-                this.plugin.settings.restoreScrollEnabled = value;
-                this.display();
-                await this.plugin.saveSettings();
-            }),
+            "Choose between starting at the top/bottom of the file, restore the last cursor position, or restore cursor & last scroll position",
+            () => (this.plugin.settings.restoreScrollMode = DEFAULT_SETTINGS.restoreScrollMode),
+        ).addDropdown((dropdown) =>
+            dropdown
+                .addOption("top", "Start at top")
+                .addOption("bottom", "Start at bottom")
+                .addOption("cursor", "Restore only cursor")
+                .addOption("scroll", "Restore scroll position")
+                .setValue(this.plugin.settings.restoreScrollMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.restoreScrollMode = value;
+                    this.display();
+                    await this.plugin.saveSettings();
+                }),
         );
 
-        this.settingsEnabled = this.plugin.settings.restoreScrollEnabled;
-
-        if (Platform.isDesktop) {
-            this.createSetting(
-                "Restore cursor position instead",
-                "Try to restore cursor position first and use scroll position only as fallback.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.restoreScrollCursor)
-                    .onChange(async (value) => {
-                        this.plugin.settings.restoreScrollCursor = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
+        this.settingsEnabled =
+            this.plugin.settings.restoreScrollMode === "cursor" ||
+            this.plugin.settings.restoreScrollMode === "scroll";
 
         this.createSetting(
             "Restore position in other files",
@@ -280,10 +278,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
 
         this.createSetting(
+            "Store positions in file",
+            "Store scroll & cursor positions locally in a file to persist when closing Obsidian.",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.restoreScrollFileEnabled).onChange(async (value) => {
+                this.plugin.settings.restoreScrollFileEnabled = value;
+                this.display();
+                await this.plugin.saveSettings();
+            }),
+        );
+
+        this.settingsEnabled &&= this.plugin.settings.restoreScrollFileEnabled;
+
+        this.createSetting(
             "Storage file path",
             "Where to store scrolling & cursor positions.",
         ).addText((input) => {
-            input.setValue(this.plugin.settings.restoreScrollStoreFile).onChange((value) => {
+            input.setValue(this.plugin.settings.restoreScrollFilePath).onChange((value) => {
                 this.proposedRestoreScrollStoreFile = value;
             });
 
@@ -293,7 +304,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 );
 
                 if (newFile) {
-                    this.plugin.settings.restoreScrollStoreFile = newFile;
+                    this.plugin.settings.restoreScrollFilePath = newFile;
                     this.proposedRestoreScrollStoreFile = null;
                     await this.plugin.saveSettings();
                 }
@@ -329,7 +340,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             setIcon(resetButton, "reset");
             resetButton.onclick = () => {
                 if (this.proposedRestoreScrollStoreFile === null) return;
-                input.setValue(this.plugin.settings.restoreScrollStoreFile);
+                input.setValue(this.plugin.settings.restoreScrollFilePath);
                 this.proposedRestoreScrollStoreFile = null;
             };
 
