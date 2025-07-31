@@ -6,5 +6,5 @@
   "description": "Improve scrolling and keep your cursor exactly where you want it.",
   "author": "omeyenburg",
   "authorUrl": "https://github.com/omeyenburg",
-  "isDesktopOnly": true
+  "isDesktopOnly": false
 }

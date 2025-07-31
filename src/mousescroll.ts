@@ -1,3 +1,5 @@
+import { Platform } from "obsidian";
+
 import type { default as ScrollingPlugin } from "./main";
 
 export class MouseScroll {
@@ -26,6 +28,7 @@ export class MouseScroll {
     }
 
     public wheelHandler(event: WheelEvent) {
+        if (Platform.isMobile) return;
         if (!this.plugin.settings.mouseEnabled) return;
         if (!event.deltaY) return;
 

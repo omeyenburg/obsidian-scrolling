@@ -36,6 +36,7 @@ export default class ScrollingPlugin extends Plugin {
 
     async onunload() {
         this.scrollbar?.removeStyle();
+        this.restoreScroll.quitHandler();
 
         console.log("ScrollingPlugin unloaded");
     }

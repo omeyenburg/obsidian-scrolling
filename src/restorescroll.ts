@@ -26,20 +26,20 @@ export class RestoreScroll {
 
     private ephemeralStates: Record<string, EphemeralState> = {};
 
-    private static readonly STORE_INTERVAL = 50;
-    private static readonly FILE_SAVE_INTERVAL = 50;
+    private static readonly STORE_DELAY = 30;
+    private static readonly FILE_SAVE_DELAY = 50;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
         this.storeStateDebounced = debounce(
             this.storeState.bind(this),
-            RestoreScroll.STORE_INTERVAL,
+            RestoreScroll.STORE_DELAY,
             false,
         );
         this.writeStateFileDebounced = debounce(
             this.writeStateFile.bind(this),
-            RestoreScroll.FILE_SAVE_INTERVAL,
+            RestoreScroll.FILE_SAVE_DELAY,
             true,
         );
     }
@@ -115,7 +115,7 @@ export class RestoreScroll {
         this.writeStateFile();
     }
 
-    private writeStateFile(): void {
+    private async writeStateFile() {
         const data = JSON.stringify(this.ephemeralStates);
         this.plugin.app.vault.adapter.write(this.plugin.settings.restoreScrollStoreFile, data);
     }
@@ -125,6 +125,7 @@ export class RestoreScroll {
         const exists = await this.plugin.app.vault.adapter.exists(
             this.plugin.settings.restoreScrollStoreFile,
         );
+
         if (exists) {
             const data = await this.plugin.app.vault.adapter.read(
                 this.plugin.settings.restoreScrollStoreFile,
@@ -150,7 +151,7 @@ export class RestoreScroll {
         )
             return;
 
-        let scrollTop;
+        let scrollTop: number;
         const timestamp = Date.now();
         if (view instanceof MarkdownView && view.getMode() == "source") {
             scrollTop = view.editor.getScrollInfo().top;
