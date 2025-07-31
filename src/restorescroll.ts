@@ -23,7 +23,7 @@ export class RestoreScroll {
 
     private ephemeralStates: Record<string, EphemeralState> = {};
 
-    public readonly storeStateDebounced: (file: TFile) => void;
+    public readonly storeStateDebounced: (file?: TFile) => void;
     public readonly writeStateFileDebounced: () => void;
 
     // Prime numbers :)
@@ -53,31 +53,38 @@ export class RestoreScroll {
         }
     }
 
+    public ephemeralStateHandler(args: [{ focus?: boolean }]) {
+        if (this.plugin.settings.restoreScrollMode === "scroll" && args[0]) {
+            args[0].focus = false;
+        }
+    }
+
     public viewStateHandler(): void {
         this.writeStateFileDebounced();
 
         const linkUsed = this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
         const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
-        if (linkUsed || !view || !view.file || !this.plugin.settings.restoreScrollEnabled) return;
+        if (linkUsed || !view || !view.file || this.plugin.settings.restoreScrollMode === "top")
+            return;
+
+        if (this.plugin.settings.restoreScrollMode === "top") return;
+        if (this.plugin.settings.restoreScrollMode === "bottom") {
+            view.setEphemeralState({ scroll: Infinity });
+            return;
+        }
 
         const ephemeralState = this.ephemeralStates[view.file.path];
         if (!ephemeralState) return;
         const { cursor, scroll, scrollTop } = ephemeralState;
 
         const type = view.getViewType();
-        if (
-            view instanceof MarkdownView &&
-            view.getMode() === "source" &&
-            (scroll || (cursor && this.plugin.settings.restoreScrollCursor))
-        ) {
-            if (cursor && this.plugin.settings.restoreScrollCursor) {
-                view.setEphemeralState({
-                    cursor: cursor,
-                });
-
+        if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
+            if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
+                view.setEphemeralState({ cursor: cursor, focus: true });
                 view.editor.scrollIntoView(cursor, true);
             } else {
                 view.setEphemeralState({
+                    cursor: cursor,
                     scroll: scroll,
                 });
             }
@@ -118,19 +125,20 @@ export class RestoreScroll {
     }
 
     private async writeStateFile() {
+        if (!this.plugin.settings.restoreScrollFileEnabled) return;
         const data = JSON.stringify(this.ephemeralStates);
-        this.plugin.app.vault.adapter.write(this.plugin.settings.restoreScrollStoreFile, data);
+        this.plugin.app.vault.adapter.write(this.plugin.settings.restoreScrollFilePath, data);
     }
 
     // Called on plugin load
     public async loadData(): Promise<void> {
         const exists = await this.plugin.app.vault.adapter.exists(
-            this.plugin.settings.restoreScrollStoreFile,
+            this.plugin.settings.restoreScrollFilePath,
         );
 
         if (exists) {
             const data = await this.plugin.app.vault.adapter.read(
-                this.plugin.settings.restoreScrollStoreFile,
+                this.plugin.settings.restoreScrollFilePath,
             );
             try {
                 this.ephemeralStates = JSON.parse(data);
@@ -141,15 +149,16 @@ export class RestoreScroll {
     }
 
     // Invoked on cursor movement and mouse scroll
-    private storeState(file: TFile): void {
-        if (!this.plugin.settings.restoreScrollEnabled) return;
+    private storeState(file?: TFile): void {
+        const mode = this.plugin.settings.restoreScrollMode;
+        if (mode === "top" || mode === "bottom") return;
 
         const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
         if (
             !view ||
             !view.file ||
             this.plugin.app.workspace.getActiveFile() != view.file ||
-            view.file != file
+            (file && view.file != file)
         )
             return;
 
@@ -187,6 +196,8 @@ export class RestoreScroll {
     }
 
     public async renameStoreFile(newPath: string | null): Promise<string | undefined> {
+        if (!this.plugin.settings.restoreScrollFileEnabled) return;
+
         if (newPath === null) {
             new Notice("Path unchanged.");
             return;
@@ -200,7 +211,7 @@ export class RestoreScroll {
 
         // Assuming this.plugin.settings.restoreScrollStoreFile is valid
         const newNormalizedPath = normalizePath(newPath);
-        const oldNormalizedPath = normalizePath(this.plugin.settings.restoreScrollStoreFile);
+        const oldNormalizedPath = normalizePath(this.plugin.settings.restoreScrollFilePath);
 
         if (!newNormalizedPath) {
             new Notice("Invalid file path!");

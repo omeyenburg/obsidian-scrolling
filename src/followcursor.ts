@@ -74,7 +74,7 @@ export class FollowCursor {
         const markdownView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!markdownView?.editor) return;
 
-        if (this.plugin.settings.restoreScrollCursor && markdownView.file) {
+        if (markdownView.file) {
             this.plugin.restoreScroll.storeStateDebounced(markdownView.file);
         }
 
