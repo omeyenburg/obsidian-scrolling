@@ -12,19 +12,33 @@ export class MouseScroll {
     private mouseLastUse = 0;
     private mouseTarget: number;
     private mouseAnimationFrame: number;
-
     private static readonly MAX_FRICTION = 0.98;
     private static readonly MIN_VELOCITY = 0.1;
-    private static readonly COMMON_MOUSE_DELTAS = [120, 197.18010794176823];
-    private static readonly TOUCHPAD_GRACE_PERIOD = 1000;
-    private static readonly TOUCHPAD_DELTA_THRESHOLD = 50;
+
+    private lastEventTime = 0;
+    private intervalSum: number | null = null;
+    private static readonly MAX_INTENSITY_INTERVAL = 600;
+    private static readonly INTENSITY_SMOOTHING = 0.3;
+
+    private delays: number[] = [];
+    private avgDelay = MouseScroll.WHEEL_DELAY_THRESHOLD;
+    private static readonly WHEEL_DELAY_THRESHOLD = 10;
+    private static readonly MAX_DELAY_SAMPLES = 50;
+
+    private batchSizes: number[] = [];
+    private avgBatchSize = MouseScroll.BATCH_SIZE_THRESHOLD;
+    private static readonly BATCH_SIZE_THRESHOLD = 20;
+    private static readonly MAX_BATCH_SIZE_SAMPLES = 3;
+    private static readonly TOUCHPAD_GRACE_PERIOD = 50;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
     }
 
     public leafChangeHandler() {
+        // Reset velocity on file change
         this.touchpadVelocity = 0;
+        window.cancelAnimationFrame(this.mouseAnimationFrame);
     }
 
     public wheelHandler(event: WheelEvent) {
@@ -33,6 +47,9 @@ export class MouseScroll {
         if (!event.deltaY) return;
 
         let el: HTMLElement | null = event.target as HTMLElement;
+
+        const now = performance.now();
+        const isStart = this.analyzeDelay(now);
 
         while (el && el != document.body) {
             const { overflowY } = getComputedStyle(el);
@@ -44,7 +61,7 @@ export class MouseScroll {
                 const delta =
                     event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
 
-                if (this.plugin.settings.touchpadEnabled && this.isTouchpad(event)) {
+                if (this.plugin.settings.touchpadEnabled && this.isTouchpad(now, isStart, event)) {
                     this.scrollWithTouchpad(el, delta);
                 } else {
                     this.scrollWithMouse(el, delta);
@@ -56,46 +73,6 @@ export class MouseScroll {
 
             el = el.parentElement;
         }
-    }
-
-    private isTouchpad(event: WheelEvent): boolean {
-        if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
-            this.touchpadLastUse = 0;
-            return false;
-        }
-
-        // Mice often return multiples of certain deltas.
-        for (const delta of MouseScroll.COMMON_MOUSE_DELTAS) {
-            if ((event.deltaY / delta) % 1 == 0) {
-                this.touchpadLastUse = 0;
-                return false;
-            }
-        }
-
-        const now = performance.now();
-
-        // Movement on both axes
-        if (event.deltaX !== 0 && event.deltaY !== 0) {
-            this.touchpadLastUse = now;
-            return true;
-        }
-
-        // Small, fractional, non-zero delta
-        if (
-            event.deltaY % 1 !== 0 &&
-            Math.abs(event.deltaY) < MouseScroll.TOUCHPAD_DELTA_THRESHOLD
-        ) {
-            this.touchpadLastUse = now;
-            return true;
-        }
-
-        // Grace period
-        if (now - this.touchpadLastUse < MouseScroll.TOUCHPAD_GRACE_PERIOD) {
-            this.touchpadLastUse = now;
-            return true;
-        }
-
-        return false;
     }
 
     // Really good approximation of the default scrolling in Obsidian.
@@ -132,6 +109,7 @@ export class MouseScroll {
                 this.mouseAnimationFrame = window.requestAnimationFrame(animateScroll);
             } else {
                 el.scrollTop = start + change;
+                this.mouseAnimationFrame = 0;
             }
         };
 
@@ -174,5 +152,114 @@ export class MouseScroll {
             this.touchpadScrolling = true;
             animate();
         }
+    }
+
+    private isTouchpad(now: number, isStart: boolean, event: WheelEvent): boolean {
+        if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
+            this.touchpadLastUse = 0;
+            return false;
+        }
+        // Movement on both axes
+        if (event.deltaX !== 0 && event.deltaY !== 0) {
+            this.touchpadLastUse = now;
+            return true;
+        }
+
+        // Grace period
+        if (now - this.touchpadLastUse < MouseScroll.TOUCHPAD_GRACE_PERIOD) {
+            this.touchpadLastUse = now;
+            return true;
+        }
+
+        let mouseScore = this.getIntensity(event.deltaY);
+
+        if (isStart) {
+            mouseScore += 0.1;
+        } else if (this.avgDelay > MouseScroll.WHEEL_DELAY_THRESHOLD) {
+            mouseScore += 0.2;
+        }
+
+        if (this.avgBatchSize < MouseScroll.BATCH_SIZE_THRESHOLD) {
+            mouseScore += 0.1;
+        }
+
+        // Common mouse delta
+        if (event.deltaY % 120 == 0) {
+            mouseScore += 0.3;
+        }
+
+        // Wheel deltas over 100
+        mouseScore += Math.max(0, Math.abs(event.deltaY / 200) - 0.5);
+
+        if (mouseScore < 1.1) {
+            if (mouseScore < 0.7) this.touchpadLastUse = now;
+            return true;
+        }
+
+        return false;
+    }
+
+    public analyzeDelay(now: number): boolean {
+        if (this.lastEventTime > 0) {
+            const delay = now - this.lastEventTime;
+
+            const mean = (data: number[]): number => {
+                return data.reduce((a, b) => a + b, 0) / data.length;
+            };
+
+            // detect start of scroll
+            const isStart = delay > this.avgDelay * 3;
+            if (isStart) {
+                this.batchSizes.push(this.delays.length);
+                if (this.batchSizes.length > MouseScroll.MAX_BATCH_SIZE_SAMPLES) {
+                    this.batchSizes.shift();
+                }
+                this.avgBatchSize = mean(this.batchSizes);
+
+                this.delays = [];
+                this.lastEventTime = now;
+                this.avgDelay = MouseScroll.WHEEL_DELAY_THRESHOLD;
+                return true;
+            }
+
+            // store delay
+            this.delays.push(delay);
+            if (this.delays.length > MouseScroll.MAX_DELAY_SAMPLES) {
+                this.delays.shift(); // drop oldest
+            }
+
+            // compute stats
+            this.avgDelay = mean(this.delays);
+
+            this.lastEventTime = now;
+            return isStart;
+        } else {
+            this.lastEventTime = now;
+            this.avgDelay = MouseScroll.WHEEL_DELAY_THRESHOLD;
+            return true;
+        }
+    }
+
+    public getIntensity(delta: number): number {
+        const now = performance.now();
+
+        if (this.lastEventTime > 0) {
+            const interval = now - this.lastEventTime;
+
+            if (interval < MouseScroll.MAX_INTENSITY_INTERVAL && this.intervalSum !== null) {
+                // EWMA (exponential weighted moving average)
+                this.intervalSum =
+                    this.intervalSum * (1 - MouseScroll.INTENSITY_SMOOTHING) +
+                    interval * MouseScroll.INTENSITY_SMOOTHING * Math.pow(delta, 2);
+            } else {
+                this.intervalSum = Math.pow(delta, 2);
+            }
+        } else {
+            this.intervalSum = Math.pow(delta, 2);
+        }
+
+        // Normalize (approx.)
+        const intensity = Math.log2(this.intervalSum) / 20;
+        return intensity;
     }
 }
