@@ -55,7 +55,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     lineWidthPercentage: 50,
     lineWidthCharacters: 70,
 
-    mouseEnabled: true,
+    mouseEnabled: false,
     mouseInvert: false,
     mouseSpeed: 50,
     mouseSmoothness: 75,
