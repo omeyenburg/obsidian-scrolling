@@ -5,6 +5,8 @@ import type { default as ScrollingPlugin } from "./main";
 export class MouseScroll {
     private readonly plugin: ScrollingPlugin;
 
+    private lastScrollElement: HTMLElement;
+
     private touchpadLastUse = 0;
     private touchpadFriction = 0;
     private touchpadVelocity = 0;
@@ -51,6 +53,30 @@ export class MouseScroll {
         const now = performance.now();
         const isStart = this.analyzeDelay(now);
 
+        const isScrolledToTop = (el: HTMLElement) => {
+            return el.scrollTop == 0;
+        };
+        const isScrolledToBottom = (el: HTMLElement) => {
+            return Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
+        };
+        const isWithinScrollContext = (el: HTMLElement): boolean => {
+            return el === this.lastScrollElement || this.lastScrollElement?.contains(el);
+        };
+
+        // Keep scrolling, while respecting nested scroll containers
+        if (!isStart && this.lastScrollElement) {
+            if (isWithinScrollContext(el)) {
+                if (
+                    (event.deltaY < 0 && !isScrolledToTop(el)) ||
+                    (event.deltaY > 0 && !isScrolledToBottom(el))
+                ) {
+                    this.applyCustomScroll(event, el.parentElement, now, isStart);
+                    return;
+                }
+            }
+        }
+
+        // Traverse DOM to find actual scrollable element
         while (el && el != document.body) {
             const { overflowY } = getComputedStyle(el);
             const allowsScrollY =
@@ -58,21 +84,37 @@ export class MouseScroll {
                 el.scrollHeight > el.clientHeight;
 
             if (allowsScrollY) {
-                const delta =
-                    event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
-
-                if (this.plugin.settings.touchpadEnabled && this.isTouchpad(now, isStart, event)) {
-                    this.scrollWithTouchpad(el, delta);
-                } else {
-                    this.scrollWithMouse(el, delta);
+                // Handle nested scroll containers
+                if (isStart) {
+                    if (event.deltaY < 0 && isScrolledToTop(el)) {
+                        el = el.parentElement;
+                        continue;
+                    }
+                    if (event.deltaY > 0 && isScrolledToBottom(el)) {
+                        el = el.parentElement;
+                        continue;
+                    }
                 }
 
-                event.preventDefault();
+                this.applyCustomScroll(event, el, now, isStart);
                 return;
             }
 
             el = el.parentElement;
         }
+    }
+
+    private applyCustomScroll(event: WheelEvent, el: HTMLElement, now: number, isStart: boolean) {
+        const delta = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
+
+        if (this.plugin.settings.touchpadEnabled && this.isTouchpad(now, isStart, event)) {
+            this.scrollWithTouchpad(el, delta);
+        } else {
+            this.scrollWithMouse(el, delta);
+        }
+
+        this.lastScrollElement = el;
+        event.preventDefault();
     }
 
     // Really good approximation of the default scrolling in Obsidian.
