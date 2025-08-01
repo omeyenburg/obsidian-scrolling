@@ -87,7 +87,7 @@ export class RestoreScroll {
         const { cursor, scroll } = ephemeralState;
 
         if (this.plugin.settings.restoreScrollMode === "bottom") {
-            delete args[0].cursor;
+            args[0].cursor = undefined;
             args[0].focus = false;
             args[0].scroll = Infinity;
         }else if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
@@ -96,7 +96,7 @@ export class RestoreScroll {
             args[0].cursor = cursor;
             window.requestAnimationFrame(() => view.editor.scrollIntoView(cursor, true));
         } else {
-            delete args[0].cursor;
+            args[0].cursor = undefined;
             args[0].focus = false;
             args[0].scroll = scroll;
         }
