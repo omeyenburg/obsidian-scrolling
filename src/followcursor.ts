@@ -38,9 +38,7 @@ export class FollowCursor {
         // This timeout is needed, because the keydown event is not reliable:
         // In normal mode of vim, keydown events are pretty much inaccessible.
         // Already wasted too much time with this.
-        window.setTimeout(() => {
-            this.recentMouseUp = false;
-        }, FollowCursor.MOUSE_UP_TIMEOUT);
+        window.setTimeout(() => (this.recentMouseUp = false), FollowCursor.MOUSE_UP_TIMEOUT);
     }
 
     public editHandler(editor: Editor): void {
@@ -118,18 +116,18 @@ export class FollowCursor {
         const goal = scrollInfo.top + signedGoalDistance;
         const steps = this.calculateSteps(signedGoalDistance, scrollInfo.height);
 
-        const animate = (editor: Editor, goal: number, stepSize: number, step: number) => {
+        window.cancelAnimationFrame(this.animationFrame);
+        this.animate(editor, goal, signedGoalDistance / steps, steps);
+    }
+
+    private animate(editor: Editor, goal: number, stepSize: number, step: number): void {
             if (step <= 0) return;
 
             editor.scrollTo(null, goal - stepSize * (step - 1));
             this.animationFrame = window.requestAnimationFrame(() =>
-                animate(editor, goal, stepSize, step - 1),
+                this.animate(editor, goal, stepSize, step - 1),
             );
         };
-
-        window.cancelAnimationFrame(this.animationFrame);
-        animate(editor, goal, signedGoalDistance / steps, steps);
-    }
 
     private calculateScrollIntensity(): void {
         const time = performance.now();
