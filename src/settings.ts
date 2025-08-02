@@ -11,6 +11,7 @@ export interface ScrollingPluginSettings {
     followCursorDynamicAnimation: boolean;
 
     restoreScrollMode: string; // scroll, cursor, top, bottom
+    restoreScrollLimit: number; // negative values for no limit
     restoreScrollAllFiles: boolean;
     restoreScrollFileEnabled: boolean;
     restoreScrollFilePath: string;
@@ -43,6 +44,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     followCursorEnableSelection: false,
 
     restoreScrollMode: "scroll",
+    restoreScrollLimit: -1,
     restoreScrollAllFiles: false,
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: ".obsidian/plugins/obsidian-scrolling/scrolling-positions.json",
@@ -170,7 +172,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Trigger distance",
-            "How far the cursor can move from the center before scrolling.\n0% keeps the cursor perfectly centered.",
+            "How far the cursor can move from the center before scrolling (%).\n0% keeps the cursor perfectly centered.",
             () => (this.plugin.settings.followCursorRadius = DEFAULT_SETTINGS.followCursorRadius),
         ).addSlider((slider) =>
             slider
@@ -249,7 +251,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Enabled",
-            "Choose between starting at the top/bottom of the file, restore the last cursor position, or restore cursor & last scroll position",
+            "Choose to start at the top/bottom of the file, or restore the last cursor position or last scroll position.",
             () => (this.plugin.settings.restoreScrollMode = DEFAULT_SETTINGS.restoreScrollMode),
         ).addDropdown((dropdown) =>
             dropdown
@@ -269,6 +271,31 @@ export class ScrollingSettingTab extends PluginSettingTab {
             this.plugin.settings.restoreScrollMode,
         );
 
+        const count = this.plugin.restoreScroll.countEphemeralStates();
+        this.createSetting(
+            "Saved positions limit",
+            `Number of files to remember scroll positions for.\nCurrently positions ${count} for file${count == 1 ? "" : "s"} are stored.`,
+            () => (this.plugin.settings.restoreScrollLimit = DEFAULT_SETTINGS.restoreScrollLimit),
+        ).addText((input) => {
+            input
+                .setPlaceholder("Unlimited")
+                .setValue(
+                    this.plugin.settings.restoreScrollLimit > 0
+                        ? this.plugin.settings.restoreScrollLimit.toString()
+                        : "",
+                )
+                .onChange((value: string) => {
+                    const limit = +value;
+                    if (limit.toString().contains(".")) return;
+                    if (limit <= 0) {
+                        this.plugin.settings.restoreScrollLimit = -1;
+                        return;
+                    }
+
+                    this.plugin.settings.restoreScrollLimit = limit;
+                });
+        });
+
         this.createSetting(
             "Restore position in other files",
             "Save and restore scroll position in markdown preview, image and pdf files.",
@@ -281,7 +308,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Store positions in file",
-            "Store scroll & cursor positions locally in a file to persist when closing Obsidian.",
+            "Store scroll & cursor positions locally in a file to persist across Obsidian restarts.",
         ).addToggle((toggle) =>
             toggle
                 .setValue(this.plugin.settings.restoreScrollFileEnabled)
@@ -340,7 +367,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             const resetButton = buttonRow.createDiv({
                 cls: "clickable-icon extra-setting-button",
             });
-            if (this.settingsEnabled) resetButton.setAttr("aria-label", "Restore last");
+            if (this.settingsEnabled) resetButton.setAttr("aria-label", "Restore saved setting");
             setIcon(resetButton, "reset");
             resetButton.onclick = () => {
                 if (this.proposedRestoreScrollStoreFile === null) return;
@@ -353,6 +380,83 @@ export class ScrollingSettingTab extends PluginSettingTab {
             confirmButton.onclick = onConfirm;
             confirmButton.disabled = !this.settingsEnabled;
         });
+    }
+
+    private linewidthSettings() {
+        if (Platform.isMobile) return;
+
+        const readableLineWidthEnabled = this.plugin.linewidth.isReadableLineWidthEnabled();
+
+        // In case readableLineWidth was toggled
+        window.setTimeout(() => this.plugin.linewidth.updateLineWidth(), 0);
+
+        this.containerEl.createEl("br");
+        if (readableLineWidthEnabled) {
+            this.plugin.settings.lineWidthMode = "disabled";
+            this.createHeading(
+                "Line length",
+                "This feature is unavailable while 'Readable line length' is enabled in the editor settings. Disable it to use this feature.",
+            );
+        } else {
+            this.createHeading("Line width");
+        }
+
+        this.settingsEnabled = !readableLineWidthEnabled;
+
+        this.createSetting("Mode", "Choose how to control the maximum line width.").addDropdown(
+            (dropdown) => {
+                dropdown
+                    .addOption("disabled", "Disabled")
+                    .addOption("characters", "Characters (ch)")
+                    .addOption("percentage", "Percentage (%)")
+                    .setValue(this.plugin.settings.lineWidthMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.lineWidthMode = value;
+                        this.display();
+                        await this.plugin.saveSettings();
+                    });
+            },
+        );
+
+        if (this.plugin.settings.lineWidthMode === "percentage") {
+            this.createSetting(
+                "Maximum line length",
+                "Maximum line length as percentage of the window width (%).",
+                () => {
+                    this.plugin.settings.lineWidthPercentage = DEFAULT_SETTINGS.lineWidthPercentage;
+                    this.plugin.linewidth.updateLineWidth();
+                },
+            ).addSlider((slider) =>
+                slider
+                    .setValue(this.plugin.settings.lineWidthPercentage)
+                    .setLimits(20, 100, 1)
+                    .onChange(async (value) => {
+                        this.plugin.settings.lineWidthPercentage = value;
+                        this.plugin.linewidth.updateLineWidth();
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        } else {
+            this.settingsEnabled &&= this.plugin.settings.lineWidthMode === "characters";
+
+            this.createSetting(
+                "Maximum line length",
+                "Maximum line length as character count (ch).",
+                () => {
+                    this.plugin.settings.lineWidthCharacters = DEFAULT_SETTINGS.lineWidthCharacters;
+                    this.plugin.linewidth.updateLineWidth();
+                },
+            ).addSlider((slider) =>
+                slider
+                    .setValue(this.plugin.settings.lineWidthCharacters)
+                    .setLimits(30, 200, 1)
+                    .onChange(async (value) => {
+                        this.plugin.settings.lineWidthCharacters = value;
+                        this.plugin.linewidth.updateLineWidth();
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
     }
 
     private scrollbarSettings() {
@@ -413,83 +517,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         }),
                 );
             }
-        }
-    }
-
-    private linewidthSettings() {
-        if (Platform.isMobile) return;
-
-        const readableLineWidthEnabled = this.plugin.linewidth.isReadableLineWidthEnabled();
-
-        // In case readableLineWidth was toggled
-        window.setTimeout(() => this.plugin.linewidth.updateLineWidth(), 0);
-
-        this.containerEl.createEl("br");
-        if (readableLineWidthEnabled) {
-            this.plugin.settings.lineWidthMode = "disabled";
-            this.createHeading(
-                "Line length",
-                "This feature is unavailable while 'Readable line length' is enabled in the editor settings. Disable it to use this feature.",
-            );
-        } else {
-            this.createHeading("Line width");
-        }
-
-        this.settingsEnabled = !readableLineWidthEnabled;
-
-        this.createSetting("Mode", "Choose how to control the maximum line width.").addDropdown(
-            (dropdown) => {
-                dropdown
-                    .addOption("disabled", "Disabled")
-                    .addOption("characters", "Characters (ch)")
-                    .addOption("percentage", "Percentage (%)")
-                    .setValue(this.plugin.settings.lineWidthMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.lineWidthMode = value;
-                        this.display();
-                        await this.plugin.saveSettings();
-                    });
-            },
-        );
-
-        if (this.plugin.settings.lineWidthMode === "percentage") {
-            const s = this.createSetting(
-                "Maximum line length",
-                "Maximum line length as percentage of the window width (%).",
-                () => {
-                    this.plugin.settings.lineWidthPercentage = DEFAULT_SETTINGS.lineWidthPercentage;
-                    this.plugin.linewidth.updateLineWidth();
-                },
-            ).addSlider((slider) =>
-                slider
-                    .setValue(this.plugin.settings.lineWidthPercentage)
-                    .setLimits(20, 100, 1)
-                    .onChange(async (value) => {
-                        this.plugin.settings.lineWidthPercentage = value;
-                        this.plugin.linewidth.updateLineWidth();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        } else {
-            this.settingsEnabled &&= this.plugin.settings.lineWidthMode === "characters";
-
-            this.createSetting(
-                "Maximum line length",
-                "Maximum line length as character count (ch).",
-                () => {
-                    this.plugin.settings.lineWidthCharacters = DEFAULT_SETTINGS.lineWidthCharacters;
-                    this.plugin.linewidth.updateLineWidth();
-                },
-            ).addSlider((slider) =>
-                slider
-                    .setValue(this.plugin.settings.lineWidthCharacters)
-                    .setLimits(30, 200, 1)
-                    .onChange(async (value) => {
-                        this.plugin.settings.lineWidthCharacters = value;
-                        this.plugin.linewidth.updateLineWidth();
-                        await this.plugin.saveSettings();
-                    }),
-            );
         }
     }
 

@@ -31,7 +31,9 @@ export class Events {
 
         /* MouseScroll */
         if (Platform.isDesktop) {
-            plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this));
+            plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
+                passive: false,
+            });
         }
 
         /* FollowCursor */
