@@ -162,6 +162,9 @@ export class FollowCursor {
     }
 
     private calculateSteps(signedGoalDistance: number, scrollerHeight: number): number {
+        const instantEditScroll = this.plugin.settings.followCursorInstantEditScroll;
+        if (this.recentEdit && instantEditScroll) return 1;
+
         const smoothness = this.plugin.settings.followCursorSmoothness;
         const dynamicAnimation = this.plugin.settings.followCursorDynamicAnimation;
 

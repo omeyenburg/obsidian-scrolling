@@ -6,6 +6,7 @@ export interface ScrollingPluginSettings {
     followCursorEnabled: boolean;
     followCursorRadius: number;
     followCursorSmoothness: number;
+    followCursorInstantEditScroll: boolean;
     followCursorEnableMouse: boolean;
     followCursorEnableSelection: boolean;
     followCursorDynamicAnimation: boolean;
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     followCursorEnabled: true,
     followCursorRadius: 75,
     followCursorSmoothness: 25,
+    followCursorInstantEditScroll: true,
     followCursorDynamicAnimation: true,
     followCursorEnableMouse: false,
     followCursorEnableSelection: false,
@@ -196,6 +198,18 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setLimits(0, 100, 1)
                 .onChange(async (value) => {
                     this.plugin.settings.followCursorSmoothness = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        this.createSetting(
+            "Instant scroll on edit",
+            "Do not scroll smoothly while editing text.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.followCursorInstantEditScroll)
+                .onChange(async (value) => {
+                    this.plugin.settings.followCursorInstantEditScroll = value;
                     await this.plugin.saveSettings();
                 }),
         );
