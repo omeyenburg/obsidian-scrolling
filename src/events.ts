@@ -31,13 +31,11 @@ export class Events {
 
         /* MouseScroll */
         if (Platform.isDesktop) {
-            plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
-                passive: false,
-            });
+            plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this));
         }
 
         /* FollowCursor */
-        plugin.registerDomEvent(document, "keydown", this.keyHandler.bind(this));
+        plugin.registerDomEvent(document, "keydown", this.keyHandler.bind(this), { passive: true });
 
         // Suppress first invocation
         let initialEditorChange = plugin.app.workspace.on("editor-change", () => {
@@ -52,17 +50,22 @@ export class Events {
 
         /* FollowCursor & RestoreScroll */
         if (Platform.isDesktop) {
-            plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this));
+            plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this), {
+                passive: true,
+            });
         }
+
+        /* MouseScroll, Scrollbar & RestoreScroll */
+        plugin.registerEvent(
+            plugin.app.workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
+        );
+        window.requestAnimationFrame(() => this.attachScrollHandler());
 
         /* RestoreScroll */
         plugin.registerEvent(plugin.app.vault.on("delete", this.deleteFileHandler.bind(this)));
         plugin.registerEvent(plugin.app.vault.on("rename", this.renameFileHandler.bind(this)));
         plugin.registerEvent(plugin.app.workspace.on("quit", this.quitHandler.bind(this)));
         plugin.registerEvent(plugin.app.workspace.on("file-open", this.openFileHandler.bind(this)));
-        plugin.registerEvent(
-            plugin.app.workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
-        );
 
         // Wrap WorkspaceLeaf.setViewState
         const self = this;
@@ -91,6 +94,26 @@ export class Events {
         );
     }
 
+    private attachScrollHandler(): void {
+        const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
+        if (!view || !view.file) return;
+
+        // Avoid scroll events after attach
+        this.scrollEventSkip = true;
+        window.setTimeout(
+            () => (this.scrollEventSkip = false),
+            Events.LEAF_CHANGE_SCROLL_EVENT_DELAY,
+        );
+
+        if (view.file.extension === "md") {
+            this.attachScrollHandlerMarkdown(view);
+        } else if (view.file.extension === "pdf") {
+            this.attachScrollHandlerPdf(view);
+        } else if (Events.IMAGE_EXTENSIONS.has(view.file.extension.toLowerCase())) {
+            this.attachScrollHandlerImage(view);
+        }
+    }
+
     private attachScrollHandlerMarkdown(view: FileView) {
         const editScroller = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
         const viewScroller = view.contentEl.querySelector(".markdown-preview-view") as HTMLElement;
@@ -102,8 +125,8 @@ export class Events {
         editScroller.removeEventListener("scroll", this.scrollHandler);
         viewScroller.removeEventListener("scroll", this.scrollHandler);
 
-        this.plugin.registerDomEvent(editScroller, "scroll", this.scrollHandler);
-        this.plugin.registerDomEvent(viewScroller, "scroll", this.scrollHandler);
+        this.plugin.registerDomEvent(editScroller, "scroll", this.scrollHandler, { passive: true });
+        this.plugin.registerDomEvent(viewScroller, "scroll", this.scrollHandler, { passive: true });
     }
 
     private attachScrollHandlerPdf(view: FileView) {
@@ -131,23 +154,7 @@ export class Events {
 
     private leafChangeHandler(): void {
         this.plugin.mousescroll.leafChangeHandler();
-
-        const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
-        if (!view || !view.file) return;
-
-        // Avoid scroll events after attach
-        this.scrollEventSkip = true;
-        window.setTimeout(() => {
-            this.scrollEventSkip = false;
-        }, Events.LEAF_CHANGE_SCROLL_EVENT_DELAY);
-
-        if (view.file.extension === "md") {
-            this.attachScrollHandlerMarkdown(view);
-        } else if (view.file.extension === "pdf") {
-            this.attachScrollHandlerPdf(view);
-        } else if (Events.IMAGE_EXTENSIONS.has(view.file.extension.toLowerCase())) {
-            this.attachScrollHandlerImage(view);
-        }
+        this.attachScrollHandler();
     }
 
     private unboundScrollHandler(event: Event): void {

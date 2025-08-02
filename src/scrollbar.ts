@@ -22,6 +22,10 @@ export class Scrollbar {
     }
 
     public scrollHandler(event: Event): void {
+        this.showScrollbarTemporary(event)
+    }
+
+    private showScrollbarTemporary(event: Event) {
         // Scrollbars styling doesnt work on MacOS.
         if (Platform.isMacOS) return;
         if (this.plugin.settings.scrollbarVisibility != "scroll") return;
@@ -29,21 +33,26 @@ export class Scrollbar {
         const el = event.currentTarget as HTMLElement;
         if (!el) return;
 
-        // Show scrollbar on target element
-        el.classList.remove("scrolling-transparent");
-
         // Update timeout
         const existingTimeout = this.scrollTimeouts.get(el);
         if (existingTimeout) {
             window.clearTimeout(existingTimeout);
         }
 
-        const timeoutId = window.setTimeout(() => {
-            el.classList.add("scrolling-transparent");
-            this.scrollTimeouts.delete(el);
-        }, Scrollbar.SCROLLBAR_IDLE_TIMEOUT);
+        // Show scrollbar on target element
+        el.classList.remove("scrolling-transparent");
 
+        // Hide scrollbar after delay
+        const timeoutId = window.setTimeout(
+            () => this.hideScrollbarTemporary(el),
+            Scrollbar.SCROLLBAR_IDLE_TIMEOUT,
+        );
         this.scrollTimeouts.set(el, timeoutId);
+    }
+
+    private hideScrollbarTemporary(el: HTMLElement) {
+        el.classList.add("scrolling-transparent");
+        this.scrollTimeouts.delete(el);
     }
 
     public updateStyle(): void {

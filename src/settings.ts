@@ -478,7 +478,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 "Maximum line length as character count (ch).",
                 () => {
                     this.plugin.settings.lineWidthCharacters = DEFAULT_SETTINGS.lineWidthCharacters;
-                    // this.plugin.linewidth.updateLineWidth();
+                    this.plugin.linewidth.updateLineWidth();
                 },
             ).addSlider((slider) =>
                 slider
@@ -486,7 +486,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     .setLimits(30, 200, 1)
                     .onChange(async (value) => {
                         this.plugin.settings.lineWidthCharacters = value;
-                        // this.plugin.linewidth.updateLineWidth();
+                        this.plugin.linewidth.updateLineWidth();
                         await this.plugin.saveSettings();
                     }),
             );

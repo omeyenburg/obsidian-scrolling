@@ -19,6 +19,19 @@ interface EphemeralState {
     cursor?: EditorRange;
 }
 
+function getScroller(view: FileView): HTMLElement | null {
+    switch (view.getViewType()) {
+        case "markdown":
+            return view.containerEl.querySelector(".markdown-preview-view");
+        case "pdf":
+            return view.containerEl.querySelector(".pdf-viewer-container");
+        case "image":
+            return view.containerEl.querySelector(".image-container")?.parentElement;
+        default:
+            return null;
+    }
+}
+
 export class RestoreScroll {
     private readonly plugin: ScrollingPlugin;
 
@@ -127,7 +140,7 @@ export class RestoreScroll {
             }
         } else if (scrollTop && this.plugin.settings.restoreScrollAllFiles) {
             window.requestAnimationFrame(() => {
-                const scroller = this.getScroller(view);
+                const scroller = getScroller(view);
                 if (scroller) {
                     scroller.scrollTop = scrollTop;
                 }
@@ -195,23 +208,10 @@ export class RestoreScroll {
                 scrollTop,
             };
         } else if (this.plugin.settings.restoreScrollAllFiles) {
-            const scrollTop = this.getScroller(view)?.scrollTop;
+            const scrollTop = getScroller(view)?.scrollTop;
             if (scrollTop) {
                 this.ephemeralStates[view.file.path] = { timestamp, scrollTop };
             }
-        }
-    }
-
-    private getScroller(view: FileView): HTMLElement | null {
-        switch (view.getViewType()) {
-            case "markdown":
-                return view.containerEl.querySelector(".markdown-preview-view");
-            case "pdf":
-                return view.containerEl.querySelector(".pdf-viewer-container");
-            case "image":
-                return view.containerEl.querySelector(".image-container")?.parentElement;
-            default:
-                return null;
         }
     }
 
