@@ -213,6 +213,27 @@ export class RestoreScroll {
                 this.ephemeralStates[view.file.path] = { timestamp, scrollTop };
             }
         }
+
+        this.discardOldStates();
+    }
+
+    private discardOldStates() {
+        const entries = Object.entries(this.ephemeralStates);
+        if (
+            this.plugin.settings.restoreScrollLimit <= 0 ||
+            entries.length <= this.plugin.settings.restoreScrollLimit
+        )
+            return;
+
+        entries.sort(([, a], [, b]) => b.timestamp - a.timestamp);
+
+        this.ephemeralStates = Object.fromEntries(
+            entries.slice(0, this.plugin.settings.restoreScrollLimit),
+        );
+    }
+
+    public countEphemeralStates(): number {
+        return Object.keys(this.ephemeralStates).length;
     }
 
     public async renameStoreFile(newPath: string | null): Promise<string | undefined> {
