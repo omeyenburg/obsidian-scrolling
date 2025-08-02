@@ -78,14 +78,16 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     display(): void {
-        const containerEl = this.containerEl;
-        containerEl.empty();
+        const previousScrollTop = this.containerEl.scrollTop;
+        this.containerEl.empty();
 
         this.followCursorSettings();
         this.restoreScrollSettings();
         this.linewidthSettings();
         this.scrollbarSettings();
         this.mouseScrollSettings();
+
+        this.containerEl.scrollTop = previousScrollTop;
     }
 
     createHeading(name: string, desc?: string): void {
@@ -420,7 +422,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const readableLineWidthEnabled = this.plugin.linewidth.isReadableLineWidthEnabled();
 
         // In case readableLineWidth was toggled
-        this.plugin.linewidth.updateLineWidth();
+        window.setTimeout(() => this.plugin.linewidth.updateLineWidth(), 0);
 
         this.containerEl.createEl("br");
         if (readableLineWidthEnabled) {
@@ -444,7 +446,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.lineWidthMode)
                     .onChange(async (value) => {
                         this.plugin.settings.lineWidthMode = value;
-                        this.plugin.linewidth.updateLineWidth();
                         this.display();
                         await this.plugin.saveSettings();
                     });
@@ -452,7 +453,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
 
         if (this.plugin.settings.lineWidthMode === "percentage") {
-            this.createSetting(
+            const s = this.createSetting(
                 "Maximum line length",
                 "Maximum line length as percentage of the window width (%).",
                 () => {
@@ -477,7 +478,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 "Maximum line length as character count (ch).",
                 () => {
                     this.plugin.settings.lineWidthCharacters = DEFAULT_SETTINGS.lineWidthCharacters;
-                    this.plugin.linewidth.updateLineWidth();
+                    // this.plugin.linewidth.updateLineWidth();
                 },
             ).addSlider((slider) =>
                 slider
@@ -485,7 +486,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     .setLimits(30, 200, 1)
                     .onChange(async (value) => {
                         this.plugin.settings.lineWidthCharacters = value;
-                        this.plugin.linewidth.updateLineWidth();
+                        // this.plugin.linewidth.updateLineWidth();
                         await this.plugin.saveSettings();
                     }),
             );
