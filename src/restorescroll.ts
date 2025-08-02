@@ -25,7 +25,7 @@ export class RestoreScroll {
     private ephemeralStates: Record<string, EphemeralState> = {};
 
     private skipViewSet = false;
-    private expectEphemeralState = false;
+    private expectEphemeralState = true; // On initial load open-file triggers too late
 
     public readonly storeStateDebounced: (file?: TFile) => void;
     public readonly writeStateFileDebounced: () => void;
@@ -42,6 +42,7 @@ export class RestoreScroll {
             RestoreScroll.STORE_INTERVAL,
             false,
         );
+
         this.writeStateFileDebounced = debounce(
             this.writeStateFile.bind(this),
             RestoreScroll.FILE_WRITE_INTERVAL,
@@ -59,6 +60,7 @@ export class RestoreScroll {
 
     public openFileHandler(): void {
         this.expectEphemeralState = true;
+        window.setTimeout(() => (this.expectEphemeralState = false), 100);
     }
 
     public ephemeralStateHandler(
@@ -68,7 +70,6 @@ export class RestoreScroll {
         // Only proceed if there was a file open event.
         if (!this.expectEphemeralState || !args[0]) return;
         this.expectEphemeralState = false;
-
 
         // Cancel any further calculations if link has been used.
         const linkUsed = this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
@@ -90,7 +91,7 @@ export class RestoreScroll {
             args[0].cursor = undefined;
             args[0].focus = false;
             args[0].scroll = Infinity;
-        }else if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
+        } else if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
             delete args[0].scroll;
             args[0].focus = true;
             args[0].cursor = cursor;
@@ -171,7 +172,6 @@ export class RestoreScroll {
         }
     }
 
-    // Invoked on cursor movement and mouse scroll
     private storeState(file?: TFile): void {
         const mode = this.plugin.settings.restoreScrollMode;
         if (mode === "top" || mode === "bottom") return;
