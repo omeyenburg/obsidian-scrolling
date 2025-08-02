@@ -7,8 +7,6 @@
  */
 
 import esbuild from "esbuild";
-import process from "process";
-import builtins from "builtin-modules";
 
 const banner =
     `/*
@@ -22,8 +20,11 @@ const context = await esbuild.context({
     banner: {
         js: banner,
     },
-    entryPoints: ["src/main.ts"],
     bundle: true,
+    define: {
+        "process.env.NODE_ENV": JSON.stringify(prod ? "production" : "development")
+    },
+    entryPoints: ["src/main.ts"],
     external: [
         "obsidian",
         "electron",
@@ -37,15 +38,17 @@ const context = await esbuild.context({
         "@codemirror/view",
         "@lezer/common",
         "@lezer/highlight",
-        "@lezer/lr",
-        ...builtins],
+        "@lezer/lr"
+    ],
     format: "cjs",
-    target: "es2018",
     logLevel: "info",
-    sourcemap: prod ? false : "inline",
-    treeShaking: true,
-    outfile: "main.js",
+    metafile: prod,
     minify: prod,
+    outfile: "main.js",
+    platform: "browser",
+    sourcemap: prod ? false : "inline",
+    target: "es2021",
+    treeShaking: true,
 });
 
 if (prod) {
