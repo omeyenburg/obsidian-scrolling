@@ -47,6 +47,11 @@ export class RestoreScroll {
     private static readonly STORE_INTERVAL = 97;
     private static readonly FILE_WRITE_INTERVAL = 293;
 
+    public static readonly DEFAULT_FILE_PATH =
+        ".obsidian/plugins/scrolling/scrolling-positions.json";
+    public static readonly FALLBACK_FILE_PATH =
+        ".obsidian/plugins/obsidian-scrolling/scrolling-positions.json";
+
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
@@ -169,19 +174,20 @@ export class RestoreScroll {
 
     // Called on plugin load
     public async loadData(): Promise<void> {
-        const exists = await this.plugin.app.vault.adapter.exists(
-            this.plugin.settings.restoreScrollFilePath,
-        );
+        if (await this.plugin.app.vault.adapter.exists(this.plugin.settings.restoreScrollFilePath)) {
+            // Use existing setting path
+        } else if (await this.plugin.app.vault.adapter.exists(RestoreScroll.FALLBACK_FILE_PATH)) {
+            this.plugin.settings.restoreScrollFilePath = RestoreScroll.FALLBACK_FILE_PATH;
+        } else {
+            return; // Neither file exists
+        }
 
-        if (exists) {
-            const data = await this.plugin.app.vault.adapter.read(
-                this.plugin.settings.restoreScrollFilePath,
-            );
-            try {
-                this.ephemeralStates = JSON.parse(data);
-            } catch (e) {
-                this.ephemeralStates = {};
-            }
+        const path = this.plugin.settings.restoreScrollFilePath;
+        try {
+            const data = await this.plugin.app.vault.adapter.read(path);
+            this.ephemeralStates = JSON.parse(data);
+        } catch {
+            this.ephemeralStates = {};
         }
     }
 

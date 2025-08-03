@@ -1,6 +1,7 @@
 import { Platform, PluginSettingTab, Setting, SliderComponent, setIcon } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
+import { RestoreScroll } from "./restorescroll";
 
 export interface ScrollingPluginSettings {
     followCursorEnabled: boolean;
@@ -49,7 +50,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollLimit: -1,
     restoreScrollAllFiles: false,
     restoreScrollFileEnabled: true,
-    restoreScrollFilePath: ".obsidian/plugins/obsidian-scrolling/scrolling-positions.json",
+    restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
 
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
