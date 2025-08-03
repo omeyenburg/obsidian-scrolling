@@ -53,10 +53,3 @@
 .scrolling-filetree-horizontal .tree-item-self .nav-folder-title {
     flex-shrink: 0;
 }
-
-/* Line width */
-.scrolling-line-width-enabled .cm-sizer,
-.scrolling-line-width-enabled .markdown-preview-sizer {
-    max-width: var(--scrolling-line-width) !important;
-    margin: auto;
-}

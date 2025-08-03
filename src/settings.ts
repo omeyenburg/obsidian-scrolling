@@ -23,10 +23,6 @@ export interface ScrollingPluginSettings {
     scrollbarWidth: number;
     scrollbarFileTreeHorizontal: boolean;
 
-    lineWidthMode: string;
-    lineWidthPercentage: number;
-    lineWidthCharacters: number;
-
     mouseEnabled: boolean;
     mouseInvert: boolean;
     mouseSpeed: number;
@@ -59,10 +55,6 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     scrollbarWidth: 12,
     scrollbarFileTreeHorizontal: false,
 
-    lineWidthMode: "disabled",
-    lineWidthPercentage: 50,
-    lineWidthCharacters: 70,
-
     mouseEnabled: false,
     mouseInvert: false,
     mouseSpeed: 50,
@@ -92,7 +84,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.followCursorSettings();
         this.cursorScrollSettings();
         this.restoreScrollSettings();
-        this.linewidthSettings();
         this.scrollbarSettings();
         this.mouseScrollSettings();
 
@@ -416,83 +407,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
             confirmButton.onclick = onConfirm;
             confirmButton.disabled = !this.settingsEnabled;
         });
-    }
-
-    private linewidthSettings() {
-        if (Platform.isMobile) return;
-
-        const readableLineWidthEnabled = this.plugin.lineWidth.isReadableLineWidthEnabled();
-
-        // In case readableLineWidth was toggled
-        window.setTimeout(() => this.plugin.lineWidth.updateLineWidth(), 0);
-
-        this.containerEl.createEl("br");
-        if (readableLineWidthEnabled) {
-            this.plugin.settings.lineWidthMode = "disabled";
-            this.createHeading(
-                "Line length",
-                "This feature is unavailable while 'Readable line length' is enabled in the editor settings. Disable it to use this feature.",
-            );
-        } else {
-            this.createHeading("Line width");
-        }
-
-        this.settingsEnabled = !readableLineWidthEnabled;
-
-        this.createSetting("Mode", "Choose how to control the maximum line width.").addDropdown(
-            (dropdown) => {
-                dropdown
-                    .addOption("disabled", "Disabled")
-                    .addOption("characters", "Characters (ch)")
-                    .addOption("percentage", "Percentage (%)")
-                    .setValue(this.plugin.settings.lineWidthMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.lineWidthMode = value;
-                        this.display();
-                        await this.plugin.saveSettings();
-                    });
-            },
-        );
-
-        if (this.plugin.settings.lineWidthMode === "percentage") {
-            this.createSetting(
-                "Maximum line length",
-                "Maximum line length as percentage of the window width (%).",
-                () => {
-                    this.plugin.settings.lineWidthPercentage = DEFAULT_SETTINGS.lineWidthPercentage;
-                    this.plugin.lineWidth.updateLineWidth();
-                },
-            ).addSlider((slider) =>
-                slider
-                    .setValue(this.plugin.settings.lineWidthPercentage)
-                    .setLimits(20, 100, 1)
-                    .onChange(async (value) => {
-                        this.plugin.settings.lineWidthPercentage = value;
-                        this.plugin.lineWidth.updateLineWidth();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        } else {
-            this.settingsEnabled &&= this.plugin.settings.lineWidthMode === "characters";
-
-            this.createSetting(
-                "Maximum line length",
-                "Maximum line length as character count (ch).",
-                () => {
-                    this.plugin.settings.lineWidthCharacters = DEFAULT_SETTINGS.lineWidthCharacters;
-                    this.plugin.lineWidth.updateLineWidth();
-                },
-            ).addSlider((slider) =>
-                slider
-                    .setValue(this.plugin.settings.lineWidthCharacters)
-                    .setLimits(30, 200, 1)
-                    .onChange(async (value) => {
-                        this.plugin.settings.lineWidthCharacters = value;
-                        this.plugin.lineWidth.updateLineWidth();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
     }
 
     private scrollbarSettings() {
