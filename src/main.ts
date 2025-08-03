@@ -2,6 +2,7 @@ import { Plugin } from "obsidian";
 
 import { Events } from "./events";
 import { FollowCursor } from "./followcursor";
+import { CursorScroll } from "./cursorscroll";
 import { MouseScroll } from "./mousescroll";
 import { Scrollbar } from "./scrollbar";
 import { RestoreScroll } from "./restorescroll";
@@ -12,20 +13,22 @@ export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
 
     restoreScroll!: RestoreScroll;
-    followcursor!: FollowCursor;
-    mousescroll!: MouseScroll;
+    cursorScroll!: CursorScroll;
+    followCursor!: FollowCursor;
+    mouseScroll!: MouseScroll;
     scrollbar!: Scrollbar;
-    linewidth!: LineWidth;
+    lineWidth!: LineWidth;
 
     async onload() {
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this));
 
         this.restoreScroll = new RestoreScroll(this);
-        this.followcursor = new FollowCursor(this);
-        this.mousescroll = new MouseScroll(this);
+        this.cursorScroll = new CursorScroll(this);
+        this.followCursor = new FollowCursor(this);
+        this.mouseScroll = new MouseScroll(this);
         this.scrollbar = new Scrollbar(this);
-        this.linewidth = new LineWidth(this);
+        this.lineWidth = new LineWidth(this);
 
         new Events(this);
 
