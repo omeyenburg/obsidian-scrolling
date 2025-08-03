@@ -285,7 +285,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             dropdown
                 .addOption("top", "Start at top")
                 .addOption("bottom", "Start at bottom")
-                .addOption("cursor", "Restore only cursor")
+                .addOption("cursor", "Restore cursor position")
                 .addOption("scroll", "Restore scroll position")
                 .setValue(this.plugin.settings.restoreScrollMode)
                 .onChange(async (value) => {
