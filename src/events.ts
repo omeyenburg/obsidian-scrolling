@@ -213,6 +213,6 @@ export class Events {
 
     private wheelHandler(event: WheelEvent): void {
         this.plugin.mouseScroll.wheelHandler(event);
-        this.plugin.cursorScroll.wheelHandler(event);
+        this.plugin.cursorScroll.wheelHandler();
     }
 }
