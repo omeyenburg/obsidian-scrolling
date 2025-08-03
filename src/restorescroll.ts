@@ -78,7 +78,7 @@ export class RestoreScroll {
 
     public openFileHandler(): void {
         this.expectEphemeralState = true;
-        window.setTimeout(() => (this.expectEphemeralState = false), 100);
+        window.setTimeout(() => (this.expectEphemeralState = false), 0);
     }
 
     public ephemeralStateHandler(
@@ -93,13 +93,16 @@ export class RestoreScroll {
         const linkUsed = this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
         if (linkUsed || this.plugin.settings.restoreScrollMode === "top") {
             this.skipViewSet = true;
+            window.setTimeout(() => (this.skipViewSet = false), 0);
             return;
         }
 
         // Only works in markdown source mode.
         if (!(view instanceof MarkdownView) || !view.file) return;
         if (view.getMode() !== "source") return;
+
         this.skipViewSet = true;
+        window.setTimeout(() => (this.skipViewSet = false), 0);
 
         const ephemeralState = this.ephemeralStates[view.file.path];
         if (!ephemeralState) return;
@@ -125,7 +128,6 @@ export class RestoreScroll {
         this.writeStateFileDebounced();
 
         if (this.skipViewSet) return;
-        this.skipViewSet = false;
 
         if (this.plugin.settings.restoreScrollMode === "top") return;
 
@@ -141,7 +143,7 @@ export class RestoreScroll {
                 view.setEphemeralState({ cursor, focus: true });
                 view.editor.scrollIntoView(cursor, true);
             } else {
-                view.setEphemeralState({ cursor, scroll });
+                view.setEphemeralState({ scroll });
             }
         } else if (scrollTop && this.plugin.settings.restoreScrollAllFiles) {
             window.requestAnimationFrame(() => {
@@ -174,7 +176,9 @@ export class RestoreScroll {
 
     // Called on plugin load
     public async loadData(): Promise<void> {
-        if (await this.plugin.app.vault.adapter.exists(this.plugin.settings.restoreScrollFilePath)) {
+        if (
+            await this.plugin.app.vault.adapter.exists(this.plugin.settings.restoreScrollFilePath)
+        ) {
             // Use existing setting path
         } else if (await this.plugin.app.vault.adapter.exists(RestoreScroll.FALLBACK_FILE_PATH)) {
             this.plugin.settings.restoreScrollFilePath = RestoreScroll.FALLBACK_FILE_PATH;
