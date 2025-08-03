@@ -11,6 +11,8 @@ export interface ScrollingPluginSettings {
     followCursorEnableSelection: boolean;
     followCursorDynamicAnimation: boolean;
 
+    cursorScrollEnabled: boolean;
+
     restoreScrollMode: string; // scroll, cursor, top, bottom
     restoreScrollLimit: number; // negative values for no limit
     restoreScrollAllFiles: boolean;
@@ -44,6 +46,8 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     followCursorDynamicAnimation: true,
     followCursorEnableMouse: false,
     followCursorEnableSelection: false,
+
+    cursorScrollEnabled: false,
 
     restoreScrollMode: "scroll",
     restoreScrollLimit: -1,
@@ -86,6 +90,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.containerEl.empty();
 
         this.followCursorSettings();
+        this.cursorScrollSettings();
         this.restoreScrollSettings();
         this.linewidthSettings();
         this.scrollbarSettings();
@@ -160,9 +165,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private followCursorSettings() {
-        this.createHeading("Follow Cursor");
+        this.createHeading("Scroll when you move the cursor");
 
-        this.createSetting("Enabled", "Keep the cursor near the center.").addToggle((toggle) =>
+        this.createSetting("Enable scroll follows cursor", "Keep the cursor near the center.").addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.followCursorEnabled).onChange(async (value) => {
                 this.plugin.settings.followCursorEnabled = value;
                 this.display();
@@ -254,6 +259,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
         }
+    }
+
+    private cursorScrollSettings() {
+        this.containerEl.createEl("br");
+        this.createHeading(
+            "Move cursor when you scroll",
+        );
+        this.createSetting(
+            "Enable cursor follows scroll",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.cursorScrollEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.cursorScrollEnabled = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
     }
 
     private restoreScrollSettings() {
@@ -399,10 +421,10 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private linewidthSettings() {
         if (Platform.isMobile) return;
 
-        const readableLineWidthEnabled = this.plugin.linewidth.isReadableLineWidthEnabled();
+        const readableLineWidthEnabled = this.plugin.lineWidth.isReadableLineWidthEnabled();
 
         // In case readableLineWidth was toggled
-        window.setTimeout(() => this.plugin.linewidth.updateLineWidth(), 0);
+        window.setTimeout(() => this.plugin.lineWidth.updateLineWidth(), 0);
 
         this.containerEl.createEl("br");
         if (readableLineWidthEnabled) {
@@ -438,7 +460,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 "Maximum line length as percentage of the window width (%).",
                 () => {
                     this.plugin.settings.lineWidthPercentage = DEFAULT_SETTINGS.lineWidthPercentage;
-                    this.plugin.linewidth.updateLineWidth();
+                    this.plugin.lineWidth.updateLineWidth();
                 },
             ).addSlider((slider) =>
                 slider
@@ -446,7 +468,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     .setLimits(20, 100, 1)
                     .onChange(async (value) => {
                         this.plugin.settings.lineWidthPercentage = value;
-                        this.plugin.linewidth.updateLineWidth();
+                        this.plugin.lineWidth.updateLineWidth();
                         await this.plugin.saveSettings();
                     }),
             );
@@ -458,7 +480,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 "Maximum line length as character count (ch).",
                 () => {
                     this.plugin.settings.lineWidthCharacters = DEFAULT_SETTINGS.lineWidthCharacters;
-                    this.plugin.linewidth.updateLineWidth();
+                    this.plugin.lineWidth.updateLineWidth();
                 },
             ).addSlider((slider) =>
                 slider
@@ -466,7 +488,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     .setLimits(30, 200, 1)
                     .onChange(async (value) => {
                         this.plugin.settings.lineWidthCharacters = value;
-                        this.plugin.linewidth.updateLineWidth();
+                        this.plugin.lineWidth.updateLineWidth();
                         await this.plugin.saveSettings();
                     }),
             );
@@ -538,7 +560,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (Platform.isMobile) return;
 
         this.containerEl.createEl("br");
-        this.createHeading("Mouse/Touchpad scrolling (Experimental)");
+        this.createHeading("Mouse & Touchpad (Experimental)");
 
         this.createSetting("Enabled", "Enable custom mouse/touchpad scrolling behavior.").addToggle(
             (toggle) =>

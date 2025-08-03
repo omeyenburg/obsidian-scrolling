@@ -1,5 +1,6 @@
 import { View, Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
+import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
 
 import type { default as ScrollingPlugin } from "./main";
@@ -155,7 +156,7 @@ export class Events {
     }
 
     private leafChangeHandler(): void {
-        this.plugin.mousescroll.leafChangeHandler();
+        this.plugin.mouseScroll.leafChangeHandler();
         this.attachScrollHandler();
     }
 
@@ -183,23 +184,35 @@ export class Events {
     }
 
     private keyHandler(): void {
-        this.plugin.followcursor.keyHandler();
+        this.plugin.followCursor.keyHandler();
     }
 
     private mouseUpHandler(): void {
-        this.plugin.followcursor.mouseUpHandler();
+        this.plugin.followCursor.mouseUpHandler();
         this.plugin.restoreScroll.storeStateDebounced();
     }
 
     private editHandler(editor: Editor): void {
-        this.plugin.followcursor.editHandler(editor);
+        this.plugin.followCursor.editHandler(editor);
     }
 
     private cursorHandler(update: ViewUpdate): void {
-        this.plugin.followcursor.cursorHandler(update);
+        // Always cancel if event was caused by mouse down/movement.
+        // This only checks if this update was caused by a mouse down event,
+        // but can't detect mouse up.
+        for (const tr of update.transactions) {
+            const event = tr.annotation(Transaction.userEvent);
+            if (event === "select.pointer") {
+                return;
+            }
+        }
+
+        this.plugin.followCursor.cursorHandler(update);
+        this.plugin.cursorScroll.cursorHandler(update);
     }
 
     private wheelHandler(event: WheelEvent): void {
-        this.plugin.mousescroll.wheelHandler(event);
+        this.plugin.mouseScroll.wheelHandler(event);
+        this.plugin.cursorScroll.wheelHandler(event);
     }
 }

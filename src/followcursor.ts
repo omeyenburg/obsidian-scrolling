@@ -1,6 +1,5 @@
 import { Editor, MarkdownView } from "obsidian";
 import { ViewUpdate } from "@codemirror/view";
-import { Transaction } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -48,16 +47,6 @@ export class FollowCursor {
     }
 
     public cursorHandler(update: ViewUpdate): void {
-        // Always cancel if event was caused by mouse down/movement.
-        // This only checks if this update was caused by a mouse down event,
-        // but can't detect mouse up.
-        for (const tr of update.transactions) {
-            const event = tr.annotation(Transaction.userEvent);
-            if (event === "select.pointer") {
-                return;
-            }
-        }
-
         // Reset recentEdit, which was set by editHandler,
         // because cursorHandler is invoked after every edit.
         if (this.recentEdit) {
