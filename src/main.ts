@@ -6,7 +6,6 @@ import { CursorScroll } from "./cursorscroll";
 import { MouseScroll } from "./mousescroll";
 import { Scrollbar } from "./scrollbar";
 import { RestoreScroll } from "./restorescroll";
-import { LineWidth } from "./linewidth";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "./settings";
 
 export default class ScrollingPlugin extends Plugin {
@@ -17,7 +16,6 @@ export default class ScrollingPlugin extends Plugin {
     followCursor!: FollowCursor;
     mouseScroll!: MouseScroll;
     scrollbar!: Scrollbar;
-    lineWidth!: LineWidth;
 
     async onload() {
         await this.loadSettings();
@@ -28,7 +26,6 @@ export default class ScrollingPlugin extends Plugin {
         this.followCursor = new FollowCursor(this);
         this.mouseScroll = new MouseScroll(this);
         this.scrollbar = new Scrollbar(this);
-        this.lineWidth = new LineWidth(this);
 
         new Events(this);
 
