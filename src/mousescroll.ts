@@ -13,7 +13,7 @@ function mean(data: number[]): number {
 export class MouseScroll {
     private readonly plugin: ScrollingPlugin;
 
-    private touchpadLastUse = 0;
+    private touchpadLastUse = -Infinity;
     private touchpadFriction = 0;
     private touchpadVelocity = 0;
     private touchpadLastAnimation = 0;
@@ -25,7 +25,8 @@ export class MouseScroll {
     private static readonly MIN_VELOCITY = 0.01;
     private static readonly TOUCHPAD_GRACE_PERIOD = 50;
 
-    private static readonly START_SCROLL_THRESHOLD = 300;
+    private static readonly MIN_START_TRESHOLD = 200;
+    private static readonly MAX_START_TRESHOLD = 500;
 
     private intervalSum: number | null = null;
     private static readonly MAX_INTENSITY_INTERVAL = 600;
@@ -210,12 +211,12 @@ export class MouseScroll {
         }
 
         // Common mouse delta
-        if (event.deltaY % 120 == 0) {
+        if (event.deltaY % 120 === 0) {
             mouseScore += 0.3;
         }
 
         if (this.IS_MAC_OS) {
-            mouseScore -= 0.1
+            mouseScore -= 0.1;
         }
 
         // Wheel deltas over 100
@@ -229,9 +230,17 @@ export class MouseScroll {
         return false;
     }
 
+    private getIsStart(deltaTime: number): boolean {
+        const threshold = Math.min(
+            MouseScroll.MIN_START_TRESHOLD + this.avgDelay,
+            MouseScroll.MAX_START_TRESHOLD,
+        );
+
+        return deltaTime > threshold;
+    }
+
     public analyzeDelay(deltaTime: number): boolean {
-        // Detect start of scroll
-        const isStart = deltaTime > MouseScroll.START_SCROLL_THRESHOLD;
+        const isStart = this.getIsStart(deltaTime);
         if (isStart) {
             this.batchSizes.push(this.delays.length);
             if (this.batchSizes.length > MouseScroll.MAX_BATCH_SIZE_SAMPLES) {
@@ -259,9 +268,9 @@ export class MouseScroll {
             // modified EWMA (exponential weighted moving average)
             this.intervalSum =
                 this.intervalSum * (1 - MouseScroll.INTENSITY_SMOOTHING) +
-                deltaTime * MouseScroll.INTENSITY_SMOOTHING * Math.pow(deltaY, 2);
+                deltaTime * MouseScroll.INTENSITY_SMOOTHING * Math.max(Math.pow(deltaY, 2));
         } else {
-            this.intervalSum = Math.pow(deltaY, 2);
+            this.intervalSum = Math.max(Math.pow(deltaY, 2), 1);
         }
 
         // Normalize (approx.)
