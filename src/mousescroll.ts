@@ -22,7 +22,7 @@ export class MouseScroll {
     private mouseTarget: number;
     private mouseAnimationFrame: number;
     private static readonly MAX_FRICTION = 0.98;
-    private static readonly MIN_VELOCITY = 0.1;
+    private static readonly MIN_VELOCITY = 0.01;
     private static readonly TOUCHPAD_GRACE_PERIOD = 50;
 
     private static readonly START_SCROLL_THRESHOLD = 300;
@@ -41,8 +41,11 @@ export class MouseScroll {
     private static readonly BATCH_SIZE_THRESHOLD = 20;
     private static readonly MAX_BATCH_SIZE_SAMPLES = 3;
 
+    private readonly IS_MAC_OS: boolean;
+
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
+        this.IS_MAC_OS = window.navigator.userAgent.includes("Mac OS");
     }
 
     // Reset velocity on file change
@@ -154,7 +157,9 @@ export class MouseScroll {
             this.touchpadLastAnimation = now;
             if (deltaTime > 100) deltaTime = 16;
 
-            el.scrollTop += this.touchpadVelocity * deltaTime;
+            const dest = el.scrollTop + this.touchpadVelocity * deltaTime;
+            el.scrollTop = dest;
+            // this.touchpadVelocity += (el.scrollTop - dest) / deltaTime;
 
             this.touchpadVelocity *= this.touchpadFriction;
             this.touchpadFriction = Math.max(
@@ -207,6 +212,10 @@ export class MouseScroll {
         // Common mouse delta
         if (event.deltaY % 120 == 0) {
             mouseScore += 0.3;
+        }
+
+        if (this.IS_MAC_OS) {
+            mouseScore -= 0.1
         }
 
         // Wheel deltas over 100
