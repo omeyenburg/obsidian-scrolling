@@ -53,12 +53,12 @@ export class CursorScroll {
         this.relativeLineOffset = Math.max(0, Math.min(scrollDOM.clientHeight, relativeLineOffset));
     }
 
-    private applyScroll(element: HTMLElement): void {
+    private applyScroll(el: HTMLElement): void {
         if (!this.plugin.settings.cursorScrollEnabled) return;
         if (this.relativeLineOffset == null) return;
 
         const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor || editor.cm.scrollDOM !== element) return;
+        if (!editor || editor.cm.scrollDOM !== el) return;
         const cm = editor.cm;
 
         const scrollTop = cm.scrollDOM.scrollTop;
