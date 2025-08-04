@@ -10,18 +10,8 @@ function mean(data: number[]): number {
     return data.reduce((a, b) => a + b, 0) / data.length;
 }
 
-function isScrolledToTop(el: HTMLElement): boolean {
-    return el.scrollTop == 0;
-}
-
-function isScrolledToBottom(el: HTMLElement): boolean {
-    return Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
-}
-
 export class MouseScroll {
     private readonly plugin: ScrollingPlugin;
-
-    private lastScrollElement: HTMLElement;
 
     private touchpadLastUse = 0;
     private touchpadFriction = 0;
@@ -33,8 +23,8 @@ export class MouseScroll {
     private mouseAnimationFrame: number;
     private static readonly MAX_FRICTION = 0.98;
     private static readonly MIN_VELOCITY = 0.1;
+    private static readonly TOUCHPAD_GRACE_PERIOD = 50;
 
-    private lastEventTime = 0;
     private static readonly START_SCROLL_THRESHOLD = 300;
 
     private intervalSum: number | null = null;
@@ -50,89 +40,43 @@ export class MouseScroll {
     private avgBatchSize = MouseScroll.BATCH_SIZE_THRESHOLD;
     private static readonly BATCH_SIZE_THRESHOLD = 20;
     private static readonly MAX_BATCH_SIZE_SAMPLES = 3;
-    private static readonly TOUCHPAD_GRACE_PERIOD = 50;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
     }
 
+    // Reset velocity on file change
     public leafChangeHandler() {
-        // Reset velocity on file change
         this.touchpadVelocity = 0;
         window.cancelAnimationFrame(this.mouseAnimationFrame);
     }
 
-    public wheelHandler(event: WheelEvent) {
-        if (Platform.isMobile) return;
-        if (!this.plugin.settings.mouseEnabled) return;
-        if (!event.deltaY) return;
+    public applyCustomScroll(
+        event: WheelEvent,
+        el: HTMLElement,
+        now: number,
+        deltaTime: number,
+        isStart: boolean,
+    ) {
+        if (Platform.isMobile || !this.plugin.settings.mouseEnabled) return;
 
-        let el: HTMLElement | null = event.target as HTMLElement;
+        const deltaY = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
 
-        const now = performance.now();
-        const isStart = this.analyzeDelay(now);
-        this.lastEventTime = now;
-
-        // Attempt to use cached scroller
-        if (!isStart && this.lastScrollElement) {
-            if (this.isWithinScrollContext(el)) {
-                if (
-                    (event.deltaY < 0 && !isScrolledToTop(this.lastScrollElement)) ||
-                    (event.deltaY > 0 && !isScrolledToBottom(this.lastScrollElement))
-                ) {
-                    this.applyCustomScroll(event, this.lastScrollElement, now, isStart);
-                    return;
-                }
-            }
-        }
-
-        // Traverse DOM to find actual scrollable element
-        while (el && el != document.body) {
-            const { overflowY } = getComputedStyle(el);
-            if (
-                (overflowY === "auto" || overflowY === "scroll") &&
-                el.scrollHeight > el.clientHeight
-            ) {
-                // Handle nested scroll containers
-                if (isStart) {
-                    if (event.deltaY < 0 && isScrolledToTop(el)) {
-                        el = el.parentElement;
-                        continue;
-                    }
-                    if (event.deltaY > 0 && isScrolledToBottom(el)) {
-                        el = el.parentElement;
-                        continue;
-                    }
-                }
-
-                this.applyCustomScroll(event, el, now, isStart);
-                return;
-            }
-
-            el = el.parentElement;
-        }
-    }
-
-    private isWithinScrollContext(el: HTMLElement): boolean {
-        return el === this.lastScrollElement || this.lastScrollElement.contains(el);
-    }
-
-    private applyCustomScroll(event: WheelEvent, el: HTMLElement, now: number, isStart: boolean) {
-        const delta = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
-
-        if (this.plugin.settings.touchpadEnabled && this.isTouchpad(now, isStart, event)) {
-            this.startTouchpadScroll(el, delta);
+        if (
+            this.plugin.settings.touchpadEnabled &&
+            this.isTouchpad(event, now, deltaTime, isStart)
+        ) {
+            this.startTouchpadScroll(el, deltaY);
         } else {
-            this.startMouseScroll(el, delta);
+            this.startMouseScroll(el, deltaY);
         }
 
-        this.lastScrollElement = el;
         event.preventDefault();
     }
 
     // Really good approximation of the default scrolling in Obsidian.
     // Defaults: smoothness=150, speed=1
-    private startMouseScroll(el: HTMLElement, delta: number): void {
+    private startMouseScroll(el: HTMLElement, deltaY: number): void {
         if (!el) return;
         window.cancelAnimationFrame(this.mouseAnimationFrame);
 
@@ -140,19 +84,18 @@ export class MouseScroll {
         const speed = this.plugin.settings.mouseSpeed / 50;
         const invert = this.plugin.settings.mouseInvert ? -1 : 1;
 
-        const change = delta * speed * invert;
-
         const startTime = performance.now();
         if (this.mouseTarget && this.mouseLastUse && startTime - this.mouseLastUse < smoothness) {
             el.scrollTop = this.mouseTarget;
         }
         this.mouseLastUse = startTime;
 
-        let start = el.scrollTop;
-        this.mouseTarget = start + change;
+        const start = el.scrollTop;
+        const changeY = deltaY * speed * invert;
+        this.mouseTarget = start + changeY;
 
         // this.mouseAnimationFrame = window.requestAnimationFrame(() =>
-        this.animateMouseScroll(el, start, startTime, smoothness, change);
+        this.animateMouseScroll(el, start, startTime, smoothness, changeY);
         // );
     }
 
@@ -161,40 +104,40 @@ export class MouseScroll {
         start: number,
         startTime: number,
         smoothness: number,
-        change: number,
+        changeY: number,
     ) {
         const now = performance.now();
         let t = Math.min(1, (now - startTime) / smoothness);
         t = easeOut(t);
 
-        el.scrollTop = start + change * t;
+        el.scrollTop = start + changeY * t;
 
         if (t < 1) {
             this.mouseAnimationFrame = window.requestAnimationFrame(() =>
-                this.animateMouseScroll(el, start, startTime, smoothness, change),
+                this.animateMouseScroll(el, start, startTime, smoothness, changeY),
             );
         } else {
-            el.scrollTop = start + change;
+            el.scrollTop = start + changeY;
             this.mouseAnimationFrame = 0;
         }
     }
 
     // Similar to touchpad scrolling in obsidian.
     // Defaults: smoothness=0.75, speed=0.25, frictionThreshold=20
-    private startTouchpadScroll(el: HTMLElement, change: number): void {
+    private startTouchpadScroll(el: HTMLElement, deltaY: number): void {
         const smoothness = this.plugin.settings.touchpadSmoothness / 100;
         const speed = this.plugin.settings.touchpadSpeed / 200 / 16.6667;
         const frictionThreshold = this.plugin.settings.touchpadFrictionThreshold;
         const invert = this.plugin.settings.mouseInvert ? -1 : 1;
 
-        if (this.touchpadVelocity * change < 0) {
+        if (this.touchpadVelocity * deltaY < 0) {
             this.touchpadScrolling = false;
         }
 
-        this.touchpadVelocity += change * speed * invert;
+        this.touchpadVelocity += deltaY * speed * invert;
 
         this.touchpadFriction =
-            Math.min(1, (Math.abs(change) / frictionThreshold) ** 3) * smoothness;
+            Math.min(1, (Math.abs(deltaY) / frictionThreshold) ** 3) * smoothness;
 
         this.touchpadFriction = 0.8;
 
@@ -226,11 +169,17 @@ export class MouseScroll {
         }
     }
 
-    private isTouchpad(now: number, isStart: boolean, event: WheelEvent): boolean {
+    private isTouchpad(
+        event: WheelEvent,
+        now: number,
+        deltaTime: number,
+        isStart: boolean,
+    ): boolean {
         if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
             this.touchpadLastUse = 0;
             return false;
         }
+
         // Movement on both axes
         if (event.deltaX !== 0 && event.deltaY !== 0) {
             this.touchpadLastUse = now;
@@ -243,7 +192,7 @@ export class MouseScroll {
             return true;
         }
 
-        let mouseScore = this.getIntensity(event.deltaY);
+        let mouseScore = this.getIntensity(deltaTime, event.deltaY);
 
         if (isStart) {
             mouseScore += 0.1;
@@ -271,54 +220,39 @@ export class MouseScroll {
         return false;
     }
 
-    private analyzeDelay(now: number): boolean {
-        if (this.lastEventTime != 0) {
-            const delay = now - this.lastEventTime;
-
-            // detect start of scroll
-            const isStart = delay > MouseScroll.START_SCROLL_THRESHOLD;
-            if (isStart) {
-                this.batchSizes.push(this.delays.length);
-                if (this.batchSizes.length > MouseScroll.MAX_BATCH_SIZE_SAMPLES) {
-                    this.batchSizes.shift();
-                }
-                this.avgBatchSize = mean(this.batchSizes);
-
-                this.delays = [];
-                this.avgDelay = MouseScroll.WHEEL_DELAY_THRESHOLD;
-                return true;
+    public analyzeDelay(deltaTime: number): boolean {
+        // Detect start of scroll
+        const isStart = deltaTime > MouseScroll.START_SCROLL_THRESHOLD;
+        if (isStart) {
+            this.batchSizes.push(this.delays.length);
+            if (this.batchSizes.length > MouseScroll.MAX_BATCH_SIZE_SAMPLES) {
+                this.batchSizes.shift();
             }
+            this.avgBatchSize = mean(this.batchSizes);
 
-            // Store delay
-            this.delays.push(delay);
-            if (this.delays.length > MouseScroll.MAX_DELAY_SAMPLES) {
-                this.delays.shift(); // drop oldest
-            }
-
-            this.avgDelay = mean(this.delays);
-            return isStart;
-        } else {
+            this.delays = [];
             this.avgDelay = MouseScroll.WHEEL_DELAY_THRESHOLD;
             return true;
         }
+
+        // Store delay
+        this.delays.push(deltaTime);
+        if (this.delays.length > MouseScroll.MAX_DELAY_SAMPLES) {
+            this.delays.shift(); // drop oldest
+        }
+
+        this.avgDelay = mean(this.delays);
+        return isStart;
     }
 
-    private getIntensity(delta: number): number {
-        const now = performance.now();
-
-        if (this.lastEventTime != 0) {
-            const interval = now - this.lastEventTime;
-
-            if (interval < MouseScroll.MAX_INTENSITY_INTERVAL && this.intervalSum !== null) {
-                // modified EWMA (exponential weighted moving average)
-                this.intervalSum =
-                    this.intervalSum * (1 - MouseScroll.INTENSITY_SMOOTHING) +
-                    interval * MouseScroll.INTENSITY_SMOOTHING * Math.pow(delta, 2);
-            } else {
-                this.intervalSum = Math.pow(delta, 2);
-            }
+    private getIntensity(deltaTime: number, deltaY: number): number {
+        if (deltaTime < MouseScroll.MAX_INTENSITY_INTERVAL && this.intervalSum !== null) {
+            // modified EWMA (exponential weighted moving average)
+            this.intervalSum =
+                this.intervalSum * (1 - MouseScroll.INTENSITY_SMOOTHING) +
+                deltaTime * MouseScroll.INTENSITY_SMOOTHING * Math.pow(deltaY, 2);
         } else {
-            this.intervalSum = Math.pow(delta, 2);
+            this.intervalSum = Math.pow(deltaY, 2);
         }
 
         // Normalize (approx.)
