@@ -1,6 +1,5 @@
 import { Editor, Debouncer, debounce } from "obsidian";
 import { EditorSelection } from "@codemirror/state";
-import { ViewUpdate } from "@codemirror/view";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -9,7 +8,7 @@ export class CursorScroll {
     private relativeLineOffset: number | null = null;
 
     public skipCursor = false;
-    private readonly resetSkip: Debouncer<[void],void>;
+    private readonly resetSkip: Debouncer<[void], void>;
     private static readonly CURSOR_SKIP_DELAY = 500;
 
     public readonly wheelHandler: Debouncer<[HTMLElement], void>;
@@ -21,7 +20,9 @@ export class CursorScroll {
         this.plugin = plugin;
 
         this.resetSkip = debounce(
-            () => {this.skipCursor = false},
+            () => {
+                this.skipCursor = false;
+            },
             CursorScroll.CURSOR_SKIP_DELAY,
             true,
         );
@@ -31,6 +32,8 @@ export class CursorScroll {
             CursorScroll.UPDATE_INTERVAL,
             false,
         );
+
+        window.requestAnimationFrame(this.cursorHandler.bind(this));
     }
 
     public leafChangeHandler(): void {
@@ -38,10 +41,16 @@ export class CursorScroll {
     }
 
     // Store the offset from the scroll top
-    public cursorHandler(update: ViewUpdate): void {
-        const cm = update.view;
-        const block = cm.lineBlockAt(update.state.selection.main.head);
-        this.relativeLineOffset = block.top - cm.scrollDOM.scrollTop;
+    public cursorHandler(): void {
+        const editor = this.plugin.app.workspace.activeEditor?.editor;
+        if (!editor) return;
+        const block = editor.cm.lineBlockAt(editor.posToOffset(editor.getCursor()));
+        const scrollDOM = editor.cm.scrollDOM;
+        const relativeLineOffset =
+            (block.top + block.bottom) / 2 -
+            scrollDOM.scrollTop +
+            scrollDOM.getBoundingClientRect().top;
+        this.relativeLineOffset = Math.max(0, Math.min(scrollDOM.clientHeight, relativeLineOffset));
     }
 
     private applyScroll(element: HTMLElement): void {

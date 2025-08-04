@@ -65,9 +65,9 @@ export class FollowCursor {
         // Cancel if mouse up, unless this setting allows it.
         if (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse) return;
 
-    // Cancel if selecting, unless this setting allows it.
-    if (!this.plugin.settings.followCursorEnableSelection)
-        if (markdownView.editor.somethingSelected()) return;
+        // Cancel if selecting, unless this setting allows it.
+        if (!this.plugin.settings.followCursorEnableSelection)
+            if (markdownView.editor.somethingSelected()) return;
 
         this.invokeScroll(markdownView.editor);
     }
@@ -107,13 +107,13 @@ export class FollowCursor {
     }
 
     private animate(editor: Editor, goal: number, stepSize: number, step: number): void {
-            if (step <= 0) return;
+        if (step <= 0) return;
 
-            editor.scrollTo(null, goal - stepSize * (step - 1));
-            this.animationFrame = window.requestAnimationFrame(() =>
-                this.animate(editor, goal, stepSize, step - 1),
-            );
-        };
+        editor.scrollTo(null, goal - stepSize * (step - 1));
+        this.animationFrame = window.requestAnimationFrame(() =>
+            this.animate(editor, goal, stepSize, step - 1),
+        );
+    }
 
     private calculateScrollIntensity(): void {
         const time = performance.now();

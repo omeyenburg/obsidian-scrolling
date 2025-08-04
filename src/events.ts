@@ -227,7 +227,7 @@ export class Events {
         }
 
         this.plugin.followCursor.cursorHandler();
-        this.plugin.cursorScroll.cursorHandler(update);
+        this.plugin.cursorScroll.cursorHandler();
     }
 
     private isWithinScrollContext(el: HTMLElement): boolean {
