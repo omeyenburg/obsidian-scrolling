@@ -18,6 +18,7 @@ export class MouseScroll {
     private touchpadVelocity = 0;
     private touchpadLastAnimation = 0;
     private touchpadScrolling = false;
+    private touchpadAnimation = 0;
     private mouseLastUse = 0;
     private mouseTarget: number;
     private mouseAnimationFrame: number;
@@ -41,6 +42,9 @@ export class MouseScroll {
     private avgBatchSize = MouseScroll.BATCH_SIZE_THRESHOLD;
     private static readonly BATCH_SIZE_THRESHOLD = 20;
     private static readonly MAX_BATCH_SIZE_SAMPLES = 3;
+
+    private currentEl: HTMLElement | null = null;
+    private static readonly DEFAULT_FRAME_TIME = 16.67;
 
     private readonly IS_MAC_OS: boolean;
 
@@ -129,23 +133,34 @@ export class MouseScroll {
     // Similar to touchpad scrolling in obsidian.
     // Defaults: smoothness=0.75, speed=0.25, frictionThreshold=20
     private startTouchpadScroll(el: HTMLElement, deltaY: number): void {
+        if (el !== this.currentEl) {
+            window.cancelAnimationFrame(this.touchpadAnimation);
+            window.requestAnimationFrame(
+                this.decoupledTouchpadScroll.bind(
+                    this,
+                    this.currentEl,
+                    this.touchpadVelocity,
+                    this.touchpadFriction,
+                ),
+            );
+
+            this.currentEl = el;
+            this.touchpadScrolling = false;
+            this.touchpadVelocity = 0;
+            this.touchpadLastAnimation = 0;
+        }
+
         const smoothness = this.plugin.settings.touchpadSmoothness / 100;
-        const speed = this.plugin.settings.touchpadSpeed / 200 / 16.6667;
+        const speed = this.plugin.settings.touchpadSpeed / 200 / MouseScroll.DEFAULT_FRAME_TIME;
         const frictionThreshold = this.plugin.settings.touchpadFrictionThreshold;
         const invert = this.plugin.settings.mouseInvert ? -1 : 1;
-
-        if (this.touchpadVelocity * deltaY < 0) {
-            this.touchpadScrolling = false;
-        }
 
         this.touchpadVelocity += deltaY * speed * invert;
 
         this.touchpadFriction =
             Math.min(1, (Math.abs(deltaY) / frictionThreshold) ** 3) * smoothness;
 
-        this.touchpadFriction = 0.8;
-
-        if (!this.touchpadScrolling) {
+        if (!this.touchpadScrolling || Math.abs(this.touchpadVelocity) < MouseScroll.MIN_VELOCITY) {
             this.touchpadScrolling = true;
             this.animateTouchpadScroll(el);
         }
@@ -154,24 +169,38 @@ export class MouseScroll {
     private animateTouchpadScroll(el: HTMLElement) {
         if (Math.abs(this.touchpadVelocity) > MouseScroll.MIN_VELOCITY) {
             const now = performance.now();
-            let deltaTime = now - this.touchpadLastAnimation;
+            const deltaTime = Math.max(8, Math.min(now - this.touchpadLastAnimation, 60));
             this.touchpadLastAnimation = now;
-            if (deltaTime > 100) deltaTime = 16;
 
             const dest = el.scrollTop + this.touchpadVelocity * deltaTime;
             el.scrollTop = dest;
-            // this.touchpadVelocity += (el.scrollTop - dest) / deltaTime;
 
             this.touchpadVelocity *= this.touchpadFriction;
             this.touchpadFriction = Math.max(
                 0,
                 Math.min(MouseScroll.MAX_FRICTION, this.touchpadFriction + 0.05),
             );
-            window.requestAnimationFrame(() => this.animateTouchpadScroll(el));
+
+            this.touchpadAnimation = window.requestAnimationFrame(() =>
+                this.animateTouchpadScroll(el),
+            );
         } else {
             this.touchpadScrolling = false;
             this.touchpadVelocity = 0;
             this.touchpadLastAnimation = 0;
+            this.touchpadAnimation = 0;
+        }
+    }
+
+    private decoupledTouchpadScroll(el: HTMLElement, velocity: number, friction: number) {
+        if (Math.abs(velocity) > MouseScroll.MIN_VELOCITY) {
+            el.scrollTop = el.scrollTop + velocity * MouseScroll.DEFAULT_FRAME_TIME;
+            velocity *= friction;
+            friction = Math.max(0, Math.min(MouseScroll.MAX_FRICTION, friction + 0.05));
+            window.setTimeout(
+                () => this.decoupledTouchpadScroll(el, velocity, friction),
+                MouseScroll.DEFAULT_FRAME_TIME,
+            );
         }
     }
 

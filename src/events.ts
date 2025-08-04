@@ -1,4 +1,4 @@
-import { View, Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf } from "obsidian";
+import { View, Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf, debounce } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
@@ -20,7 +20,7 @@ export class Events {
     private readonly scrollHandler: (event: Event) => void;
 
     private lastWheelEventTime = 0;
-    private lastWheelScrollElement: HTMLElement;
+    private lastWheelScrollElement: HTMLElement | null;
 
     private static readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
     private static readonly IMAGE_EXTENSIONS = new Set([
