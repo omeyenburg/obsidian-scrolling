@@ -22,7 +22,7 @@ export class Scrollbar {
     }
 
     public scrollHandler(event: Event): void {
-        this.showScrollbarTemporary(event)
+        this.showScrollbarTemporary(event);
     }
 
     private showScrollbarTemporary(event: Event) {
