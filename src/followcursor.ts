@@ -46,16 +46,13 @@ export class FollowCursor {
         this.invokeScroll(editor);
     }
 
-    public cursorHandler(update: ViewUpdate): void {
+    public cursorHandler(): void {
         // Reset recentEdit, which was set by editHandler,
         // because cursorHandler is invoked after every edit.
         if (this.recentEdit) {
             this.recentEdit = false;
             return;
         }
-
-        // Only proceed if its a cursor event.
-        if (!update.selectionSet) return;
 
         // Get the editor
         const markdownView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
@@ -65,12 +62,12 @@ export class FollowCursor {
             this.plugin.restoreScroll.storeStateDebounced(markdownView.file);
         }
 
-        // Cancel if selecting, unless this setting allows it.
-        if (!this.plugin.settings.followCursorEnableSelection)
-            if (markdownView.editor.somethingSelected()) return;
-
         // Cancel if mouse up, unless this setting allows it.
         if (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse) return;
+
+    // Cancel if selecting, unless this setting allows it.
+    if (!this.plugin.settings.followCursorEnableSelection)
+        if (markdownView.editor.somethingSelected()) return;
 
         this.invokeScroll(markdownView.editor);
     }

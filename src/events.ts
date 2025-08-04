@@ -208,6 +208,14 @@ export class Events {
     }
 
     private cursorHandler(update: ViewUpdate): void {
+        if (this.plugin.cursorScroll.skipCursor) {
+            this.plugin.cursorScroll.skipCursor = false;
+            return;
+        }
+
+        // Only proceed if its a cursor event.
+        if (!update.selectionSet) return;
+
         // Always cancel if event was caused by mouse down/movement.
         // This only checks if this update was caused by a mouse down event,
         // but can't detect mouse up.
@@ -218,7 +226,7 @@ export class Events {
             }
         }
 
-        this.plugin.followCursor.cursorHandler(update);
+        this.plugin.followCursor.cursorHandler();
         this.plugin.cursorScroll.cursorHandler(update);
     }
 
