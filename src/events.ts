@@ -5,12 +5,22 @@ import { around } from "monkey-around";
 
 import type { default as ScrollingPlugin } from "./main";
 
+function isScrolledToTop(el: HTMLElement): boolean {
+    return el.scrollTop == 0;
+}
+
+function isScrolledToBottom(el: HTMLElement): boolean {
+    return Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
+}
+
 export class Events {
     private readonly plugin: ScrollingPlugin;
 
     private scrollEventSkip = false;
-
     private readonly scrollHandler: (event: Event) => void;
+
+    private lastWheelEventTime = 0;
+    private lastWheelScrollElement: HTMLElement;
 
     private static readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
     private static readonly IMAGE_EXTENSIONS = new Set([
@@ -157,6 +167,7 @@ export class Events {
 
     private leafChangeHandler(): void {
         this.plugin.mouseScroll.leafChangeHandler();
+        this.plugin.cursorScroll.leafChangeHandler();
         this.attachScrollHandler();
     }
 
@@ -211,8 +222,75 @@ export class Events {
         this.plugin.cursorScroll.cursorHandler(update);
     }
 
+    private isWithinScrollContext(el: HTMLElement): boolean {
+        return el === this.lastWheelScrollElement || this.lastWheelScrollElement.contains(el);
+    }
+
     private wheelHandler(event: WheelEvent): void {
-        this.plugin.mouseScroll.wheelHandler(event);
-        this.plugin.cursorScroll.wheelHandler();
+        if (!event.deltaY) return;
+        if (
+            !(
+                (Platform.isDesktop && this.plugin.settings.mouseEnabled) ||
+                this.plugin.settings.cursorScrollEnabled
+            )
+        )
+            return;
+
+        let el: HTMLElement | null = event.target as HTMLElement;
+
+        const now = performance.now();
+        const deltaTime = now - this.lastWheelEventTime;
+        this.lastWheelEventTime = now;
+
+        const isStart = this.plugin.mouseScroll.analyzeDelay(deltaTime);
+
+        // Attempt to use cached scroller
+        if (!isStart && this.lastWheelScrollElement) {
+            if (this.isWithinScrollContext(el)) {
+                if (
+                    (event.deltaY < 0 && !isScrolledToTop(this.lastWheelScrollElement)) ||
+                    (event.deltaY > 0 && !isScrolledToBottom(this.lastWheelScrollElement))
+                ) {
+                    this.plugin.mouseScroll.applyCustomScroll(
+                        event,
+                        this.lastWheelScrollElement,
+                        now,
+                        deltaTime,
+                        isStart,
+                    );
+
+                    this.plugin.cursorScroll.wheelHandler(this.lastWheelScrollElement);
+                    return;
+                }
+            }
+        }
+
+        // Traverse DOM to find actual scrollable element
+        while (el && el != document.body) {
+            const { overflowY } = getComputedStyle(el);
+            if (
+                (overflowY === "auto" || overflowY === "scroll") &&
+                el.scrollHeight > el.clientHeight
+            ) {
+                // Handle nested scroll containers
+                if (isStart) {
+                    if (event.deltaY < 0 && isScrolledToTop(el)) {
+                        el = el.parentElement;
+                        continue;
+                    }
+                    if (event.deltaY > 0 && isScrolledToBottom(el)) {
+                        el = el.parentElement;
+                        continue;
+                    }
+                }
+
+                this.plugin.mouseScroll.applyCustomScroll(event, el, now, deltaTime, isStart);
+                this.plugin.cursorScroll.wheelHandler(el);
+                this.lastWheelScrollElement = el;
+                return;
+            }
+
+            el = el.parentElement;
+        }
     }
 }
