@@ -8,27 +8,34 @@ Feel free to contribute or leave a star if you like this plugin :)
 
 ## Features
 
-Each feature can be toggled and configured individually via the plugin settings.
+Each feature is fully optional and can be toggled or configured in the plugin settings.
 
-#### Follow Cursor
+#### Scroll follows cursor
 
-- Scrolls automatically while editing or navigating in a file.
-- Also known as _typewriter mode_ or _`scrolloff`_ in vim.
+- By default, Obsidian only scrolls when the cursor reaches the edge of the viewport.
+- This feature automatically scrolls the view to keep the text cursor near the center while editing or navigating.
+- Also known as '_typewriter mode_' or similar to '_scrolloff_' in Vim.
+- Can be used together with '_Cursor follows scroll_'.
+
+#### Cursor follows scroll (Desktop only)
+
+- Normally, Obsidian allows the text cursor to move out of view when scrolling with the mouse or touchpad.
+- With this feature enabled, the text cursor is automatically moved to stay within view as you scroll.
+- Can be used together with '_Scroll follows cursor_'.
 
 #### Remember Scroll Position
 
-- Saves your scroll position when closing a file.
-- Restores it when reopening the file later.
+- By default, Obsidian will always open files and place you at the top.
+- This feature saves your scroll position when closing a file and restores it when reopening the file later.
 
 #### Scrollbar Customization
 
-- Change the appearance of scrollbars.
-- Add or remove individual scrollbars.
-- Show scrollbars only when necessary.
+- Customize when the scrollbar is shown or hidden.
+- Optionally enable individual scrollbars.
 
-#### Mouse & Touchpad Scrolling
+#### Mouse & Touchpad Scrolling (Experimental, Desktop only)
 
-- Customize mouse wheel and touchpad behavior.
+- Change the speed and smoothness of scrolling with mouse and touchpad.
 
 ---
 
@@ -44,11 +51,11 @@ Each feature can be toggled and configured individually via the plugin settings.
 
 1. Open your vault in your terminal and navigate into *.obsidian/plugins*.
 2. Clone the repo:
-   ```
+   ```sh
    git clone https://github.com/omeyenburg/obsidian-scrolling.git
    ```
 3. Build the plugin:
-   ```
+   ```sh
    cd obsidian-scrolling
    npm install
    npm run build
@@ -71,8 +78,12 @@ Contributions are welcome! Feel free to open an issue or submit a pull request.
 To start developing:
 1. Follow the [Manual installation](#manual-installation) steps.
 2. Run the plugin in development mode, which will automatically rebuild the plugin on file changes:
-   ```
+   ```sh
    npm run dev
+   ```
+3. Run tests:
+   ```sh
+   npm run test
    ```
 
 ## Similar projects
