@@ -9,8 +9,8 @@ export interface ScrollingPluginSettings {
     followCursorSmoothness: number;
     followCursorInstantEditScroll: boolean;
     followCursorEnableMouse: boolean;
-    followCursorEnableSelection: boolean;
-    followCursorDynamicAnimation: boolean;
+    followCursorEnableSelection: boolean; // Not exposed in the settings
+    followCursorDynamicAnimation: boolean; // Not exposed in the settings
 
     cursorScrollEnabled: boolean;
 
@@ -25,11 +25,11 @@ export interface ScrollingPluginSettings {
     scrollbarFileTreeHorizontal: boolean;
 
     mouseEnabled: boolean;
-    mouseInvert: boolean;
+    mouseInvert: boolean; // Not exposed in the settings
     mouseSpeed: number;
     mouseSmoothness: number;
 
-    touchpadEnabled: boolean;
+    touchpadEnabled: boolean; // Not exposed in the settings. Only enables touchpad detection.
     touchpadSmoothness: number;
     touchpadFrictionThreshold: number;
     touchpadSpeed: number;
@@ -88,36 +88,60 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.scrollbarSettings();
         this.mouseScrollSettings();
 
+        this.createHeading("Issues & feature requests").setDesc(
+            createFragment((frag) => {
+                frag.createEl("span", {
+                    text: "To report bugs or provide feedback, please use the ",
+                });
+                frag.createEl("a", {
+                    text: "issue tracker",
+                    href: "https://github.com/omeyenburg/obsidian-scrolling/issues",
+                });
+                frag.createEl("span", {
+                    text: " and the ",
+                });
+                frag.createEl("a", {
+                    text: "discussion page",
+                    href: "https://github.com/omeyenburg/obsidian-scrolling/discussions",
+                });
+                frag.createEl("span", {
+                    text: ".",
+                });
+            }),
+        );
         this.containerEl.scrollTop = previousScrollTop;
     }
 
-    createHeading(name: string, desc?: string): void {
+    private setDesc(setting: Setting, desc: string): void {
+        if (!desc) return;
+        if (!desc.includes("\n")) {
+            setting.setDesc(desc);
+            return;
+        }
+        const lines = desc.split("\n");
+
+        setting.setDesc(
+            createFragment((frag) =>
+                lines.forEach((line, index) => {
+                    frag.createEl("span", { text: line });
+                    if (index < lines.length - 1) {
+                        frag.createEl("br");
+                    }
+                }),
+            ),
+        );
+    }
+
+    createHeading(name: string, desc?: string): Setting {
         const heading = new Setting(this.containerEl).setName(name).setHeading();
-        if (desc) heading.setDesc(desc);
+        this.setDesc(heading, desc);
         this.settingsEnabled = true;
+        return heading;
     }
 
     createSetting(name: string, desc?: string, onReset?: () => void): Setting {
         const setting = new Setting(this.containerEl).setName(name);
-
-        if (desc) {
-            if (desc.includes("\n")) {
-                const lines = desc.split("\n");
-
-                setting.setDesc(
-                    createFragment((frag) =>
-                        lines.forEach((line, index) => {
-                            frag.createEl("span", { text: line });
-                            if (index < lines.length - 1) {
-                                frag.createEl("br");
-                            }
-                        }),
-                    ),
-                );
-            } else {
-                setting.setDesc(desc);
-            }
-        }
+        this.setDesc(setting, desc);
 
         if (onReset) {
             setting.addExtraButton((button) => {
@@ -157,9 +181,12 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private followCursorSettings() {
-        this.createHeading("Scroll when you move the cursor");
+        this.createHeading("Scroll follows text cursor");
 
-        this.createSetting("Enable scroll follows cursor", "Keep the cursor near the center.").addToggle((toggle) =>
+        this.createSetting(
+            "Enable",
+            "Scroll the view to keep the cursor near the center when you move the cursor.\nCan be used together with 'Text cursor follows scroll'.",
+        ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.followCursorEnabled).onChange(async (value) => {
                 this.plugin.settings.followCursorEnabled = value;
                 this.display();
@@ -184,8 +211,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
 
         this.createSetting(
-            "Animation duration",
-            "Length of the scrolling animation.",
+            "Animation smoothness",
+            "Duration of the scroll animation.",
             () =>
                 (this.plugin.settings.followCursorSmoothness =
                     DEFAULT_SETTINGS.followCursorSmoothness),
@@ -211,79 +238,78 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        this.createSetting(
-            "Dynamic animations",
-            "If many scroll events happen quickly, skip animation frames to improve responsiveness.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.followCursorDynamicAnimation)
-                .onChange(async (value) => {
-                    this.plugin.settings.followCursorDynamicAnimation = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
+        // this.createSetting(
+        //     "Dynamic animations",
+        //     "If many scroll events happen quickly, skip animation frames to improve responsiveness.",
+        // ).addToggle((toggle) =>
+        //     toggle
+        //         .setValue(this.plugin.settings.followCursorDynamicAnimation)
+        //         .onChange(async (value) => {
+        //             this.plugin.settings.followCursorDynamicAnimation = value;
+        //             await this.plugin.saveSettings();
+        //         }),
+        // );
 
-        if (Platform.isDesktop) {
-            this.createSetting(
-                "Trigger on mouse interactions",
-                "Update when the cursor is moved using the mouse.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.followCursorEnableMouse)
-                    .onChange(async (value) => {
-                        this.plugin.settings.followCursorEnableMouse = value;
-                        this.display();
-                        await this.plugin.saveSettings();
-                    }),
-            );
+        // if (Platform.isDesktop) {
+        //     this.createSetting(
+        //         "Trigger on mouse interactions",
+        //         "Update when the cursor is moved using the mouse.",
+        //     ).addToggle((toggle) =>
+        //         toggle
+        //             .setValue(this.plugin.settings.followCursorEnableMouse)
+        //             .onChange(async (value) => {
+        //                 this.plugin.settings.followCursorEnableMouse = value;
+        //                 this.display();
+        //                 await this.plugin.saveSettings();
+        //             }),
+        //     );
 
-            this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
-
-            this.createSetting(
-                "Trigger on mouse selection",
-                "Also update when text is selected using the mouse.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.followCursorEnableSelection)
-                    .onChange(async (value) => {
-                        this.plugin.settings.followCursorEnableSelection = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
+        //     this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
+        //     this.createSetting(
+        //         "Trigger on mouse selection",
+        //         "Also update when text is selected using the mouse.",
+        //     ).addToggle((toggle) =>
+        //         toggle
+        //             .setValue(this.plugin.settings.followCursorEnableSelection)
+        //             .onChange(async (value) => {
+        //                 this.plugin.settings.followCursorEnableSelection = value;
+        //                 await this.plugin.saveSettings();
+        //             }),
+        //     );
+        // }
     }
 
     private cursorScrollSettings() {
+        if (Platform.isMobile) return;
+
         this.containerEl.createEl("br");
-        this.createHeading(
-            "Move cursor when you scroll",
-        );
+        this.createHeading("Text cursor follows scroll");
+
         this.createSetting(
-            "Enable cursor follows scroll",
+            "Enable",
+            "Move the cursor to stay visible when scrolling manually.\nCan be used together with 'Scroll follows text cursor'.",
         ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.cursorScrollEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.cursorScrollEnabled = value;
-                    await this.plugin.saveSettings();
-                }),
+            toggle.setValue(this.plugin.settings.cursorScrollEnabled).onChange(async (value) => {
+                this.plugin.settings.cursorScrollEnabled = value;
+                await this.plugin.saveSettings();
+            }),
         );
     }
 
     private restoreScrollSettings() {
         this.containerEl.createEl("br");
         this.createHeading(
-            "Remember scroll position",
-            "Save scroll position or cursor position before closing a file and restore it when opening the file again.",
+            "Remember scroll/cursor position",
+            "Automatically save your position before closing a file and restore it upon opening the file again.",
         );
 
         this.createSetting(
-            "Enabled",
-            "Choose to start at the top/bottom of the file, or restore the last cursor position or last scroll position.",
+            "Mode",
+            "Start at the top/bottom of the file, or restore the cursor or scroll position.",
             () => (this.plugin.settings.restoreScrollMode = DEFAULT_SETTINGS.restoreScrollMode),
         ).addDropdown((dropdown) =>
             dropdown
-                .addOption("top", "Start at top")
+                .addOption("top", "Start at top (Obsidian's default)")
                 .addOption("bottom", "Start at bottom")
                 .addOption("cursor", "Restore cursor position")
                 .addOption("scroll", "Restore scroll position")
@@ -302,7 +328,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const count = this.plugin.restoreScroll.countEphemeralStates();
         this.createSetting(
             "Saved positions limit",
-            `Number of files to remember scroll positions for.\nCurrently positions ${count} for file${count == 1 ? "" : "s"} are stored.`,
+            `Number of files to remember scroll positions for. Leave empty for unlimited.\nCurrently positions for ${count} file${count == 1 ? "" : "s"} are stored.`,
             () => (this.plugin.settings.restoreScrollLimit = DEFAULT_SETTINGS.restoreScrollLimit),
         ).addText((input) => {
             input
@@ -326,7 +352,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Restore position in other files",
-            "Save and restore scroll position in markdown preview, image and pdf files.",
+            "Enable restoring scroll position in Markdown preview, images, and PDFs.",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.restoreScrollAllFiles).onChange(async (value) => {
                 this.plugin.settings.restoreScrollAllFiles = value;
@@ -336,7 +362,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Store positions in file",
-            "Store scroll & cursor positions locally in a file to persist across Obsidian restarts.",
+            "Save positions inside a file to keep them after Obsidian restarts.",
         ).addToggle((toggle) =>
             toggle
                 .setValue(this.plugin.settings.restoreScrollFileEnabled)
@@ -395,7 +421,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             const resetButton = buttonRow.createDiv({
                 cls: "clickable-icon extra-setting-button",
             });
-            if (this.settingsEnabled) resetButton.setAttr("aria-label", "Restore saved setting");
+            if (this.settingsEnabled) resetButton.setAttr("aria-label", "Cancel changes");
             setIcon(resetButton, "reset");
             resetButton.onclick = () => {
                 if (this.proposedRestoreScrollStoreFile === null) return;
@@ -414,25 +440,10 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.containerEl.createEl("br");
         this.createHeading("Scrollbar appearance");
 
-        if (Platform.isDesktop) {
-            this.createSetting(
-                "Show horizontal scrollbar in file tree",
-                "Allow horizontal scrolling in the file tree and add a horizontal scrollbar.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.scrollbarFileTreeHorizontal)
-                    .onChange(async (value) => {
-                        this.plugin.settings.scrollbarFileTreeHorizontal = value;
-                        this.plugin.scrollbar.updateStyle();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
-
         if (!Platform.isMacOS) {
             this.createSetting(
                 "Scrollbar visibility",
-                "When to show the scrollbar in markdown/pdf files.",
+                "When to show the scrollbar in notes and PDFs.",
                 () => {
                     this.plugin.settings.scrollbarVisibility = DEFAULT_SETTINGS.scrollbarVisibility;
                     this.plugin.scrollbar.updateStyle();
@@ -450,24 +461,39 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+        }
 
-            if (Platform.isLinux) {
-                this.settingsEnabled = this.plugin.settings.scrollbarVisibility !== "hide";
+        if (Platform.isLinux && Platform.isDesktop) {
+            this.settingsEnabled = this.plugin.settings.scrollbarVisibility !== "hide";
 
-                this.createSetting("Scrollbar thickness", "Width of scrollbars in pixels.", () => {
-                    this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
-                    this.plugin.scrollbar.updateStyle();
-                }).addSlider((slider) =>
-                    slider
-                        .setValue(this.plugin.settings.scrollbarWidth)
-                        .setLimits(0, 30, 1)
-                        .onChange(async (value) => {
-                            this.plugin.settings.scrollbarWidth = value;
-                            this.plugin.scrollbar.updateStyle();
-                            await this.plugin.saveSettings();
-                        }),
-                );
-            }
+            this.createSetting("Scrollbar thickness", "Scrollbar width in pixels.", () => {
+                this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
+                this.plugin.scrollbar.updateStyle();
+            }).addSlider((slider) =>
+                slider
+                    .setValue(this.plugin.settings.scrollbarWidth)
+                    .setLimits(0, 30, 1)
+                    .onChange(async (value) => {
+                        this.plugin.settings.scrollbarWidth = value;
+                        this.plugin.scrollbar.updateStyle();
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
+
+        if (Platform.isDesktop) {
+            this.createSetting(
+                "Horizontal scrollbar in file tree",
+                "Allow horizontal scrolling in the file tree and show the scrollbar.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.scrollbarFileTreeHorizontal)
+                    .onChange(async (value) => {
+                        this.plugin.settings.scrollbarFileTreeHorizontal = value;
+                        this.plugin.scrollbar.updateStyle();
+                        await this.plugin.saveSettings();
+                    }),
+            );
         }
     }
 
@@ -477,30 +503,29 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.containerEl.createEl("br");
         this.createHeading("Mouse & Touchpad (Experimental)");
 
-        this.createSetting("Enabled", "Enable custom mouse/touchpad scrolling behavior.").addToggle(
-            (toggle) =>
-                toggle.setValue(this.plugin.settings.mouseEnabled).onChange(async (value) => {
-                    this.plugin.settings.mouseEnabled = value;
-                    this.display();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        this.settingsEnabled = this.plugin.settings.mouseEnabled;
-
-        this.createSetting(
-            "Invert scroll direction",
-            "Reverse the scroll direction for mouse wheel and touchpad input.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
-                this.plugin.settings.mouseInvert = value;
+        this.createSetting("Enable", "Enable custom scrolling behavior.").addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.mouseEnabled).onChange(async (value) => {
+                this.plugin.settings.mouseEnabled = value;
+                this.display();
                 await this.plugin.saveSettings();
             }),
         );
 
+        this.settingsEnabled = this.plugin.settings.mouseEnabled;
+
+        // this.createSetting(
+        //     "Invert scroll direction",
+        //     "Reverse the scroll direction for mouse wheel and touchpad input.",
+        // ).addToggle((toggle) =>
+        //     toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
+        //         this.plugin.settings.mouseInvert = value;
+        //         await this.plugin.saveSettings();
+        //     }),
+        // );
+
         this.createSetting(
-            "Scroll speed",
-            "How far the page scrolls per mouse wheel movement.",
+            "Mouse scroll speed",
+            "How far the page scrolls.",
             () => (this.plugin.settings.mouseSpeed = DEFAULT_SETTINGS.mouseSpeed),
         ).addSlider((slider) =>
             slider
@@ -513,8 +538,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
 
         this.createSetting(
-            "Scroll smoothness",
-            "Duration of the scrolling animation.",
+            "Mouse scroll smoothness",
+            "Duration of the scroll animation.",
             () => (this.plugin.settings.mouseSmoothness = DEFAULT_SETTINGS.mouseSmoothness),
         ).addSlider((slider) =>
             slider
@@ -526,22 +551,21 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        this.createSetting(
-            "Touchpad detection",
-            "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.touchpadEnabled).onChange(async (value) => {
-                this.plugin.settings.touchpadEnabled = value;
-                this.display();
-                await this.plugin.saveSettings();
-            }),
-        );
-
-        this.settingsEnabled &&= this.plugin.settings.touchpadEnabled;
+        // this.createSetting(
+        //     "Touchpad detection",
+        //     "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
+        // ).addToggle((toggle) =>
+        //     toggle.setValue(this.plugin.settings.touchpadEnabled).onChange(async (value) => {
+        //         this.plugin.settings.touchpadEnabled = value;
+        //         this.display();
+        //         await this.plugin.saveSettings();
+        //     }),
+        // );
+        // this.settingsEnabled &&= this.plugin.settings.touchpadEnabled;
 
         this.createSetting(
             "Touchpad scroll speed",
-            "How fast the page scrolls on touchpad movement.",
+            "How far the page scrolls.",
             () => (this.plugin.settings.touchpadSpeed = DEFAULT_SETTINGS.touchpadSpeed),
         ).addSlider((slider) =>
             slider
@@ -555,7 +579,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Touchpad scroll smoothness",
-            "Scroll smoothness when using a touchpad.",
+            "Duration of the scroll animation.",
             () => (this.plugin.settings.touchpadSmoothness = DEFAULT_SETTINGS.touchpadSmoothness),
         ).addSlider((slider) =>
             slider
@@ -569,7 +593,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Touchpad friction threshold",
-            "Threshold between precise and smooth scrolling. Defines how much finger movement is needed before scrolling decelerates and stops.",
+            "Threshold between precise and smooth scrolling.\nDefines how much finger movement is needed before scrolling decelerates and stops.",
             () =>
                 (this.plugin.settings.touchpadFrictionThreshold =
                     DEFAULT_SETTINGS.touchpadFrictionThreshold),
