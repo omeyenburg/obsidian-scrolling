@@ -3,7 +3,10 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
-    "lib": [ "DOM", "ES2021" ],
+    "lib": [
+      "DOM",
+      "ES2021"
+    ],
     "module": "ESNext",
     "moduleResolution": "node",
     "noEmitHelpers": true,
@@ -12,5 +15,7 @@
     "skipLibCheck": true,
     "target": "ES2021"
   },
-  "include": [ "src/**/*.ts" ]
+  "include": [
+    "src"
+  ]
 }
