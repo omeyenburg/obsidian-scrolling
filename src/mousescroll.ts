@@ -205,7 +205,7 @@ export class MouseScroll {
     }
 
     private isTouchpad(
-        event: WheelEvent,
+        event: WheelEvent & { wheelDeltaY?: number },
         now: number,
         deltaTime: number,
         isStart: boolean,
@@ -239,19 +239,26 @@ export class MouseScroll {
             mouseScore += 0.1;
         }
 
-        // Common mouse delta
-        if (event.deltaY % 120 === 0) {
-            mouseScore += 0.3;
+        // Common mouse deltas
+        if (event.wheelDeltaY) {
+            if (event.wheelDeltaY % 120 === 0 || event.wheelDeltaY % 164 === 0) {
+                mouseScore += 0.7;
+            }
         }
 
         if (this.IS_MAC_OS) {
             mouseScore -= 0.1;
+
+            // On MacOS touchpad seems to report integer values for some reason
+            if (event.deltaY % 1 != 0 && Math.abs(event.deltaY) > 5) {
+                mouseScore += 0.3;
+            }
         }
 
         // Wheel deltas over 100
         mouseScore += Math.max(0, Math.abs(event.deltaY / 200) - 0.5);
 
-        if (mouseScore < 1.1) {
+        if (mouseScore < 1.2) {
             if (mouseScore < 0.7) this.touchpadLastUse = now;
             return true;
         }
