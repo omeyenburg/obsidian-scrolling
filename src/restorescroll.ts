@@ -168,27 +168,69 @@ export class RestoreScroll {
         this.writeStateFile();
     }
 
-    private async writeStateFile() {
-        if (!this.plugin.settings.restoreScrollFileEnabled) return;
-        const data = JSON.stringify(this.ephemeralStates);
-        this.plugin.app.vault.adapter.write(this.plugin.settings.restoreScrollFilePath, data);
+    private async directoryOfFileExists(filePath: string): Promise<boolean> {
+        const lastSlashIndex = filePath.lastIndexOf("/");
+        if (lastSlashIndex === -1) {
+            return true;
+        }
+        const dirPath = filePath.substring(0, lastSlashIndex);
+        return await this.plugin.app.vault.adapter.exists(dirPath);
     }
 
-    // Called on plugin load
-    public async loadData(): Promise<void> {
-        if (
-            await this.plugin.app.vault.adapter.exists(this.plugin.settings.restoreScrollFilePath)
-        ) {
-            // Use existing setting path
-        } else if (await this.plugin.app.vault.adapter.exists(RestoreScroll.FALLBACK_FILE_PATH)) {
-            this.plugin.settings.restoreScrollFilePath = RestoreScroll.FALLBACK_FILE_PATH;
-        } else {
-            return; // Neither file exists
+    private async checkWriteStorePath(): Promise<void> {
+        // Check saved path
+        if (await this.directoryOfFileExists(this.plugin.settings.restoreScrollFilePath)) return;
+
+        // Check default path
+        if (await this.directoryOfFileExists(RestoreScroll.DEFAULT_FILE_PATH)) {
+            this.plugin.settings.restoreScrollFilePath = RestoreScroll.DEFAULT_FILE_PATH;
+            return;
         }
 
-        const path = this.plugin.settings.restoreScrollFilePath;
+        // Check fallback path
+        if (await this.directoryOfFileExists(RestoreScroll.FALLBACK_FILE_PATH)) {
+            this.plugin.settings.restoreScrollFilePath = RestoreScroll.FALLBACK_FILE_PATH;
+            return;
+        }
+    }
+
+    private async writeStateFile() {
+        if (!this.plugin.settings.restoreScrollFileEnabled) return;
+
+        await this.checkWriteStorePath();
+        const filePath = this.plugin.settings.restoreScrollFilePath;
+
+        const data = JSON.stringify(this.ephemeralStates);
+        this.plugin.app.vault.adapter.write(filePath, data);
+    }
+
+    private async checkLoadStorePath(): Promise<boolean> {
+        // Check saved path
+        if (await this.plugin.app.vault.adapter.exists(this.plugin.settings.restoreScrollFilePath))
+            return true;
+
+        // Check default path
+        if (await this.plugin.app.vault.adapter.exists(RestoreScroll.DEFAULT_FILE_PATH)) {
+            this.plugin.settings.restoreScrollFilePath = RestoreScroll.DEFAULT_FILE_PATH;
+            return true;
+        }
+
+        // Check fallback path
+        if (await this.plugin.app.vault.adapter.exists(RestoreScroll.FALLBACK_FILE_PATH)) {
+            this.plugin.settings.restoreScrollFilePath = RestoreScroll.FALLBACK_FILE_PATH;
+            return true;
+        }
+
+        return false;
+    }
+
+    public async loadData(): Promise<void> {
+        const exists = await this.checkLoadStorePath();
+        if (!exists) return;
+        const filePath = this.plugin.settings.restoreScrollFilePath;
+
         try {
-            const data = await this.plugin.app.vault.adapter.read(path);
+            const data = await this.plugin.app.vault.adapter.read(filePath);
             this.ephemeralStates = JSON.parse(data);
         } catch {
             this.ephemeralStates = {};
@@ -271,9 +313,8 @@ export class RestoreScroll {
 
         const adapter = this.plugin.app.vault.adapter;
 
-        const folder = newNormalizedPath.substring(0, newNormalizedPath.lastIndexOf("/"));
-        if (!folder || !(await adapter.exists(folder))) {
-            new Notice(`Directory does not exist: ${folder}`);
+        if (!(await this.directoryOfFileExists(newNormalizedPath))) {
+            new Notice(`Directory of file does not exist.`);
             return;
         }
 
