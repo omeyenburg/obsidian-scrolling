@@ -22,6 +22,8 @@ export class Events {
     private lastWheelEventTime = 0;
     private lastWheelScrollElement: HTMLElement | null;
 
+    public manualPreventCursor = false
+
     private static readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
     private static readonly IMAGE_EXTENSIONS = new Set([
         "png",
@@ -43,6 +45,7 @@ export class Events {
         /* MouseScroll */
         if (Platform.isDesktop) {
             plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
+                capture: true,
                 passive: false,
             });
         }
@@ -226,6 +229,7 @@ export class Events {
             }
         }
 
+        this.plugin.codeScroll.cursorHandler();
         this.plugin.followCursor.cursorHandler();
         this.plugin.cursorScroll.cursorHandler();
     }
@@ -235,6 +239,8 @@ export class Events {
     }
 
     private wheelHandler(event: WheelEvent): void {
+        this.plugin.codeScroll.wheelHandler(event);
+
         if (!event.deltaY) return;
         if (
             !(
