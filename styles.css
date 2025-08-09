@@ -53,3 +53,32 @@
 .scrolling-filetree-horizontal .tree-item-self .nav-folder-title {
     flex-shrink: 0;
 }
+
+/* Scrollable code in editing view */
+.HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
+    overflow-x: auto;
+    word-wrap: normal;
+    white-space: nowrap;
+}
+
+.HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
+    content: '';
+    display: inline-block;
+    position: absolute;
+    width: var(--scrolling-extra-line-padding);
+    height: 1px;
+}
+
+.HyperMD-codeblock.HyperMD-codeblock-bg.cm-line::-webkit-scrollbar {
+    display: none;
+}
+
+.HyperMD-codeblock.HyperMD-codeblock-begin.HyperMD-codeblock-begin-bg.HyperMD-codeblock-bg.cm-line {
+    padding-bottom: 0.6rem;
+}
+
+/* Scrollable code in reading view */
+code {
+    white-space: pre !important;
+    overflow-x: auto !important;
+}

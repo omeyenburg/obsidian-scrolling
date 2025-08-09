@@ -3,6 +3,7 @@ import { Plugin } from "obsidian";
 import { Events } from "./events";
 import { FollowCursor } from "./followcursor";
 import { CursorScroll } from "./cursorscroll";
+import { CodeScroll } from "./codescroll";
 import { MouseScroll } from "./mousescroll";
 import { Scrollbar } from "./scrollbar";
 import { RestoreScroll } from "./restorescroll";
@@ -16,6 +17,8 @@ export default class ScrollingPlugin extends Plugin {
     followCursor!: FollowCursor;
     mouseScroll!: MouseScroll;
     scrollbar!: Scrollbar;
+    codeScroll!: CodeScroll;
+    events!: Events;
 
     async onload() {
         await this.loadSettings();
@@ -26,8 +29,8 @@ export default class ScrollingPlugin extends Plugin {
         this.followCursor = new FollowCursor(this);
         this.mouseScroll = new MouseScroll(this);
         this.scrollbar = new Scrollbar(this);
-
-        new Events(this);
+        this.codeScroll = new CodeScroll(this);
+        this.events = new Events(this);
 
         await this.restoreScroll.loadData();
 
@@ -37,6 +40,8 @@ export default class ScrollingPlugin extends Plugin {
     async onunload() {
         this.scrollbar?.removeStyle();
         this.restoreScroll.quitHandler();
+
+        this.codeScroll.unload();
 
         console.log("ScrollingPlugin unloaded");
     }
