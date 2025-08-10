@@ -1,103 +1,80 @@
+import { Editor } from "obsidian";
+
 import type { default as ScrollingPlugin } from "./main";
 
-function nearCodeBlock(classes: DOMTokenList) {
-    return classes.contains("HyperMD-codeblock") && classes.contains("HyperMD-codeblock-bg");
-}
+function insideCodeBlock(classes: DOMTokenList): boolean {
+    let isCode = false;
+    for (let i = 0; i < classes.length; i++) {
+        const c = classes[i];
+        if (c === "HyperMD-codeblock") {
+            isCode = true;
+        }
+        if (c === "HyperMD-codeblock-begin" || c === "HyperMD-codeblock-end") {
+            return false;
+        }
+    }
 
-function codeBlockBegin(classes: DOMTokenList) {
-    return classes.contains("HyperMD-codeblock-begin");
-}
-
-function codeBlockEnd(classes: DOMTokenList) {
-    return classes.contains("HyperMD-codeblock-end");
-}
-
-function insideCodeBlock(classes: DOMTokenList) {
-    return nearCodeBlock(classes) && !codeBlockBegin(classes) && !codeBlockEnd(classes);
+    return isCode;
 }
 
 export class CodeScroll {
     private readonly plugin: ScrollingPlugin;
 
-    private lastHorizontal = 0;
-    private lastVertical = 0;
-    private horizontalVel = 0;
-    private horizontalElements: Element[] = [];
-    private animation = 0;
-    private left = 0;
-    private max = 0;
+    private codeBlockLines: Element[] = [];
 
-    private readonly EXTRA_LINE_PADDING = 2000;
+    private currentScrollLeft = 0;
+    private currentScrollVelocity = 0;
+    private currentScrollWidth = 0;
+    private lastHorizontalTimeStamp = 0;
+    private lastVerticalTimeStamp = 0;
+    private scrollAnimationFrame = 0;
+
+    private verticalScroll = false;
+    private cursorScheduled = false;
+    private cachedCursor: HTMLElement | null = null;
+
     private readonly FRICTION_COFFICIENT = 0.8;
-    private readonly DELTA_TIME_THRESHOLD = 200;
+
+    // Grace period to keep horizontal/vertical scrolling alive.
+    // Higher values might cause vertical scroll detection while
+    // actually scrolling horizontally.
+    private readonly DELTA_TIME_THRESHOLD = 100;
+
+    // Large constant used to artificially extend line length so that
+    // each code line does not limit horizontal scrolling individually.
+    // This allows the plugin to handle the scroll boundary uniformly across
+    // all code lines in a block instead of relying on their individual widths.
+    private readonly EXTRA_LINE_LENGTH = 1_000_000;
+    private readonly EXTRA_LINE_LENGTH_WITH_PADDING = 1_000_000 + 15;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
         document.body.style.setProperty(
-            "--scrolling-extra-line-padding",
-            `${this.EXTRA_LINE_PADDING}px`,
+            "--scrolling-extra-line-length",
+            `${this.EXTRA_LINE_LENGTH_WITH_PADDING}px`,
         );
     }
 
     public unload() {
-        window.cancelAnimationFrame(this.animation);
+        window.cancelAnimationFrame(this.scrollAnimationFrame);
         document.body.style.removeProperty("--scrolling-scrollbar-width");
     }
 
-    public cursorHandler(): void {
-        window.requestAnimationFrame(() => {
-            this.updateCursorActive();
-            window.requestAnimationFrame(() => {
-                this.updateCursorActive();
-            });
-        });
-    }
+    public leafChangeHandler(): void {
+        this.cachedCursor = null;
+        this.currentScrollLeft = 0;
 
-    private updateCursorActive(): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor) return;
 
-        const currentLine = document.querySelector(".cm-line.cm-active");
+        const pos = editor.cm.state.selection.main.head;
+        const lineInfo = editor.cm.state.doc.lineAt(pos);
+        const lineEl = editor.cm.contentDOM.children[lineInfo.number - 1];
+        if (!lineEl) return;
 
-        let cursorLeft: number;
-        let cursorRight: number;
-
-        const cursorEl = document.querySelector(".cm-cursor-primary");
-        if (cursorEl) {
-            // Vim fat cursor
-            const cursorRect = cursorEl.getBoundingClientRect();
-            cursorLeft = cursorRect.left;
-            cursorRight = cursorRect.right;
-        } else {
-            // Normal text cursor
-            const cursorCoords = editor.cm.coordsAtPos(editor.cm.state.selection.main.head);
-            if (!cursorCoords) return;
-
-            cursorLeft = cursorCoords.left;
-            cursorRight = cursorCoords.right;
-        }
-
-        this.findCodeLines(currentLine);
-        if (!this.horizontalElements.length) return;
-
-        // Compute visibility
-        const blockRect = currentLine.getBoundingClientRect();
-        const offset = editor.cm.defaultCharacterWidth * 2;
-        if (cursorLeft < blockRect.left + offset) {
-            this.left += cursorLeft - blockRect.left - offset;
-        } else if (cursorRight > blockRect.right - offset) {
-            this.left += cursorRight - blockRect.right + offset;
-        }
-
-        this.updateHorizontalScroll();
-
-        this.plugin.cursorScroll.skipCursor = true;
-        editor.cm.dispatch({ selection: editor.cm.state.selection.main });
-
-        if (cursorEl && cursorEl instanceof HTMLElement) {
-            cursorEl.style.visibility = "visible";
-        }
+        this.findCodeLines(lineEl);
+        this.updateCursorPassive();
     }
 
     public wheelHandler(event: WheelEvent): void {
@@ -116,119 +93,181 @@ export class CodeScroll {
 
         if (
             (Math.abs(event.deltaX) > Math.abs(event.deltaY) &&
-                event.timeStamp - this.lastVertical >= this.DELTA_TIME_THRESHOLD) ||
-            event.timeStamp - this.lastHorizontal < this.DELTA_TIME_THRESHOLD
+                event.timeStamp - this.lastVerticalTimeStamp >= this.DELTA_TIME_THRESHOLD) ||
+            event.timeStamp - this.lastHorizontalTimeStamp < this.DELTA_TIME_THRESHOLD
         ) {
             event.preventDefault();
             this.horizontalWheelScroll(event, line);
-            this.lastHorizontal = event.timeStamp;
+            this.lastHorizontalTimeStamp = event.timeStamp;
+            this.verticalScroll = false
         } else {
             // No horizontal scroll
-            this.lastVertical = event.timeStamp;
+            this.lastVerticalTimeStamp = event.timeStamp;
+            this.verticalScroll = true
         }
     }
 
+    public cursorHandler(isEdit: boolean): void {
+        if (this.cursorScheduled) return;
+        this.cursorScheduled = true;
+
+        window.requestAnimationFrame(() => {
+            this.cursorScheduled = false;
+
+            const editor = this.plugin.app.workspace.activeEditor?.editor;
+            if (!editor) return;
+
+            const cursorEl = this.getCursorEl(editor);
+            if (!cursorEl) return;
+
+            const pos = editor.cm.state.selection.main.head;
+            const lineInfo = editor.cm.state.doc.lineAt(pos);
+            const lineEl = editor.cm.contentDOM.children[lineInfo.number - 1];
+            if (!lineEl) return;
+
+            if (!this.codeBlockLines.contains(lineEl) || !isEdit) {
+                this.findCodeLines(lineEl);
+            }
+
+            this.updateCursorActive(editor, lineEl, cursorEl);
+        });
+    }
+
+    private getCursorEl(editor: Editor): HTMLElement | null {
+        if (this.cachedCursor && this.cachedCursor.isConnected) {
+            return this.cachedCursor;
+        }
+
+        this.cachedCursor = editor.cm.dom.querySelector<HTMLElement>(".cm-cursor-primary");
+        return this.cachedCursor;
+    }
+
     private horizontalWheelScroll(event: WheelEvent, line: Element) {
-        const maxScrollWidthWithExtension = this.findCodeLines(line);
+        if (this.verticalScroll || !this.codeBlockLines.contains(line)) {
+            this.currentScrollWidth = Math.max(
+                0,
+                this.findCodeLines(line) - this.EXTRA_LINE_LENGTH - line.clientWidth,
+            );
+        }
 
-        const padding = 10;
-        this.max = Math.max(
-            0,
-            maxScrollWidthWithExtension - this.EXTRA_LINE_PADDING - line.clientWidth + padding,
-        );
-
-        // Init horizontal scroll
-        this.horizontalVel = event.deltaX;
-        this.lastVertical = 0;
+        this.currentScrollVelocity = event.deltaX;
+        this.lastVerticalTimeStamp = 0;
 
         // Restore previous position
-        this.left = this.horizontalElements[0].scrollLeft;
+        this.currentScrollLeft = this.codeBlockLines[0].scrollLeft;
 
-        window.cancelAnimationFrame(this.animation);
-        this.animation = window.requestAnimationFrame(() => this.animateScroll());
+        window.cancelAnimationFrame(this.scrollAnimationFrame);
+        this.scrollAnimationFrame = window.requestAnimationFrame(() => this.animateScroll());
+    }
+
+    private animateScroll(): void {
+        this.currentScrollLeft += this.currentScrollVelocity;
+
+        if (this.currentScrollLeft < 0) {
+            this.currentScrollVelocity = 0;
+            this.currentScrollLeft = 0;
+        } else if (this.currentScrollLeft > this.currentScrollWidth) {
+            this.currentScrollLeft = this.currentScrollWidth;
+            this.currentScrollVelocity = 0;
+        } else if (Math.abs(this.currentScrollVelocity) > 0.1) {
+            this.currentScrollVelocity *= this.FRICTION_COFFICIENT;
+            this.scrollAnimationFrame = window.requestAnimationFrame(() => this.animateScroll());
+        } else {
+            this.scrollAnimationFrame = 0;
+        }
+
+        this.updateHorizontalScroll();
+
+        // Cursor must be updated, otherwise it would not move at all while scrolling
+        this.updateCursorPassive();
+    }
+
+    private updateCursorActive(editor: Editor, lineEl: Element, cursorEl: Element): void {
+        let cursorLeft: number;
+        let cursorRight: number;
+
+        const cursorCoords = editor.cm.coordsAtPos(editor.cm.state.selection.main.head);
+        if (!cursorCoords) return;
+
+        // Respect Vim's fat cursor
+        cursorLeft = cursorCoords.left;
+        cursorRight = cursorCoords.right + (cursorEl ? editor.cm.defaultCharacterWidth : 0);
+
+        // Compute visibility
+        const blockRect = lineEl.getBoundingClientRect();
+        const offset = editor.cm.defaultCharacterWidth * 2;
+        if (cursorLeft < blockRect.left + offset) {
+            this.currentScrollLeft += cursorLeft - blockRect.left - offset;
+        } else if (cursorRight > blockRect.right - offset) {
+            this.currentScrollLeft += cursorRight - blockRect.right + offset;
+        }
+
+        this.updateHorizontalScroll();
+
+        // Tell codemirror to update cursor
+        this.plugin.cursorScroll.skipCursor = true;
+        editor.cm.dispatch({ selection: editor.cm.state.selection });
+
+        if (
+            cursorEl &&
+            cursorEl instanceof HTMLElement &&
+            cursorEl.style.visibility !== "visible"
+        ) {
+            cursorEl.style.visibility = "visible";
+        }
     }
 
     private updateCursorPassive() {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor || !this.horizontalElements.length) return;
+        if (!editor || !this.codeBlockLines.length) return;
 
         // This is only necessary with block cursor in vim mode. .cm-cursor-primary will select that.
-        const codeBlock = this.horizontalElements[0].parentElement;
-        const cursorEl = document.querySelector(".cm-cursor-primary");
+        const cursorEl = this.getCursorEl(editor);
         if (!cursorEl) return;
 
         // Cursor must be updated, otherwise it would not move at all while scrolling
         this.plugin.cursorScroll.skipCursor = true;
         editor.cm.dispatch({
-            selection: editor.cm.state.selection.main,
+            selection: editor.cm.state.selection,
             effects: [],
         });
 
+        if (!(cursorEl instanceof HTMLElement)) return;
+
         // Compute visibility
         const cursorRect = cursorEl.getBoundingClientRect();
-        const blockRect = codeBlock.getBoundingClientRect();
-
-        const isVisible = cursorRect.left >= blockRect.left && cursorRect.right <= blockRect.right;
-
-        if (cursorEl instanceof HTMLElement) {
-            cursorEl.style.visibility = isVisible ? "visible" : "hidden";
-        }
-    }
-
-    private animateScroll(): void {
-        this.left += this.horizontalVel;
-
-        if (this.left < 0) {
-            this.horizontalVel = 0;
-            this.left = 0;
-
-            this.updateHorizontalScroll();
-
-            // Cursor must be updated, otherwise it would not move at all while scrolling
-            this.updateCursorPassive();
-
+        const codeBlockEl = this.codeBlockLines[0].parentElement;
+        if (!this.codeBlockLines[0].parentElement) {
+            this.codeBlockLines = [];
             return;
         }
 
-        if (this.left > this.max) {
-            this.left = this.max;
-            this.horizontalVel = 0;
+        const codeBlockRect = codeBlockEl.getBoundingClientRect();
 
-            this.updateHorizontalScroll();
-
-            // Cursor must be updated, otherwise it would not move at all while scrolling
-            this.updateCursorPassive();
-
-            return;
-        }
-
-        this.horizontalVel *= this.FRICTION_COFFICIENT;
-        this.updateHorizontalScroll();
-        this.updateCursorPassive();
-
-        if (Math.abs(this.horizontalVel) > 0.1) {
-            this.animation = window.requestAnimationFrame(() => this.animateScroll());
-        } else {
-            this.animation = 0;
-        }
+        const isVisible =
+            cursorRect.left >= codeBlockRect.left && cursorRect.right <= codeBlockRect.right;
+        cursorEl.style.visibility = isVisible ? "visible" : "hidden";
     }
 
     // Searches for code lines around line
     // Returns the maximum length of all lines
     private findCodeLines(line: Element): number {
         let maxScrollWidthWithExtension = line.scrollWidth;
-        this.horizontalElements = [line];
+
+        this.codeBlockLines = [line];
+
         let prev = line.previousElementSibling;
         while (prev && insideCodeBlock(prev.classList)) {
-            this.horizontalElements.push(prev);
+            this.codeBlockLines.push(prev);
             if (prev.scrollWidth > maxScrollWidthWithExtension) {
                 maxScrollWidthWithExtension = prev.scrollWidth;
             }
             prev = prev.previousElementSibling;
         }
+
         let next = line.nextElementSibling;
         while (next && insideCodeBlock(next.classList)) {
-            this.horizontalElements.push(next);
+            this.codeBlockLines.push(next);
             if (next.scrollWidth > maxScrollWidthWithExtension) {
                 maxScrollWidthWithExtension = next.scrollWidth;
             }
@@ -239,8 +278,8 @@ export class CodeScroll {
     }
 
     private updateHorizontalScroll() {
-        this.horizontalElements.forEach((el: Element) => {
-            el.scrollLeft = this.left;
+        this.codeBlockLines.forEach((el: Element) => {
+            el.scrollLeft = this.currentScrollLeft;
         });
     }
 }

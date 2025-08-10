@@ -22,7 +22,7 @@ export class Events {
     private lastWheelEventTime = 0;
     private lastWheelScrollElement: HTMLElement | null;
 
-    public manualPreventCursor = false
+    public manualPreventCursor = false;
 
     private static readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
     private static readonly IMAGE_EXTENSIONS = new Set([
@@ -62,7 +62,9 @@ export class Events {
         });
         plugin.registerEvent(initialEditorChange);
 
-        plugin.registerEditorExtension(EditorView.updateListener.of(this.cursorHandler.bind(this)));
+        plugin.registerEditorExtension(
+            EditorView.updateListener.of(this.viewUpdateHandler.bind(this)),
+        );
 
         /* FollowCursor & RestoreScroll */
         if (Platform.isDesktop) {
@@ -171,6 +173,7 @@ export class Events {
     private leafChangeHandler(): void {
         this.plugin.mouseScroll.leafChangeHandler();
         this.plugin.cursorScroll.leafChangeHandler();
+        this.plugin.codeScroll.leafChangeHandler();
         this.attachScrollHandler();
     }
 
@@ -210,7 +213,8 @@ export class Events {
         this.plugin.followCursor.editHandler(editor);
     }
 
-    private cursorHandler(update: ViewUpdate): void {
+    skipViewUpdate = false;
+    private viewUpdateHandler(update: ViewUpdate): void {
         if (this.plugin.cursorScroll.skipCursor) {
             this.plugin.cursorScroll.skipCursor = false;
             return;
@@ -229,7 +233,11 @@ export class Events {
             }
         }
 
-        this.plugin.codeScroll.cursorHandler();
+        if (this.skipViewUpdate) return;
+        this.skipViewUpdate = true;
+        window.requestAnimationFrame(() => (this.skipViewUpdate = false));
+
+        this.plugin.codeScroll.cursorHandler(update.docChanged);
         this.plugin.followCursor.cursorHandler();
         this.plugin.cursorScroll.cursorHandler();
     }
