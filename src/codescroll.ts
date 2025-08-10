@@ -1,21 +1,6 @@
-import { Editor } from "obsidian";
+import { Editor, debounce } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
-
-function insideCodeBlock(classes: DOMTokenList): boolean {
-    let isCode = false;
-    for (let i = 0; i < classes.length; i++) {
-        const c = classes[i];
-        if (c === "HyperMD-codeblock") {
-            isCode = true;
-        }
-        if (c === "HyperMD-codeblock-begin" || c === "HyperMD-codeblock-end") {
-            return false;
-        }
-    }
-
-    return isCode;
-}
 
 export class CodeScroll {
     private readonly plugin: ScrollingPlugin;
@@ -29,7 +14,11 @@ export class CodeScroll {
     private lastVerticalTimeStamp = 0;
     private scrollAnimationFrame = 0;
 
-    private verticalScroll = false;
+    private readonly verticalWheelScrollDebouncer: (line: Element) => void;
+
+    // private incompleteBeginLine: Element | null = null;
+    // private incompleteEndLine: Element | null = null;
+
     private cursorScheduled = false;
     private cachedCursor: HTMLElement | null = null;
 
@@ -38,7 +27,7 @@ export class CodeScroll {
     // Grace period to keep horizontal/vertical scrolling alive.
     // Higher values might cause vertical scroll detection while
     // actually scrolling horizontally.
-    private readonly DELTA_TIME_THRESHOLD = 100;
+    private readonly DELTA_TIME_THRESHOLD = 50;
 
     // Large constant used to artificially extend line length so that
     // each code line does not limit horizontal scrolling individually.
@@ -49,6 +38,12 @@ export class CodeScroll {
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
+
+        this.verticalWheelScrollDebouncer = debounce(
+            this.verticalWheelScroll.bind(this),
+            50,
+            false,
+        );
 
         document.body.style.setProperty(
             "--scrolling-extra-line-length",
@@ -68,28 +63,53 @@ export class CodeScroll {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor) return;
 
-        const pos = editor.cm.state.selection.main.head;
-        const lineInfo = editor.cm.state.doc.lineAt(pos);
-        const lineEl = editor.cm.contentDOM.children[lineInfo.number - 1];
+        // const pos = editor.cm.state.selection.main.head;
+        // const lineInfo = editor.cm.state.doc.lineAt(pos);
+        // const lineEl = editor.cm.contentDOM.children[lineInfo.number - 1];
+        const lineEl = document.querySelector(".cm-line.cm-active");
         if (!lineEl) return;
 
-        this.findCodeLines(lineEl);
+        this.searchCodeLines(lineEl);
         this.updateCursorPassive();
     }
 
     public wheelHandler(event: WheelEvent): void {
         // Often parent but not always
-        let line = event.targetNode.parentElement as Element;
-        if (!line || !insideCodeBlock(line.classList)) {
-            if (
-                event.target instanceof Element &&
-                insideCodeBlock((event.target as Element).classList)
-            ) {
-                line = event.target as Element;
-            } else {
-                return;
-            }
+        // let line = event.targetNode.parentElement as Element;
+        // if (!line || !this.insideCodeBlock(line.classList)) {
+        //     if (
+        //         event.target instanceof Element &&
+        //         this.insideCodeBlock((event.target as Element).classList)
+        //     ) {
+        //         line = event.target as Element;
+        //     } else {
+        //         return;
+        //     }
+        // }
+
+        // Early return
+        // if (
+        //     !target ||
+        //     (!this.insideCodeBlock(target.classList) &&
+        //         !(parent && this.insideCodeBlock(parent.classList)))
+        // )
+        //     return;
+
+        // const line = this.insideCodeBlock(parent?.classList) ? parent : target;
+        const target = event.target as Element;
+        const parent = target?.parentElement;
+
+        // Fast early exit
+        if (
+            !target?.classList?.contains("HyperMD-codeblock") &&
+            !parent?.classList?.contains("HyperMD-codeblock")
+        ) {
+            return; // Super fast exit for non-code blocks
         }
+
+        // Only do the full check when we know we're in a code block
+        const line = this.insideCodeBlock(parent?.classList) ? parent : target;
+        if (line === target && !this.insideCodeBlock(target?.classList)) return;
 
         if (
             (Math.abs(event.deltaX) > Math.abs(event.deltaY) &&
@@ -99,34 +119,62 @@ export class CodeScroll {
             event.preventDefault();
             this.horizontalWheelScroll(event, line);
             this.lastHorizontalTimeStamp = event.timeStamp;
-            this.verticalScroll = false
         } else {
             // No horizontal scroll
             this.lastVerticalTimeStamp = event.timeStamp;
-            this.verticalScroll = true
+
+            // if (this.incompleteEndLine || this.incompleteBeginLine) {
+            this.verticalWheelScrollDebouncer(line);
+            // }
+
+            // // Updated newly loaded lines
+            // if (event.deltaY > 0 && this.incompleteEndLine !== null) {
+            //     if (this.codeBlockLines.contains(line)) {
+            //         this.searchCodeLinesBelow(this.incompleteEndLine);
+            //         this.codeBlockLines.forEach((e) => {
+            //             if (!e.isConnected) {
+            //                 this.codeBlockLines.remove(e);
+            //             }
+            //         });
+            //     } else {
+            //         this.searchCodeLines(line);
+            //     }
+            //     this.updateHorizontalScroll();
+            // } else if (this.incompleteBeginLine !== null) {
+            //     if (this.codeBlockLines.contains(line)) {
+            //         this.searchCodeLinesAbove(this.incompleteBeginLine);
+            //         this.codeBlockLines.forEach((e) => {
+            //             if (!e.isConnected) {
+            //                 this.codeBlockLines.remove(e);
+            //             }
+            //         });
+            //     } else {
+            //         this.searchCodeLines(line);
+            //     }
+            //     this.updateHorizontalScroll();
+            // }
         }
     }
 
     public cursorHandler(isEdit: boolean): void {
-        if (this.cursorScheduled) return;
-        this.cursorScheduled = true;
+        const editor = this.plugin.app.workspace.activeEditor?.editor;
+        if (this.cursorScheduled || !editor) return;
 
+        const lineEl = document.querySelector(".cm-line.cm-active");
+        if (!lineEl?.classList?.contains("HyperMD-codeblock")) {
+            this.codeBlockLines = [];
+            return;
+        }
+
+        this.cursorScheduled = true;
         window.requestAnimationFrame(() => {
             this.cursorScheduled = false;
-
-            const editor = this.plugin.app.workspace.activeEditor?.editor;
-            if (!editor) return;
 
             const cursorEl = this.getCursorEl(editor);
             if (!cursorEl) return;
 
-            const pos = editor.cm.state.selection.main.head;
-            const lineInfo = editor.cm.state.doc.lineAt(pos);
-            const lineEl = editor.cm.contentDOM.children[lineInfo.number - 1];
-            if (!lineEl) return;
-
             if (!this.codeBlockLines.contains(lineEl) || !isEdit) {
-                this.findCodeLines(lineEl);
+                this.searchCodeLines(lineEl);
             }
 
             this.updateCursorActive(editor, lineEl, cursorEl);
@@ -142,12 +190,20 @@ export class CodeScroll {
         return this.cachedCursor;
     }
 
+    private verticalWheelScroll(line: Element): void {
+        this.searchCodeLines(line);
+        this.updateHorizontalScroll();
+    }
+
     private horizontalWheelScroll(event: WheelEvent, line: Element) {
-        if (this.verticalScroll || !this.codeBlockLines.contains(line)) {
+        if (!this.codeBlockLines.contains(line) || !this.currentScrollWidth) {
             this.currentScrollWidth = Math.max(
                 0,
-                this.findCodeLines(line) - this.EXTRA_LINE_LENGTH - line.clientWidth,
+                this.searchCodeLines(line) - this.EXTRA_LINE_LENGTH - line.clientWidth,
             );
+        } else {
+            // Remove dead lines
+            this.codeBlockLines.filter((e) => e.isConnected);
         }
 
         this.currentScrollVelocity = event.deltaX;
@@ -169,7 +225,7 @@ export class CodeScroll {
         } else if (this.currentScrollLeft > this.currentScrollWidth) {
             this.currentScrollLeft = this.currentScrollWidth;
             this.currentScrollVelocity = 0;
-        } else if (Math.abs(this.currentScrollVelocity) > 0.1) {
+        } else if (Math.abs(this.currentScrollVelocity) > 0.2) {
             this.currentScrollVelocity *= this.FRICTION_COFFICIENT;
             this.scrollAnimationFrame = window.requestAnimationFrame(() => this.animateScroll());
         } else {
@@ -249,24 +305,29 @@ export class CodeScroll {
         cursorEl.style.visibility = isVisible ? "visible" : "hidden";
     }
 
+    private updateHorizontalScroll() {
+        this.codeBlockLines.forEach((el: Element) => {
+            el.scrollLeft = this.currentScrollLeft;
+        });
+    }
+
     // Searches for code lines around line
     // Returns the maximum length of all lines
-    private findCodeLines(line: Element): number {
-        let maxScrollWidthWithExtension = line.scrollWidth;
-
+    private searchCodeLines(line: Element): number {
         this.codeBlockLines = [line];
+        return Math.max(
+            line.scrollWidth,
+            this.searchCodeLinesAbove(line),
+            this.searchCodeLinesBelow(line),
+        );
+    }
 
-        let prev = line.previousElementSibling;
-        while (prev && insideCodeBlock(prev.classList)) {
-            this.codeBlockLines.push(prev);
-            if (prev.scrollWidth > maxScrollWidthWithExtension) {
-                maxScrollWidthWithExtension = prev.scrollWidth;
-            }
-            prev = prev.previousElementSibling;
-        }
-
+    // TODO: obsolete if this.incompleteEndLine not used
+    private searchCodeLinesBelow(line: Element): number {
+        let maxScrollWidthWithExtension = 0;
         let next = line.nextElementSibling;
-        while (next && insideCodeBlock(next.classList)) {
+
+        while (next && this.insideCodeBlockBelow(next)) {
             this.codeBlockLines.push(next);
             if (next.scrollWidth > maxScrollWidthWithExtension) {
                 maxScrollWidthWithExtension = next.scrollWidth;
@@ -277,9 +338,70 @@ export class CodeScroll {
         return maxScrollWidthWithExtension;
     }
 
-    private updateHorizontalScroll() {
-        this.codeBlockLines.forEach((el: Element) => {
-            el.scrollLeft = this.currentScrollLeft;
-        });
+    private searchCodeLinesAbove(line: Element): number {
+        let maxScrollWidthWithExtension = 0;
+        let prev = line.previousElementSibling;
+
+        while (prev && this.insideCodeBlockAbove(prev)) {
+            this.codeBlockLines.push(prev);
+            if (prev.scrollWidth > maxScrollWidthWithExtension) {
+                maxScrollWidthWithExtension = prev.scrollWidth;
+            }
+            prev = prev.previousElementSibling;
+        }
+
+        return maxScrollWidthWithExtension;
+    }
+
+    private insideCodeBlock(classes: DOMTokenList): boolean {
+        let isCode = false;
+        for (let i = 0; i < classes.length; i++) {
+            const c = classes[i];
+            if (c === "HyperMD-codeblock") {
+                isCode = true;
+            }
+            if (c === "HyperMD-codeblock-begin" || c === "HyperMD-codeblock-end") {
+                return false;
+            }
+        }
+
+        return isCode;
+    }
+
+    // TODO: obsolete if this.incompleteEndLine not used
+    private insideCodeBlockBelow(lineBelow: Element): boolean {
+        let isCode = false;
+        const classes = lineBelow.classList;
+        for (let i = 0; i < classes.length; i++) {
+            const c = classes[i];
+            if (c === "HyperMD-codeblock") {
+                // this.incompleteEndLine = lineBelow;
+                isCode = true;
+            }
+            if (c === "HyperMD-codeblock-end") {
+                // this.incompleteEndLine = null;
+                return false;
+            }
+        }
+
+        return isCode;
+    }
+
+    private insideCodeBlockAbove(lineAbove: Element): boolean {
+        let isCode = false;
+        const classes = lineAbove.classList;
+        for (let i = 0; i < classes.length; i++) {
+            const c = classes[i];
+            if (c === "HyperMD-codeblock") {
+                // this.incompleteBeginLine = lineAbove;
+                isCode = true;
+            }
+            if (c === "HyperMD-codeblock-begin") {
+                // this.incompleteBeginLine = null;
+                return false;
+            }
+        }
+
+        return isCode;
     }
 }
