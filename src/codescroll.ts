@@ -49,11 +49,22 @@ export class CodeScroll {
             "--scrolling-extra-line-length",
             `${this.EXTRA_LINE_LENGTH_WITH_PADDING}px`,
         );
+
+        this.updateStyle();
+    }
+
+    public updateStyle(): void {
+        if (this.plugin.settings.horizontalScrollingCodeBlockEnabled) {
+            document.body.addClass("scrolling-horizontal-code-blocks");
+        } else {
+            document.body.removeClass("scrolling-horizontal-code-blocks");
+        }
     }
 
     public unload() {
         window.cancelAnimationFrame(this.scrollAnimationFrame);
         document.body.style.removeProperty("--scrolling-scrollbar-width");
+        document.body.removeClass("scrolling-horizontal-code-blocks");
     }
 
     public leafChangeHandler(): void {
@@ -61,7 +72,7 @@ export class CodeScroll {
         this.currentScrollLeft = 0;
 
         const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor) return;
+        if (!editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
 
         // const pos = editor.cm.state.selection.main.head;
         // const lineInfo = editor.cm.state.doc.lineAt(pos);
@@ -96,13 +107,15 @@ export class CodeScroll {
         //     return;
 
         // const line = this.insideCodeBlock(parent?.classList) ? parent : target;
+
         const target = event.target as Element;
         const parent = target?.parentElement;
 
         // Fast early exit
         if (
-            !target?.classList?.contains("HyperMD-codeblock") &&
-            !parent?.classList?.contains("HyperMD-codeblock")
+            !this.plugin.settings.horizontalScrollingCodeBlockEnabled ||
+            (!target?.classList?.contains("HyperMD-codeblock") &&
+                !parent?.classList?.contains("HyperMD-codeblock"))
         ) {
             return; // Super fast exit for non-code blocks
         }
@@ -158,7 +171,7 @@ export class CodeScroll {
 
     public cursorHandler(isEdit: boolean): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (this.cursorScheduled || !editor) return;
+        if (this.cursorScheduled || !editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
 
         const lineEl = document.querySelector(".cm-line.cm-active");
         if (!lineEl?.classList?.contains("HyperMD-codeblock")) {

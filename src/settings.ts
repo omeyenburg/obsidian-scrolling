@@ -20,9 +20,11 @@ export interface ScrollingPluginSettings {
     restoreScrollFileEnabled: boolean;
     restoreScrollFilePath: string;
 
+    horizontalScrollingCodeBlockEnabled: boolean;
+    horizontalScrollingFileTreeEnabled: boolean;
+
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
-    scrollbarFileTreeHorizontal: boolean;
 
     mouseEnabled: boolean;
     mouseInvert: boolean; // Not exposed in the settings
@@ -52,9 +54,11 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
 
+    horizontalScrollingCodeBlockEnabled: false,
+    horizontalScrollingFileTreeEnabled: false,
+
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
-    scrollbarFileTreeHorizontal: false,
 
     mouseEnabled: false,
     mouseInvert: false,
@@ -82,11 +86,12 @@ export class ScrollingSettingTab extends PluginSettingTab {
         const previousScrollTop = this.containerEl.scrollTop;
         this.containerEl.empty();
 
-        this.followCursorSettings();
-        this.cursorScrollSettings();
-        this.restoreScrollSettings();
-        this.scrollbarSettings();
-        this.mouseScrollSettings();
+        this.displayFollowCursorSettings();
+        this.displayCursorScrollSettings();
+        this.displayRestoreScrollSettings();
+        this.displayHorizontalScrollingSettings();
+        this.displayScrollbarSettings();
+        this.displayMouseScrollSettings();
 
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
@@ -180,7 +185,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         return setting;
     }
 
-    private followCursorSettings() {
+    private displayFollowCursorSettings() {
         this.createHeading("Scroll follows text cursor");
 
         this.createSetting(
@@ -279,7 +284,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         // }
     }
 
-    private cursorScrollSettings() {
+    private displayCursorScrollSettings() {
         if (Platform.isMobile) return;
 
         this.containerEl.createEl("br");
@@ -296,7 +301,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
     }
 
-    private restoreScrollSettings() {
+    private displayRestoreScrollSettings() {
         this.containerEl.createEl("br");
         this.createHeading(
             "Remember scroll/cursor position",
@@ -436,7 +441,40 @@ export class ScrollingSettingTab extends PluginSettingTab {
         });
     }
 
-    private scrollbarSettings() {
+    private displayHorizontalScrollingSettings() {
+        this.containerEl.createEl("br");
+        this.createHeading("Horizontal scrolling");
+
+        this.createSetting(
+            "Code blocks",
+            "Allow horizontal scrolling of code blocks in your notes.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.horizontalScrollingCodeBlockEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.horizontalScrollingCodeBlockEnabled = value;
+                    this.plugin.codeScroll.updateStyle();
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        if (Platform.isDesktop) {
+            this.createSetting(
+                "File tree",
+                "Allow horizontal scrolling in the file tree and show a scrollbar.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.horizontalScrollingFileTreeEnabled)
+                    .onChange(async (value) => {
+                        this.plugin.settings.horizontalScrollingFileTreeEnabled = value;
+                        this.plugin.scrollbar.updateStyle();
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
+    }
+
+    private displayScrollbarSettings() {
         this.containerEl.createEl("br");
         this.createHeading("Scrollbar appearance");
 
@@ -480,24 +518,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
         }
-
-        if (Platform.isDesktop) {
-            this.createSetting(
-                "Horizontal scrollbar in file tree",
-                "Allow horizontal scrolling in the file tree and show the scrollbar.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.scrollbarFileTreeHorizontal)
-                    .onChange(async (value) => {
-                        this.plugin.settings.scrollbarFileTreeHorizontal = value;
-                        this.plugin.scrollbar.updateStyle();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
     }
 
-    private mouseScrollSettings() {
+    private displayMouseScrollSettings() {
         if (Platform.isMobile) return;
 
         this.containerEl.createEl("br");

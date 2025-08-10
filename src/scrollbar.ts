@@ -60,7 +60,7 @@ export class Scrollbar {
         // Only handle horizontal file tree scrollbar.
         if (Platform.isMacOS) {
             // Only proceed if state changed.
-            const fileTreeHorizontal = this.plugin.settings.scrollbarFileTreeHorizontal;
+            const fileTreeHorizontal = this.plugin.settings.horizontalScrollingFileTreeEnabled;
             if (this.currentFileTreeHorizontal == fileTreeHorizontal) return;
             this.currentFileTreeHorizontal = fileTreeHorizontal;
 
@@ -79,7 +79,7 @@ export class Scrollbar {
         // Only linux supports this option, set to -1 to ignore width.
         const width = Platform.isLinux ? this.plugin.settings.scrollbarWidth : -1;
 
-        const fileTreeHorizontal = this.plugin.settings.scrollbarFileTreeHorizontal;
+        const fileTreeHorizontal = this.plugin.settings.horizontalScrollingFileTreeEnabled;
 
         // Only proceed if state changed.
         if (
