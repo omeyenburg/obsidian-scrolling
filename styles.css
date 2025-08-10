@@ -3,20 +3,6 @@
  * name: Scrolling
  * id: scrolling
  *
- * Classes for document body:
- * .scrolling-scrollbar-width
- * .scrolling-visibility-hide
- * .scrolling-visibility-scroll
- * .scrolling-filetree-horizontal
- * .scrolling-linewidth-enabled
- *
- * Classes for elements supporting scrolling:
- * .scrolling-transparent
- *
- * Variables:
- * --scrolling-scrollbar-width
- * --scrolling-line-width
- *
  */
 
 /* Hide specific scrollbars in files */
@@ -65,7 +51,7 @@
     content: '';
     display: inline-block;
     position: absolute;
-    width: var(--scrolling-extra-line-padding);
+    width: var(--scrolling-extra-line-length);
     height: 1px;
 }
 
