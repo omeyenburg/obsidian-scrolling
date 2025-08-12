@@ -14,14 +14,14 @@ export interface ScrollingPluginSettings {
 
     cursorScrollEnabled: boolean;
 
+    horizontalScrollingCodeBlockEnabled: boolean;
+    horizontalScrollingFileTreeEnabled: boolean;
+
     restoreScrollMode: string; // scroll, cursor, top, bottom
     restoreScrollLimit: number; // negative values for no limit
     restoreScrollAllFiles: boolean;
     restoreScrollFileEnabled: boolean;
     restoreScrollFilePath: string;
-
-    horizontalScrollingCodeBlockEnabled: boolean;
-    horizontalScrollingFileTreeEnabled: boolean;
 
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
@@ -35,6 +35,8 @@ export interface ScrollingPluginSettings {
     touchpadSmoothness: number;
     touchpadFrictionThreshold: number;
     touchpadSpeed: number;
+
+    enableExperimentalSettings: boolean;
 }
 
 export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
@@ -48,14 +50,14 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
     cursorScrollEnabled: false,
 
-    restoreScrollMode: "scroll",
-    restoreScrollLimit: -1,
-    restoreScrollAllFiles: false,
-    restoreScrollFileEnabled: true,
-    restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
-
     horizontalScrollingCodeBlockEnabled: false,
     horizontalScrollingFileTreeEnabled: false,
+
+    restoreScrollMode: "scroll",
+    restoreScrollLimit: -1,
+    restoreScrollAllFiles: true,
+    restoreScrollFileEnabled: true,
+    restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
 
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
@@ -69,6 +71,8 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     touchpadSmoothness: 75,
     touchpadFrictionThreshold: 20,
     touchpadSpeed: 50,
+
+    enableExperimentalSettings: false,
 };
 
 export class ScrollingSettingTab extends PluginSettingTab {
@@ -88,8 +92,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.displayFollowCursorSettings();
         this.displayCursorScrollSettings();
-        this.displayRestoreScrollSettings();
         this.displayHorizontalScrollingSettings();
+        this.displayRestoreScrollSettings();
         this.displayScrollbarSettings();
         this.displayMouseScrollSettings();
 
@@ -114,6 +118,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 });
             }),
         );
+
         this.containerEl.scrollTop = previousScrollTop;
     }
 
@@ -243,45 +248,60 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        // this.createSetting(
-        //     "Dynamic animations",
-        //     "If many scroll events happen quickly, skip animation frames to improve responsiveness.",
-        // ).addToggle((toggle) =>
-        //     toggle
-        //         .setValue(this.plugin.settings.followCursorDynamicAnimation)
-        //         .onChange(async (value) => {
-        //             this.plugin.settings.followCursorDynamicAnimation = value;
-        //             await this.plugin.saveSettings();
-        //         }),
-        // );
+        if (!this.plugin.settings.enableExperimentalSettings) {
+            this.plugin.settings.followCursorDynamicAnimation =
+                DEFAULT_SETTINGS.followCursorDynamicAnimation;
+        } else {
+            this.createSetting(
+                "Dynamic animations (Experimental)",
+                "If many scroll events happen quickly, skip animation frames to improve responsiveness.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.followCursorDynamicAnimation)
+                    .onChange(async (value) => {
+                        this.plugin.settings.followCursorDynamicAnimation = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
 
-        // if (Platform.isDesktop) {
-        //     this.createSetting(
-        //         "Trigger on mouse interactions",
-        //         "Update when the cursor is moved using the mouse.",
-        //     ).addToggle((toggle) =>
-        //         toggle
-        //             .setValue(this.plugin.settings.followCursorEnableMouse)
-        //             .onChange(async (value) => {
-        //                 this.plugin.settings.followCursorEnableMouse = value;
-        //                 this.display();
-        //                 await this.plugin.saveSettings();
-        //             }),
-        //     );
+        if (Platform.isDesktop) {
+            if (!this.plugin.settings.enableExperimentalSettings) {
+                this.plugin.settings.followCursorEnableMouse =
+                    DEFAULT_SETTINGS.followCursorEnableMouse;
+            } else {
+                this.createSetting(
+                    "Trigger on mouse interactions (Experimental)",
+                    "Update when the cursor is moved using the mouse.",
+                ).addToggle((toggle) =>
+                    toggle
+                        .setValue(this.plugin.settings.followCursorEnableMouse)
+                        .onChange(async (value) => {
+                            this.plugin.settings.followCursorEnableMouse = value;
+                            this.display();
+                            await this.plugin.saveSettings();
+                        }),
+                );
+            }
 
-        //     this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
-        //     this.createSetting(
-        //         "Trigger on mouse selection",
-        //         "Also update when text is selected using the mouse.",
-        //     ).addToggle((toggle) =>
-        //         toggle
-        //             .setValue(this.plugin.settings.followCursorEnableSelection)
-        //             .onChange(async (value) => {
-        //                 this.plugin.settings.followCursorEnableSelection = value;
-        //                 await this.plugin.saveSettings();
-        //             }),
-        //     );
-        // }
+            if (!this.plugin.settings.enableExperimentalSettings) {
+                this.plugin.settings.followCursorEnableSelection =
+                    DEFAULT_SETTINGS.followCursorEnableSelection;
+            } else {
+                this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
+                this.createSetting(
+                    "Trigger on mouse selection (Experimental)",
+                    "Also update when text is selected using the mouse.",
+                ).addToggle((toggle) =>
+                    toggle
+                        .setValue(this.plugin.settings.followCursorEnableSelection)
+                        .onChange(async (value) => {
+                            this.plugin.settings.followCursorEnableSelection = value;
+                            await this.plugin.saveSettings();
+                        }),
+                );
+            }
+        }
     }
 
     private displayCursorScrollSettings() {
@@ -298,6 +318,39 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 this.plugin.settings.cursorScrollEnabled = value;
                 await this.plugin.saveSettings();
             }),
+        );
+    }
+
+    private displayHorizontalScrollingSettings() {
+        if (!Platform.isDesktop) return;
+
+        this.containerEl.createEl("br");
+        this.createHeading("Horizontal scrolling");
+
+        this.createSetting(
+            "Code blocks",
+            "Allow horizontal scrolling of code blocks in your notes.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.horizontalScrollingCodeBlockEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.horizontalScrollingCodeBlockEnabled = value;
+                    this.plugin.codeScroll.updateStyle();
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        this.createSetting(
+            "File tree",
+            "Allow horizontal scrolling in the file tree and show a scrollbar.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.horizontalScrollingFileTreeEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.horizontalScrollingFileTreeEnabled = value;
+                    this.plugin.scrollbar.updateStyle();
+                    await this.plugin.saveSettings();
+                }),
         );
     }
 
@@ -355,15 +408,21 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 });
         });
 
-        this.createSetting(
-            "Restore position in other files",
-            "Enable restoring scroll position in Markdown preview, images, and PDFs.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.restoreScrollAllFiles).onChange(async (value) => {
-                this.plugin.settings.restoreScrollAllFiles = value;
-                await this.plugin.saveSettings();
-            }),
-        );
+        if (!this.plugin.settings.enableExperimentalSettings) {
+            this.plugin.settings.restoreScrollAllFiles = DEFAULT_SETTINGS.restoreScrollAllFiles;
+        } else {
+            this.createSetting(
+                "Restore position in other files (Experimental)",
+                "Enable restoring scroll position in Markdown preview, images, and PDFs.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.restoreScrollAllFiles)
+                    .onChange(async (value) => {
+                        this.plugin.settings.restoreScrollAllFiles = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
 
         this.createSetting(
             "Store positions in file",
@@ -441,39 +500,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
         });
     }
 
-    private displayHorizontalScrollingSettings() {
-        this.containerEl.createEl("br");
-        this.createHeading("Horizontal scrolling");
-
-        this.createSetting(
-            "Code blocks",
-            "Allow horizontal scrolling of code blocks in your notes.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.horizontalScrollingCodeBlockEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.horizontalScrollingCodeBlockEnabled = value;
-                    this.plugin.codeScroll.updateStyle();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        if (Platform.isDesktop) {
-            this.createSetting(
-                "File tree",
-                "Allow horizontal scrolling in the file tree and show a scrollbar.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.horizontalScrollingFileTreeEnabled)
-                    .onChange(async (value) => {
-                        this.plugin.settings.horizontalScrollingFileTreeEnabled = value;
-                        this.plugin.scrollbar.updateStyle();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
-    }
-
     private displayScrollbarSettings() {
         this.containerEl.createEl("br");
         this.createHeading("Scrollbar appearance");
@@ -536,15 +562,19 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.settingsEnabled = this.plugin.settings.mouseEnabled;
 
-        // this.createSetting(
-        //     "Invert scroll direction",
-        //     "Reverse the scroll direction for mouse wheel and touchpad input.",
-        // ).addToggle((toggle) =>
-        //     toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
-        //         this.plugin.settings.mouseInvert = value;
-        //         await this.plugin.saveSettings();
-        //     }),
-        // );
+        if (!this.plugin.settings.enableExperimentalSettings) {
+            this.plugin.settings.mouseInvert = DEFAULT_SETTINGS.mouseInvert;
+        } else {
+            this.createSetting(
+                "Invert scroll direction (Experimental)",
+                "Reverse the scroll direction for mouse wheel and touchpad input.",
+            ).addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.mouseInvert).onChange(async (value) => {
+                    this.plugin.settings.mouseInvert = value;
+                    await this.plugin.saveSettings();
+                }),
+            );
+        }
 
         this.createSetting(
             "Mouse scroll speed",
@@ -574,17 +604,21 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        // this.createSetting(
-        //     "Touchpad detection",
-        //     "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
-        // ).addToggle((toggle) =>
-        //     toggle.setValue(this.plugin.settings.touchpadEnabled).onChange(async (value) => {
-        //         this.plugin.settings.touchpadEnabled = value;
-        //         this.display();
-        //         await this.plugin.saveSettings();
-        //     }),
-        // );
-        // this.settingsEnabled &&= this.plugin.settings.touchpadEnabled;
+        if (!this.plugin.settings.enableExperimentalSettings) {
+            this.plugin.settings.mouseInvert = DEFAULT_SETTINGS.mouseInvert;
+        } else {
+            this.createSetting(
+                "Touchpad detection (Experimental)",
+                "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
+            ).addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.touchpadEnabled).onChange(async (value) => {
+                    this.plugin.settings.touchpadEnabled = value;
+                    this.display();
+                    await this.plugin.saveSettings();
+                }),
+            );
+            this.settingsEnabled &&= this.plugin.settings.touchpadEnabled;
+        }
 
         this.createSetting(
             "Touchpad scroll speed",
