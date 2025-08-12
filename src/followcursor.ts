@@ -17,12 +17,16 @@ export class FollowCursor {
     private scrollIntensity = 0;
     private scrollLastEvent = 0;
 
-    private static readonly INTENSITY_DECAY_RATE = 0.01;
-    private static readonly INTENSITY_THRESHOLD = 3;
-    private static readonly MOUSE_UP_TIMEOUT = 100;
+    private readonly INTENSITY_DECAY_RATE = 0.01;
+    private readonly INTENSITY_THRESHOLD = 3;
+    private readonly MOUSE_UP_TIMEOUT = 100;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
+
+        plugin.register(() => {
+            window.cancelAnimationFrame(this.animationFrame);
+        });
     }
 
     public keyHandler(): void {
@@ -36,7 +40,7 @@ export class FollowCursor {
         // This timeout is needed, because the keydown event is not reliable:
         // In normal mode of vim, keydown events are pretty much inaccessible.
         // Already wasted too much time with this.
-        window.setTimeout(() => (this.recentMouseUp = false), FollowCursor.MOUSE_UP_TIMEOUT);
+        window.setTimeout(() => (this.recentMouseUp = false), this.MOUSE_UP_TIMEOUT);
     }
 
     public editHandler(editor: Editor): void {
@@ -103,6 +107,39 @@ export class FollowCursor {
 
         window.cancelAnimationFrame(this.animationFrame);
         this.animate(editor, goal, signedGoalDistance / steps, steps);
+
+        // NOTE: Alternative: use transition effects.
+        // import { EditorView } from "@codemirror/view";
+        // const view = editor.cm;
+        // view.requestMeasure({
+        //     key: "center-cursor",
+        //     read: (view) => {
+        //         const caret = view.coordsAtPos(view.state.selection.main.head);
+        //         if (!caret) return null;
+        //         const viewportHeight = view.dom.clientHeight;
+        //         const caretHeight = caret.bottom - caret.top;
+        //         return viewportHeight / 2 - caretHeight / 2;
+        //     },
+        //     write: (centerOffset, view) => {
+        //         if (centerOffset == null) return;
+        //         window.requestAnimationFrame(() => {
+        //             const effect = EditorView.scrollIntoView(view.state.selection.main.head, {
+        //                 y: "start",
+        //                 yMargin: centerOffset,
+        //             });
+        //             view.dispatch({ effects: effect });
+        //         });
+        //     },
+        // });
+
+        // TODO: Use requestMeasure.
+        // editor.cm.requestMeasure({
+        //     key: "center-cursor",
+        //     read: (view) => {},
+        //     write: (_, view) => {
+        //         this.animate(editor, goal, signedGoalDistance / steps, steps);
+        //     },
+        // });
     }
 
     private animate(editor: Editor, goal: number, stepSize: number, step: number): void {
@@ -120,7 +157,7 @@ export class FollowCursor {
 
         this.scrollLastEvent = time;
         this.scrollIntensity =
-            Math.max(0, this.scrollIntensity - elapsed * FollowCursor.INTENSITY_DECAY_RATE) + 1;
+            Math.max(0, this.scrollIntensity - elapsed * this.INTENSITY_DECAY_RATE) + 1;
     }
 
     private calculateGoalDistance(cursorVerticalPosition: number, scrollInfo: ScrollInfo) {
@@ -165,7 +202,7 @@ export class FollowCursor {
 
         // If scrolling fast, reduce animation steps.
         if (
-            this.scrollIntensity > FollowCursor.INTENSITY_THRESHOLD ||
+            this.scrollIntensity > this.INTENSITY_THRESHOLD ||
             Math.abs(signedGoalDistance) > scrollerHeight
         ) {
             steps = Math.ceil(Math.sqrt(steps));

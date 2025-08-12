@@ -24,8 +24,8 @@ export class Events {
 
     public manualPreventCursor = false;
 
-    private static readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
-    private static readonly IMAGE_EXTENSIONS = new Set([
+    private readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
+    private readonly IMAGE_EXTENSIONS = new Set([
         "png",
         "jpg",
         "jpeg",
@@ -120,14 +120,14 @@ export class Events {
         this.scrollEventSkip = true;
         window.setTimeout(
             () => (this.scrollEventSkip = false),
-            Events.LEAF_CHANGE_SCROLL_EVENT_DELAY,
+            this.LEAF_CHANGE_SCROLL_EVENT_DELAY,
         );
 
         if (view.file.extension === "md") {
             this.attachScrollHandlerMarkdown(view);
         } else if (view.file.extension === "pdf") {
             this.attachScrollHandlerPdf(view);
-        } else if (Events.IMAGE_EXTENSIONS.has(view.file.extension.toLowerCase())) {
+        } else if (this.IMAGE_EXTENSIONS.has(view.file.extension.toLowerCase())) {
             this.attachScrollHandlerImage(view);
         }
     }
@@ -172,8 +172,8 @@ export class Events {
 
     private leafChangeHandler(): void {
         this.plugin.mouseScroll.leafChangeHandler();
-        this.plugin.cursorScroll.leafChangeHandler();
-        this.plugin.codeScroll.leafChangeHandler();
+        this.plugin.followScroll.leafChangeHandler();
+        this.plugin.codeBlock.leafChangeHandler();
         this.attachScrollHandler();
     }
 
@@ -215,8 +215,8 @@ export class Events {
 
     skipViewUpdate = false;
     private viewUpdateHandler(update: ViewUpdate): void {
-        if (this.plugin.cursorScroll.skipCursor) {
-            this.plugin.cursorScroll.skipCursor = false;
+        if (this.plugin.followScroll.skipCursor) {
+            this.plugin.followScroll.skipCursor = false;
             return;
         }
 
@@ -237,9 +237,9 @@ export class Events {
         this.skipViewUpdate = true;
         window.requestAnimationFrame(() => (this.skipViewUpdate = false));
 
-        this.plugin.codeScroll.cursorHandler(update.docChanged);
+        this.plugin.codeBlock.cursorHandler(update.docChanged);
         this.plugin.followCursor.cursorHandler();
-        this.plugin.cursorScroll.cursorHandler();
+        this.plugin.followScroll.cursorHandler();
     }
 
     private isWithinScrollContext(el: HTMLElement): boolean {
@@ -247,7 +247,7 @@ export class Events {
     }
 
     private wheelHandler(event: WheelEvent): void {
-        this.plugin.codeScroll.wheelHandler(event);
+        this.plugin.codeBlock.wheelHandler(event);
 
         if (!event.deltaY) return;
         if (
@@ -281,7 +281,7 @@ export class Events {
                         isStart,
                     );
 
-                    this.plugin.cursorScroll.wheelHandler(this.lastWheelScrollElement);
+                    this.plugin.followScroll.wheelHandler(this.lastWheelScrollElement);
                     return;
                 }
             }
@@ -307,7 +307,7 @@ export class Events {
                 }
 
                 this.plugin.mouseScroll.applyCustomScroll(event, el, now, deltaTime, isStart);
-                this.plugin.cursorScroll.wheelHandler(el);
+                this.plugin.followScroll.wheelHandler(el);
                 this.lastWheelScrollElement = el;
                 return;
             }

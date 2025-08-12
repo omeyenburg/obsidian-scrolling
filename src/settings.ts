@@ -335,7 +335,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.horizontalScrollingCodeBlockEnabled)
                 .onChange(async (value) => {
                     this.plugin.settings.horizontalScrollingCodeBlockEnabled = value;
-                    this.plugin.codeScroll.updateStyle();
+                    this.plugin.codeBlock.updateStyle();
                     await this.plugin.saveSettings();
                 }),
         );
@@ -348,7 +348,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.horizontalScrollingFileTreeEnabled)
                 .onChange(async (value) => {
                     this.plugin.settings.horizontalScrollingFileTreeEnabled = value;
-                    this.plugin.scrollbar.updateStyle();
+                    this.plugin.fileTree.updateStyle();
                     await this.plugin.saveSettings();
                 }),
         );
