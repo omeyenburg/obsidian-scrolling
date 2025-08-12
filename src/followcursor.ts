@@ -1,5 +1,4 @@
 import { Editor, MarkdownView } from "obsidian";
-import { ViewUpdate } from "@codemirror/view";
 
 import type { default as ScrollingPlugin } from "./main";
 
