@@ -1,7 +1,7 @@
 {
   "id": "scrolling",
   "name": "Scrolling",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "minAppVersion": "1.2.7",
   "description": "Improve scrolling and keep your cursor exactly where you want it.",
   "author": "omeyenburg",
