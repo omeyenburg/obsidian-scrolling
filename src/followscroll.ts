@@ -3,18 +3,18 @@ import { EditorSelection } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "./main";
 
-export class CursorScroll {
+export class FollowScroll {
     private plugin: ScrollingPlugin;
     private relativeLineOffset: number | null = null;
 
     public skipCursor = false;
     private readonly resetSkip: Debouncer<[void], void>;
-    private static readonly CURSOR_SKIP_DELAY = 500;
+    private readonly CURSOR_SKIP_DELAY = 500;
 
     public readonly wheelHandler: Debouncer<[HTMLElement], void>;
 
     // Balanced between performance and visual response
-    private static readonly UPDATE_INTERVAL = 70;
+    private readonly UPDATE_INTERVAL = 70;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -23,15 +23,11 @@ export class CursorScroll {
             () => {
                 this.skipCursor = false;
             },
-            CursorScroll.CURSOR_SKIP_DELAY,
+            this.CURSOR_SKIP_DELAY,
             true,
         );
 
-        this.wheelHandler = debounce(
-            this.applyScroll.bind(this),
-            CursorScroll.UPDATE_INTERVAL,
-            false,
-        );
+        this.wheelHandler = debounce(this.applyScroll.bind(this), this.UPDATE_INTERVAL, false);
 
         window.requestAnimationFrame(this.cursorHandler.bind(this));
     }

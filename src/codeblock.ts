@@ -2,7 +2,7 @@ import { Editor, debounce } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
-export class CodeScroll {
+export class CodeBlock {
     private readonly plugin: ScrollingPlugin;
 
     private codeBlockLines: Element[] = [];
@@ -15,9 +15,6 @@ export class CodeScroll {
     private scrollAnimationFrame = 0;
 
     private readonly verticalWheelScrollDebouncer: (line: Element) => void;
-
-    // private incompleteBeginLine: Element | null = null;
-    // private incompleteEndLine: Element | null = null;
 
     private cursorScheduled = false;
     private cachedCursor: HTMLElement | null = null;
@@ -51,6 +48,12 @@ export class CodeScroll {
         );
 
         this.updateStyle();
+
+        plugin.register(() => {
+            window.cancelAnimationFrame(this.scrollAnimationFrame);
+            document.body.style.removeProperty("--scrolling-scrollbar-width");
+            document.body.removeClass("scrolling-horizontal-code-blocks");
+        });
     }
 
     public updateStyle(): void {
@@ -61,12 +64,6 @@ export class CodeScroll {
         }
     }
 
-    public unload() {
-        window.cancelAnimationFrame(this.scrollAnimationFrame);
-        document.body.style.removeProperty("--scrolling-scrollbar-width");
-        document.body.removeClass("scrolling-horizontal-code-blocks");
-    }
-
     public leafChangeHandler(): void {
         this.cachedCursor = null;
         this.currentScrollLeft = 0;
@@ -74,9 +71,6 @@ export class CodeScroll {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
 
-        // const pos = editor.cm.state.selection.main.head;
-        // const lineInfo = editor.cm.state.doc.lineAt(pos);
-        // const lineEl = editor.cm.contentDOM.children[lineInfo.number - 1];
         const lineEl = document.querySelector(".cm-line.cm-active");
         if (!lineEl) return;
 
@@ -85,42 +79,19 @@ export class CodeScroll {
     }
 
     public wheelHandler(event: WheelEvent): void {
-        // Often parent but not always
-        // let line = event.targetNode.parentElement as Element;
-        // if (!line || !this.insideCodeBlock(line.classList)) {
-        //     if (
-        //         event.target instanceof Element &&
-        //         this.insideCodeBlock((event.target as Element).classList)
-        //     ) {
-        //         line = event.target as Element;
-        //     } else {
-        //         return;
-        //     }
-        // }
-
-        // Early return
-        // if (
-        //     !target ||
-        //     (!this.insideCodeBlock(target.classList) &&
-        //         !(parent && this.insideCodeBlock(parent.classList)))
-        // )
-        //     return;
-
-        // const line = this.insideCodeBlock(parent?.classList) ? parent : target;
-
         const target = event.target as Element;
         const parent = target?.parentElement;
 
-        // Fast early exit
+        // Fast exit for non-code blocks
         if (
             !this.plugin.settings.horizontalScrollingCodeBlockEnabled ||
             (!target?.classList?.contains("HyperMD-codeblock") &&
                 !parent?.classList?.contains("HyperMD-codeblock"))
         ) {
-            return; // Super fast exit for non-code blocks
+            return;
         }
 
-        // Only do the full check when we know we're in a code block
+        // Only do the full check when we know we are in a code block
         const line = this.insideCodeBlock(parent?.classList) ? parent : target;
         if (line === target && !this.insideCodeBlock(target?.classList)) return;
 
@@ -135,43 +106,18 @@ export class CodeScroll {
         } else {
             // No horizontal scroll
             this.lastVerticalTimeStamp = event.timeStamp;
-
-            // if (this.incompleteEndLine || this.incompleteBeginLine) {
             this.verticalWheelScrollDebouncer(line);
-            // }
-
-            // // Updated newly loaded lines
-            // if (event.deltaY > 0 && this.incompleteEndLine !== null) {
-            //     if (this.codeBlockLines.contains(line)) {
-            //         this.searchCodeLinesBelow(this.incompleteEndLine);
-            //         this.codeBlockLines.forEach((e) => {
-            //             if (!e.isConnected) {
-            //                 this.codeBlockLines.remove(e);
-            //             }
-            //         });
-            //     } else {
-            //         this.searchCodeLines(line);
-            //     }
-            //     this.updateHorizontalScroll();
-            // } else if (this.incompleteBeginLine !== null) {
-            //     if (this.codeBlockLines.contains(line)) {
-            //         this.searchCodeLinesAbove(this.incompleteBeginLine);
-            //         this.codeBlockLines.forEach((e) => {
-            //             if (!e.isConnected) {
-            //                 this.codeBlockLines.remove(e);
-            //             }
-            //         });
-            //     } else {
-            //         this.searchCodeLines(line);
-            //     }
-            //     this.updateHorizontalScroll();
-            // }
         }
     }
 
     public cursorHandler(isEdit: boolean): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (this.cursorScheduled || !editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
+        if (
+            this.cursorScheduled ||
+            !editor ||
+            !this.plugin.settings.horizontalScrollingCodeBlockEnabled
+        )
+            return;
 
         const lineEl = document.querySelector(".cm-line.cm-active");
         if (!lineEl?.classList?.contains("HyperMD-codeblock")) {
@@ -274,7 +220,7 @@ export class CodeScroll {
         this.updateHorizontalScroll();
 
         // Tell codemirror to update cursor
-        this.plugin.cursorScroll.skipCursor = true;
+        this.plugin.followScroll.skipCursor = true;
         editor.cm.dispatch({ selection: editor.cm.state.selection });
 
         if (
@@ -295,7 +241,7 @@ export class CodeScroll {
         if (!cursorEl) return;
 
         // Cursor must be updated, otherwise it would not move at all while scrolling
-        this.plugin.cursorScroll.skipCursor = true;
+        this.plugin.followScroll.skipCursor = true;
         editor.cm.dispatch({
             selection: editor.cm.state.selection,
             effects: [],
@@ -335,7 +281,6 @@ export class CodeScroll {
         );
     }
 
-    // TODO: obsolete if this.incompleteEndLine not used
     private searchCodeLinesBelow(line: Element): number {
         let maxScrollWidthWithExtension = 0;
         let next = line.nextElementSibling;
@@ -381,18 +326,15 @@ export class CodeScroll {
         return isCode;
     }
 
-    // TODO: obsolete if this.incompleteEndLine not used
     private insideCodeBlockBelow(lineBelow: Element): boolean {
         let isCode = false;
         const classes = lineBelow.classList;
         for (let i = 0; i < classes.length; i++) {
             const c = classes[i];
             if (c === "HyperMD-codeblock") {
-                // this.incompleteEndLine = lineBelow;
                 isCode = true;
             }
             if (c === "HyperMD-codeblock-end") {
-                // this.incompleteEndLine = null;
                 return false;
             }
         }
@@ -406,11 +348,9 @@ export class CodeScroll {
         for (let i = 0; i < classes.length; i++) {
             const c = classes[i];
             if (c === "HyperMD-codeblock") {
-                // this.incompleteBeginLine = lineAbove;
                 isCode = true;
             }
             if (c === "HyperMD-codeblock-begin") {
-                // this.incompleteBeginLine = null;
                 return false;
             }
         }

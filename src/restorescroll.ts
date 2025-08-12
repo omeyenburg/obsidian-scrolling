@@ -44,8 +44,8 @@ export class RestoreScroll {
     public readonly writeStateFileDebounced: () => void;
 
     // Prime numbers :)
-    private static readonly STORE_INTERVAL = 97;
-    private static readonly FILE_WRITE_INTERVAL = 293;
+    private readonly STORE_INTERVAL = 97;
+    private readonly FILE_WRITE_INTERVAL = 293;
 
     public static readonly DEFAULT_FILE_PATH =
         ".obsidian/plugins/scrolling/scrolling-positions.json";
@@ -55,15 +55,11 @@ export class RestoreScroll {
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
-        this.storeStateDebounced = debounce(
-            this.storeState.bind(this),
-            RestoreScroll.STORE_INTERVAL,
-            false,
-        );
+        this.storeStateDebounced = debounce(this.storeState.bind(this), this.STORE_INTERVAL, false);
 
         this.writeStateFileDebounced = debounce(
             this.writeStateFile.bind(this),
-            RestoreScroll.FILE_WRITE_INTERVAL,
+            this.FILE_WRITE_INTERVAL,
             true,
         );
     }

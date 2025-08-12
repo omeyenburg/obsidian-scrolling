@@ -1,35 +1,41 @@
 import { Plugin } from "obsidian";
 
-import { Events } from "./events";
+import { CodeBlock } from "./codeblock";
+import { FileTree } from "./filetree";
 import { FollowCursor } from "./followcursor";
-import { CursorScroll } from "./cursorscroll";
-import { CodeScroll } from "./codescroll";
+import { FollowScroll } from "./followscroll";
 import { MouseScroll } from "./mousescroll";
-import { Scrollbar } from "./scrollbar";
 import { RestoreScroll } from "./restorescroll";
+import { Scrollbar } from "./scrollbar";
+
+import { Events } from "./events";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "./settings";
 
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
 
-    restoreScroll!: RestoreScroll;
-    cursorScroll!: CursorScroll;
+    codeBlock!: CodeBlock;
+    fileTree!: FileTree;
     followCursor!: FollowCursor;
+    followScroll!: FollowScroll;
     mouseScroll!: MouseScroll;
+    restoreScroll!: RestoreScroll;
     scrollbar!: Scrollbar;
-    codeScroll!: CodeScroll;
+
     events!: Events;
 
     async onload() {
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this));
 
-        this.restoreScroll = new RestoreScroll(this);
-        this.cursorScroll = new CursorScroll(this);
+        this.codeBlock = new CodeBlock(this);
+        this.fileTree = new FileTree(this);
         this.followCursor = new FollowCursor(this);
+        this.followScroll = new FollowScroll(this);
         this.mouseScroll = new MouseScroll(this);
+        this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
-        this.codeScroll = new CodeScroll(this);
+
         this.events = new Events(this);
 
         await this.restoreScroll.loadData();
@@ -38,10 +44,7 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async onunload() {
-        this.scrollbar?.removeStyle();
         this.restoreScroll.quitHandler();
-
-        this.codeScroll.unload();
 
         console.log("ScrollingPlugin unloaded");
     }

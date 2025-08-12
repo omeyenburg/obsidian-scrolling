@@ -18,39 +18,44 @@ export class MouseScroll {
     private touchpadVelocity = 0;
     private touchpadLastAnimation = 0;
     private touchpadScrolling = false;
-    private touchpadAnimation = 0;
+    private touchpadAnimationFrame = 0;
     private mouseLastUse = 0;
     private mouseTarget: number;
     private mouseAnimationFrame: number;
-    private static readonly MAX_FRICTION = 0.98;
-    private static readonly MIN_VELOCITY = 0.01;
-    private static readonly TOUCHPAD_GRACE_PERIOD = 50;
+    private readonly MAX_FRICTION = 0.98;
+    private readonly MIN_VELOCITY = 0.01;
+    private readonly TOUCHPAD_GRACE_PERIOD = 50;
 
-    private static readonly MIN_START_TRESHOLD = 200;
-    private static readonly MAX_START_TRESHOLD = 500;
+    private readonly MIN_START_TRESHOLD = 200;
+    private readonly MAX_START_TRESHOLD = 500;
 
     private intervalSum: number | null = null;
-    private static readonly MAX_INTENSITY_INTERVAL = 600;
-    private static readonly INTENSITY_SMOOTHING = 0.3;
+    private readonly MAX_INTENSITY_INTERVAL = 600;
+    private readonly INTENSITY_SMOOTHING = 0.3;
 
     private delays: number[] = [];
-    private avgDelay = MouseScroll.WHEEL_DELAY_THRESHOLD;
-    private static readonly WHEEL_DELAY_THRESHOLD = 10;
-    private static readonly MAX_DELAY_SAMPLES = 50;
+    private avgDelay = 10;
+    private readonly WHEEL_DELAY_THRESHOLD = 10;
+    private readonly MAX_DELAY_SAMPLES = 50;
 
     private batchSizes: number[] = [];
-    private avgBatchSize = MouseScroll.BATCH_SIZE_THRESHOLD;
-    private static readonly BATCH_SIZE_THRESHOLD = 20;
-    private static readonly MAX_BATCH_SIZE_SAMPLES = 3;
+    private avgBatchSize = 20;
+    private readonly BATCH_SIZE_THRESHOLD = 20;
+    private readonly MAX_BATCH_SIZE_SAMPLES = 3;
 
     private currentEl: HTMLElement | null = null;
-    private static readonly DEFAULT_FRAME_TIME = 16.67;
+    private readonly DEFAULT_FRAME_TIME = 16.67;
 
     private readonly IS_MAC_OS: boolean;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
         this.IS_MAC_OS = window.navigator.userAgent.includes("Mac OS");
+
+        plugin.register(() => {
+            window.cancelAnimationFrame(this.mouseAnimationFrame)
+            window.cancelAnimationFrame(this.touchpadAnimationFrame)
+        })
     }
 
     // Reset velocity on file change
@@ -134,7 +139,7 @@ export class MouseScroll {
     // Defaults: smoothness=0.75, speed=0.25, frictionThreshold=20
     private startTouchpadScroll(el: HTMLElement, deltaY: number): void {
         if (el !== this.currentEl) {
-            window.cancelAnimationFrame(this.touchpadAnimation);
+            window.cancelAnimationFrame(this.touchpadAnimationFrame);
             window.requestAnimationFrame(
                 this.decoupledTouchpadScroll.bind(
                     this,
@@ -151,7 +156,7 @@ export class MouseScroll {
         }
 
         const smoothness = this.plugin.settings.touchpadSmoothness / 100;
-        const speed = this.plugin.settings.touchpadSpeed / 200 / MouseScroll.DEFAULT_FRAME_TIME;
+        const speed = this.plugin.settings.touchpadSpeed / 200 / this.DEFAULT_FRAME_TIME;
         const frictionThreshold = this.plugin.settings.touchpadFrictionThreshold;
         const invert = this.plugin.settings.mouseInvert ? -1 : 1;
 
@@ -160,14 +165,14 @@ export class MouseScroll {
         this.touchpadFriction =
             Math.min(1, (Math.abs(deltaY) / frictionThreshold) ** 3) * smoothness;
 
-        if (!this.touchpadScrolling || Math.abs(this.touchpadVelocity) < MouseScroll.MIN_VELOCITY) {
+        if (!this.touchpadScrolling || Math.abs(this.touchpadVelocity) < this.MIN_VELOCITY) {
             this.touchpadScrolling = true;
             this.animateTouchpadScroll(el);
         }
     }
 
     private animateTouchpadScroll(el: HTMLElement) {
-        if (Math.abs(this.touchpadVelocity) > MouseScroll.MIN_VELOCITY) {
+        if (Math.abs(this.touchpadVelocity) > this.MIN_VELOCITY) {
             const now = performance.now();
             const deltaTime = Math.max(8, Math.min(now - this.touchpadLastAnimation, 60));
             this.touchpadLastAnimation = now;
@@ -178,28 +183,28 @@ export class MouseScroll {
             this.touchpadVelocity *= this.touchpadFriction;
             this.touchpadFriction = Math.max(
                 0,
-                Math.min(MouseScroll.MAX_FRICTION, this.touchpadFriction + 0.05),
+                Math.min(this.MAX_FRICTION, this.touchpadFriction + 0.05),
             );
 
-            this.touchpadAnimation = window.requestAnimationFrame(() =>
+            this.touchpadAnimationFrame = window.requestAnimationFrame(() =>
                 this.animateTouchpadScroll(el),
             );
         } else {
             this.touchpadScrolling = false;
             this.touchpadVelocity = 0;
             this.touchpadLastAnimation = 0;
-            this.touchpadAnimation = 0;
+            this.touchpadAnimationFrame = 0;
         }
     }
 
     private decoupledTouchpadScroll(el: HTMLElement, velocity: number, friction: number) {
-        if (Math.abs(velocity) > MouseScroll.MIN_VELOCITY) {
-            el.scrollTop = el.scrollTop + velocity * MouseScroll.DEFAULT_FRAME_TIME;
+        if (Math.abs(velocity) > this.MIN_VELOCITY) {
+            el.scrollTop = el.scrollTop + velocity * this.DEFAULT_FRAME_TIME;
             velocity *= friction;
-            friction = Math.max(0, Math.min(MouseScroll.MAX_FRICTION, friction + 0.05));
+            friction = Math.max(0, Math.min(this.MAX_FRICTION, friction + 0.05));
             window.setTimeout(
                 () => this.decoupledTouchpadScroll(el, velocity, friction),
-                MouseScroll.DEFAULT_FRAME_TIME,
+                this.DEFAULT_FRAME_TIME,
             );
         }
     }
@@ -222,7 +227,7 @@ export class MouseScroll {
         }
 
         // Grace period
-        if (now - this.touchpadLastUse < MouseScroll.TOUCHPAD_GRACE_PERIOD) {
+        if (now - this.touchpadLastUse < this.TOUCHPAD_GRACE_PERIOD) {
             this.touchpadLastUse = now;
             return true;
         }
@@ -231,11 +236,11 @@ export class MouseScroll {
 
         if (isStart) {
             mouseScore += 0.1;
-        } else if (this.avgDelay > MouseScroll.WHEEL_DELAY_THRESHOLD) {
+        } else if (this.avgDelay > this.WHEEL_DELAY_THRESHOLD) {
             mouseScore += 0.2;
         }
 
-        if (this.avgBatchSize < MouseScroll.BATCH_SIZE_THRESHOLD) {
+        if (this.avgBatchSize < this.BATCH_SIZE_THRESHOLD) {
             mouseScore += 0.1;
         }
 
@@ -268,8 +273,8 @@ export class MouseScroll {
 
     private getIsStart(deltaTime: number): boolean {
         const threshold = Math.min(
-            MouseScroll.MIN_START_TRESHOLD + this.avgDelay,
-            MouseScroll.MAX_START_TRESHOLD,
+            this.MIN_START_TRESHOLD + this.avgDelay,
+            this.MAX_START_TRESHOLD,
         );
 
         return deltaTime > threshold;
@@ -279,19 +284,19 @@ export class MouseScroll {
         const isStart = this.getIsStart(deltaTime);
         if (isStart) {
             this.batchSizes.push(this.delays.length);
-            if (this.batchSizes.length > MouseScroll.MAX_BATCH_SIZE_SAMPLES) {
+            if (this.batchSizes.length > this.MAX_BATCH_SIZE_SAMPLES) {
                 this.batchSizes.shift();
             }
             this.avgBatchSize = mean(this.batchSizes);
 
             this.delays = [];
-            this.avgDelay = MouseScroll.WHEEL_DELAY_THRESHOLD;
+            this.avgDelay = this.WHEEL_DELAY_THRESHOLD;
             return true;
         }
 
         // Store delay
         this.delays.push(deltaTime);
-        if (this.delays.length > MouseScroll.MAX_DELAY_SAMPLES) {
+        if (this.delays.length > this.MAX_DELAY_SAMPLES) {
             this.delays.shift(); // drop oldest
         }
 
@@ -300,11 +305,11 @@ export class MouseScroll {
     }
 
     private getIntensity(deltaTime: number, deltaY: number): number {
-        if (deltaTime < MouseScroll.MAX_INTENSITY_INTERVAL && this.intervalSum !== null) {
+        if (deltaTime < this.MAX_INTENSITY_INTERVAL && this.intervalSum !== null) {
             // modified EWMA (exponential weighted moving average)
             this.intervalSum =
-                this.intervalSum * (1 - MouseScroll.INTENSITY_SMOOTHING) +
-                deltaTime * MouseScroll.INTENSITY_SMOOTHING * Math.max(Math.pow(deltaY, 2));
+                this.intervalSum * (1 - this.INTENSITY_SMOOTHING) +
+                deltaTime * this.INTENSITY_SMOOTHING * Math.max(Math.pow(deltaY, 2));
         } else {
             this.intervalSum = Math.max(Math.pow(deltaY, 2), 1);
         }
