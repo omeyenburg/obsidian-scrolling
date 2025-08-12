@@ -10,30 +10,34 @@ Feel free to contribute or leave a star if you like this plugin :)
 
 Each feature is fully optional and can be toggled or configured in the plugin settings.
 
-#### Scroll follows cursor
+#### Scroll follows text cursor
 
 - By default, Obsidian only scrolls when the cursor reaches the edge of the viewport.
 - This feature automatically scrolls the view to keep the text cursor near the center while editing or navigating.
 - Also known as '_typewriter mode_' or similar to '_scrolloff_' in Vim.
 - Can be used together with '_Cursor follows scroll_'.
 
-#### Cursor follows scroll (Desktop only)
+#### Text Cursor follows scroll (Desktop only)
 
 - Normally, Obsidian allows the text cursor to move out of view when scrolling with the mouse or touchpad.
 - With this feature enabled, the text cursor is automatically moved to stay within view as you scroll.
 - Can be used together with '_Scroll follows cursor_'.
 
-#### Remember Scroll Position
+#### Horizontal scrolling
+
+- Disable wrapping and enable horizontal scrolling in code blocks.
+- Allow horizontal scrolling in the file tree.
+
+#### Remember scroll position
 
 - By default, Obsidian will always open files and place you at the top.
 - This feature saves your scroll position when closing a file and restores it when reopening the file later.
 
-#### Scrollbar Customization
+#### Scrollbar customization
 
 - Customize when the scrollbar is shown or hidden.
-- Optionally enable individual scrollbars.
 
-#### Mouse & Touchpad Scrolling (Experimental, Desktop only)
+#### Mouse & touchpad scrolling (Desktop only)
 
 - Change the speed and smoothness of scrolling with mouse and touchpad.
 
