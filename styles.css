@@ -8,6 +8,7 @@
 /* Hide specific scrollbars in files */
 .scrolling-visibility-hide .pdf-viewer-container::-webkit-scrollbar,
 .scrolling-visibility-hide .markdown-source-view::-webkit-scrollbar,
+.scrolling-visibility-hide .markdown-preview-view::-webkit-scrollbar,
 .scrolling-visibility-hide .cm-scroller::-webkit-scrollbar {
   display: none;
 }
@@ -64,7 +65,8 @@
 }
 
 /* Scrollable code in reading view */
-.scrolling-horizontal-code-blocks code {
+.scrolling-horizontal-code-blocks .markdown-preview-view code {
     white-space: pre;
     overflow-x: auto;
+    display: block;
 }
