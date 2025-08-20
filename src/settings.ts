@@ -501,8 +501,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private displayScrollbarSettings() {
-        if (!Platform.isDesktop) return;
-
         this.containerEl.createEl("br");
         this.createHeading("Scrollbar appearance");
 
@@ -529,7 +527,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             );
         }
 
-        if (Platform.isLinux) {
+        if (Platform.isLinux && Platform.isDesktop) {
             this.settingsEnabled = this.plugin.settings.scrollbarVisibility !== "hide";
 
             this.createSetting("Scrollbar thickness", "Scrollbar width in pixels.", () => {

@@ -2,16 +2,25 @@ import { Platform } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
-function applyStyle(visibility: string, width: number): void {
+function setVisibility(visibility: string): void {
     if (visibility === "hide") {
+        document.body.removeClass("scrolling-visibility-scroll");
         document.body.addClass("scrolling-visibility-hide");
     } else if (visibility === "scroll") {
+        document.body.removeClass("scrolling-visibility-hide");
         document.body.addClass("scrolling-visibility-scroll");
+    } else {
+        document.body.removeClass("scrolling-visibility-scroll");
+        document.body.removeClass("scrolling-visibility-hide");
     }
+}
 
+function setWidth(width: number) {
     if (width >= 0) {
         document.body.addClass("scrolling-scrollbar-width");
         document.body.style.setProperty("--scrolling-scrollbar-width", `${width}px`);
+    } else {
+        document.body.removeClass("scrolling-scrollbar-width");
     }
 }
 
@@ -20,7 +29,6 @@ function cleanup(): void {
         "scrolling-scrollbar-width",
         "scrolling-visibility-hide",
         "scrolling-visibility-scroll",
-        "scrolling-filetree-horizontal",
     ]);
 
     document.body.style.removeProperty("--scrolling-scrollbar-width");
@@ -29,8 +37,6 @@ function cleanup(): void {
 export class Scrollbar {
     private readonly plugin: ScrollingPlugin;
 
-    private currentWidth = 0;
-    private currentVisibility = "";
     private scrollTimeouts = new Map<HTMLElement, number>();
 
     private readonly SCROLLBAR_IDLE_TIMEOUT = 500;
@@ -51,21 +57,15 @@ export class Scrollbar {
 
     public updateStyle(): void {
         // Styling scrollbars doesnt work on MacOS.
-        if (Platform.isMacOS || !Platform.isDesktop) return;
+        if (Platform.isMacOS) return;
 
-        const visibility = this.plugin.settings.scrollbarVisibility;
+        setVisibility(this.plugin.settings.scrollbarVisibility);
 
-        // Default width appears to be 12px.
-        // Only linux supports this option, set to -1 to ignore width.
-        const width = Platform.isLinux ? this.plugin.settings.scrollbarWidth : -1;
-
-        // Only proceed if state changed.
-        if (this.currentWidth == width && this.currentVisibility == visibility) return;
-        this.currentWidth = width;
-        this.currentVisibility = visibility;
-
-        cleanup();
-        applyStyle(visibility, width);
+        // Default width on Linux (Desktop) appears to be 12px.
+        // Only Linux supports this option. Android does support this, but has different defaults.
+        if (Platform.isLinux && Platform.isDesktop) {
+            setWidth(this.plugin.settings.scrollbarWidth);
+        }
     }
 
     private showScrollbarTemporary(event: Event) {
