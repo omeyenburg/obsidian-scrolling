@@ -53,9 +53,9 @@ export class MouseScroll {
         this.IS_MAC_OS = window.navigator.userAgent.includes("Mac OS");
 
         plugin.register(() => {
-            window.cancelAnimationFrame(this.mouseAnimationFrame)
-            window.cancelAnimationFrame(this.touchpadAnimationFrame)
-        })
+            window.cancelAnimationFrame(this.mouseAnimationFrame);
+            window.cancelAnimationFrame(this.touchpadAnimationFrame);
+        });
     }
 
     // Reset velocity on file change
@@ -64,19 +64,51 @@ export class MouseScroll {
         window.cancelAnimationFrame(this.mouseAnimationFrame);
     }
 
-    public applyCustomScroll(
+    public wheelHandler(
         event: WheelEvent,
         el: HTMLElement,
         now: number,
         deltaTime: number,
         isStart: boolean,
     ) {
-        if (Platform.isMobile || !this.plugin.settings.mouseEnabled) return;
+        if (Platform.isMobile) return;
 
+        if (this.plugin.settings.scrollMode === "native") {
+            this.applyNativeScroll(event, el);
+        } else if (this.plugin.settings.scrollMode === "simulated") {
+            this.applySimulatedScroll(event, el, now, deltaTime, isStart);
+        }
+    }
+
+    private applyNativeScroll(event: WheelEvent, el: HTMLElement) {
+        const increasePercent = event.altKey
+            ? this.plugin.settings.nativeAltMultiplier
+            : this.plugin.settings.nativeScrollMultiplier;
+
+        if (this.plugin.settings.nativeScrollInstant) {
+            event.preventDefault()
+            el.scrollBy({
+                top: event.deltaY * increasePercent,
+                behavior: "instant",
+            });
+        }
+        else {
+            el.scrollBy(null, event.deltaY * (increasePercent - 1));
+        }
+    }
+
+    private applySimulatedScroll(
+        event: WheelEvent,
+        el: HTMLElement,
+        now: number,
+        deltaTime: number,
+        isStart: boolean,
+    ) {
+        // Approximate line height as 20px.
         const deltaY = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
 
         if (
-            this.plugin.settings.touchpadEnabled &&
+            this.plugin.settings.simulatedTouchpadEnabled &&
             this.isTouchpad(event, now, deltaTime, isStart)
         ) {
             this.startTouchpadScroll(el, deltaY);
@@ -93,9 +125,9 @@ export class MouseScroll {
         if (!el) return;
         window.cancelAnimationFrame(this.mouseAnimationFrame);
 
-        const smoothness = this.plugin.settings.mouseSmoothness * 2;
-        const speed = this.plugin.settings.mouseSpeed / 50;
-        const invert = this.plugin.settings.mouseInvert ? -1 : 1;
+        const smoothness = this.plugin.settings.simulatedMouseSmoothness * 2;
+        const speed = this.plugin.settings.simulatedMouseSpeed / 50;
+        const invert = this.plugin.settings.simulatedMouseInvert ? -1 : 1;
 
         const startTime = performance.now();
         if (this.mouseTarget && this.mouseLastUse && startTime - this.mouseLastUse < smoothness) {
@@ -155,10 +187,10 @@ export class MouseScroll {
             this.touchpadLastAnimation = 0;
         }
 
-        const smoothness = this.plugin.settings.touchpadSmoothness / 100;
-        const speed = this.plugin.settings.touchpadSpeed / 200 / this.DEFAULT_FRAME_TIME;
-        const frictionThreshold = this.plugin.settings.touchpadFrictionThreshold;
-        const invert = this.plugin.settings.mouseInvert ? -1 : 1;
+        const smoothness = this.plugin.settings.simulatedTouchpadSmoothness / 100;
+        const speed = this.plugin.settings.simulatedTouchpadSpeed / 200 / this.DEFAULT_FRAME_TIME;
+        const frictionThreshold = this.plugin.settings.simulatedTouchpadFrictionThreshold;
+        const invert = this.plugin.settings.simulatedMouseInvert ? -1 : 1;
 
         this.touchpadVelocity += deltaY * speed * invert;
 
