@@ -51,7 +51,7 @@ export class Scrollbar {
 
     public updateStyle(): void {
         // Styling scrollbars doesnt work on MacOS.
-        if (Platform.isMacOS) return;
+        if (Platform.isMacOS || !Platform.isDesktop) return;
 
         const visibility = this.plugin.settings.scrollbarVisibility;
 
