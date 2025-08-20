@@ -1,4 +1,4 @@
-import { View, Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf, debounce } from "obsidian";
+import { View, Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
@@ -252,7 +252,7 @@ export class Events {
         if (!event.deltaY) return;
         if (
             !(
-                (Platform.isDesktop && this.plugin.settings.mouseEnabled) ||
+                (Platform.isDesktop && this.plugin.settings.scrollMode === "disabled") ||
                 this.plugin.settings.cursorScrollEnabled
             )
         )
@@ -273,7 +273,7 @@ export class Events {
                     (event.deltaY < 0 && !isScrolledToTop(this.lastWheelScrollElement)) ||
                     (event.deltaY > 0 && !isScrolledToBottom(this.lastWheelScrollElement))
                 ) {
-                    this.plugin.mouseScroll.applyCustomScroll(
+                    this.plugin.mouseScroll.wheelHandler(
                         event,
                         this.lastWheelScrollElement,
                         now,
@@ -306,7 +306,7 @@ export class Events {
                     }
                 }
 
-                this.plugin.mouseScroll.applyCustomScroll(event, el, now, deltaTime, isStart);
+                this.plugin.mouseScroll.wheelHandler(event, el, now, deltaTime, isStart);
                 this.plugin.followScroll.wheelHandler(el);
                 this.lastWheelScrollElement = el;
                 return;
