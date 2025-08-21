@@ -122,6 +122,13 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     href: "https://github.com/omeyenburg/obsidian-scrolling/discussions",
                 });
                 frag.createEl("span", {
+                    text: " or send an email to ",
+                });
+                frag.createEl("a", {
+                    text: "omeyenburg@gmail.com",
+                    href: "mailto:omeyenburg@gmail.com",
+                });
+                frag.createEl("span", {
                     text: ".",
                 });
             }),
