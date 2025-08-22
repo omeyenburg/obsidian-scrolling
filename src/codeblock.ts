@@ -2,6 +2,16 @@ import { Editor, debounce } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
+function normalizeWheel(event: WheelEvent) {
+    let scale = 1;
+
+    // Approximate line height as 16 pixels
+    if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) scale = 16;
+    else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) scale = window.innerHeight;
+
+    return { deltaX: event.deltaX * scale, deltaY: event.deltaY * scale };
+}
+
 export class CodeBlock {
     private readonly plugin: ScrollingPlugin;
 
@@ -82,6 +92,15 @@ export class CodeBlock {
         const target = event.target as Element;
         const parent = target?.parentElement;
 
+        let { deltaX, deltaY } = normalizeWheel(event);
+
+        if (event.shiftKey && Math.abs(event.deltaX) < Math.abs(event.deltaY)) {
+            deltaX = deltaY;
+            deltaY = 0;
+        }
+
+        const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
+
         // Fast exit for non-code blocks
         if (
             !this.plugin.settings.horizontalScrollingCodeBlockEnabled ||
@@ -96,12 +115,12 @@ export class CodeBlock {
         if (line === target && !this.insideCodeBlock(target?.classList)) return;
 
         if (
-            (Math.abs(event.deltaX) > Math.abs(event.deltaY) &&
+            (isHorizontalScroll &&
                 event.timeStamp - this.lastVerticalTimeStamp >= this.DELTA_TIME_THRESHOLD) ||
             event.timeStamp - this.lastHorizontalTimeStamp < this.DELTA_TIME_THRESHOLD
         ) {
             event.preventDefault();
-            this.horizontalWheelScroll(event, line);
+            this.horizontalWheelScroll(deltaX, line);
             this.lastHorizontalTimeStamp = event.timeStamp;
         } else {
             // No horizontal scroll
@@ -154,7 +173,7 @@ export class CodeBlock {
         this.updateHorizontalScroll();
     }
 
-    private horizontalWheelScroll(event: WheelEvent, line: Element) {
+    private horizontalWheelScroll(deltaX: number, line: Element) {
         if (!this.codeBlockLines.contains(line) || !this.currentScrollWidth) {
             this.currentScrollWidth = Math.max(
                 0,
@@ -165,7 +184,7 @@ export class CodeBlock {
             this.codeBlockLines.filter((e) => e.isConnected);
         }
 
-        this.currentScrollVelocity = event.deltaX;
+        this.currentScrollVelocity = deltaX;
         this.lastVerticalTimeStamp = 0;
 
         // Restore previous position
