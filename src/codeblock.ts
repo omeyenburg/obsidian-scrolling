@@ -140,13 +140,13 @@ export class CodeBlock {
         editor.cm.requestMeasure({
             key: "cursor-active",
             read(view) {
+                const cursorEl = self.getCursorEl(editor);
+
                 const lineEl = editor.cm.contentDOM.querySelector(".cm-line.cm-active");
                 if (!lineEl?.classList?.contains("HyperMD-codeblock")) {
                     self.codeBlockLines = [];
-                    return { valid: false };
+                    return { valid: false, cursorEl };
                 }
-
-                const cursorEl = self.getCursorEl(editor);
 
                 if (!self.codeBlockLines.contains(lineEl) || isEdit) {
                     self.updateWidthAndBlock(lineEl);
@@ -187,6 +187,12 @@ export class CodeBlock {
                 return { valid: true, cursorEl: cursorEl };
             },
             write(measure, view) {
+                // Cursor is now in view
+                if (measure.cursorEl) {
+                    measure.cursorEl.style.visibility = "visible";
+                }
+
+                // Abort if cursor not in code block
                 if (!measure.valid) return;
 
                 self.updateHorizontalScroll();
@@ -196,10 +202,6 @@ export class CodeBlock {
                     self.plugin.followScroll.skipCursor = true;
                     view.dispatch({ selection: editor.cm.state.selection });
                 });
-
-                // Cursor is now in view
-                if (!measure.cursorEl) return;
-                measure.cursorEl.style.visibility = "visible";
             },
         });
     }

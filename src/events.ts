@@ -22,6 +22,8 @@ export class Events {
     private lastWheelEventTime = 0;
     private lastWheelScrollElement: HTMLElement | null;
 
+    private skipViewUpdate = false;
+
     public manualPreventCursor = false;
 
     private readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
@@ -84,7 +86,6 @@ export class Events {
         plugin.registerEvent(plugin.app.vault.on("rename", this.renameFileHandler.bind(this)));
         plugin.registerEvent(plugin.app.workspace.on("quit", this.quitHandler.bind(this)));
         plugin.registerEvent(plugin.app.workspace.on("file-open", this.openFileHandler.bind(this)));
-
 
         // Wrap WorkspaceLeaf.setViewState
         const self = this;
@@ -211,22 +212,13 @@ export class Events {
     }
 
     private editHandler(editor: Editor): void {
-        this.plugin.followCursor.editHandler(editor);
+        // this.plugin.followCursor.editHandler(editor);
     }
 
-    skipViewUpdate = false;
     private viewUpdateHandler(update: ViewUpdate): void {
         if (this.plugin.followScroll.skipCursor) {
             this.plugin.followScroll.skipCursor = false;
             return;
-        }
-
-        // Only proceed if its a cursor event.
-        if (!update.selectionSet) {
-            if (update.docChanged) {
-                this.plugin.codeBlock.cursorHandler(true);
-            }
-            return
         }
 
         // Always cancel if event was caused by mouse down/movement.
@@ -235,7 +227,7 @@ export class Events {
         for (const tr of update.transactions) {
             const event = tr.annotation(Transaction.userEvent);
             if (event === "select.pointer") {
-            return
+                return;
             }
         }
 
@@ -243,8 +235,11 @@ export class Events {
         this.skipViewUpdate = true;
         window.requestAnimationFrame(() => (this.skipViewUpdate = false));
 
+        // Only proceed if its a cursor or edit event
+        if (!update.selectionSet && !update.docChanged) return;
+
         this.plugin.codeBlock.cursorHandler(update.docChanged);
-        this.plugin.followCursor.cursorHandler();
+        this.plugin.followCursor.cursorHandler(update.docChanged);
         this.plugin.followScroll.cursorHandler();
     }
 
