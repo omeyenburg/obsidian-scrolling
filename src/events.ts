@@ -85,6 +85,7 @@ export class Events {
         plugin.registerEvent(plugin.app.workspace.on("quit", this.quitHandler.bind(this)));
         plugin.registerEvent(plugin.app.workspace.on("file-open", this.openFileHandler.bind(this)));
 
+
         // Wrap WorkspaceLeaf.setViewState
         const self = this;
         plugin.register(
@@ -221,7 +222,12 @@ export class Events {
         }
 
         // Only proceed if its a cursor event.
-        if (!update.selectionSet) return;
+        if (!update.selectionSet) {
+            if (update.docChanged) {
+                this.plugin.codeBlock.cursorHandler(true);
+            }
+            return
+        }
 
         // Always cancel if event was caused by mouse down/movement.
         // This only checks if this update was caused by a mouse down event,
@@ -229,7 +235,7 @@ export class Events {
         for (const tr of update.transactions) {
             const event = tr.annotation(Transaction.userEvent);
             if (event === "select.pointer") {
-                return;
+            return
             }
         }
 

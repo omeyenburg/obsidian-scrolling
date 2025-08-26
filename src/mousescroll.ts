@@ -104,8 +104,8 @@ export class MouseScroll {
         deltaTime: number,
         isStart: boolean,
     ) {
-        // Approximate line height as 20px.
-        const deltaY = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 20 : event.deltaY;
+        // Approximate line height as 16px.
+        const deltaY = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 16 : event.deltaY;
 
         if (
             this.plugin.settings.simulatedTouchpadEnabled &&
