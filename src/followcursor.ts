@@ -11,8 +11,8 @@ interface ScrollInfo {
 export class FollowCursor {
     private readonly plugin: ScrollingPlugin;
 
-    private recentEdit = false;
     private recentMouseUp = false;
+
     private animationFrame = 0;
     private scrollIntensity = 0;
     private scrollLastEvent = 0;
@@ -43,20 +43,7 @@ export class FollowCursor {
         window.setTimeout(() => (this.recentMouseUp = false), this.MOUSE_UP_TIMEOUT);
     }
 
-    public editHandler(editor: Editor): void {
-        this.recentEdit = true; // Will be reset by cursorHandler
-
-        this.invokeScroll(editor);
-    }
-
-    public cursorHandler(): void {
-        // Reset recentEdit, which was set by editHandler,
-        // because cursorHandler is invoked after every edit.
-        if (this.recentEdit) {
-            this.recentEdit = false;
-            return;
-        }
-
+    public cursorHandler(isEdit: boolean): void {
         // Get the editor
         const markdownView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!markdownView?.editor) return;
@@ -72,17 +59,17 @@ export class FollowCursor {
         if (!this.plugin.settings.followCursorEnableSelection)
             if (markdownView.editor.somethingSelected()) return;
 
-        this.invokeScroll(markdownView.editor);
+        this.invokeScroll(markdownView.editor, isEdit);
     }
 
-    private invokeScroll(editor: Editor): void {
+    private invokeScroll(editor: Editor, isEdit: boolean): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
         const dynamicAnimation = this.plugin.settings.followCursorDynamicAnimation;
 
         // If scrolling fast, skip animation steps
         // (Only if not scrolling inverted and scrolling without edit (otherwise run later))
-        if (!this.recentEdit && dynamicAnimation) {
+        if (!isEdit && dynamicAnimation) {
             this.calculateScrollIntensity();
         } else {
             this.scrollIntensity = 0;
@@ -103,43 +90,10 @@ export class FollowCursor {
         if (signedGoalDistance === 0) return;
 
         const goal = scrollInfo.top + signedGoalDistance;
-        const steps = this.calculateSteps(signedGoalDistance, scrollInfo.height);
+        const steps = this.calculateSteps(signedGoalDistance, scrollInfo.height, isEdit);
 
         window.cancelAnimationFrame(this.animationFrame);
         this.animate(editor, goal, signedGoalDistance / steps, steps);
-
-        // NOTE: Alternative: use transition effects.
-        // import { EditorView } from "@codemirror/view";
-        // const view = editor.cm;
-        // view.requestMeasure({
-        //     key: "center-cursor",
-        //     read: (view) => {
-        //         const caret = view.coordsAtPos(view.state.selection.main.head);
-        //         if (!caret) return null;
-        //         const viewportHeight = view.dom.clientHeight;
-        //         const caretHeight = caret.bottom - caret.top;
-        //         return viewportHeight / 2 - caretHeight / 2;
-        //     },
-        //     write: (centerOffset, view) => {
-        //         if (centerOffset == null) return;
-        //         window.requestAnimationFrame(() => {
-        //             const effect = EditorView.scrollIntoView(view.state.selection.main.head, {
-        //                 y: "start",
-        //                 yMargin: centerOffset,
-        //             });
-        //             view.dispatch({ effects: effect });
-        //         });
-        //     },
-        // });
-
-        // TODO: Use requestMeasure.
-        // editor.cm.requestMeasure({
-        //     key: "center-cursor",
-        //     read: (view) => {},
-        //     write: (_, view) => {
-        //         this.animate(editor, goal, signedGoalDistance / steps, steps);
-        //     },
-        // });
     }
 
     private animate(editor: Editor, goal: number, stepSize: number, step: number): void {
@@ -183,9 +137,12 @@ export class FollowCursor {
         return signedGoalDistance;
     }
 
-    private calculateSteps(signedGoalDistance: number, scrollerHeight: number): number {
-        const instantEditScroll = this.plugin.settings.followCursorInstantEditScroll;
-        if (this.recentEdit && instantEditScroll) return 1;
+    private calculateSteps(
+        signedGoalDistance: number,
+        scrollerHeight: number,
+        isEdit: boolean,
+    ): number {
+        if (isEdit && this.plugin.settings.followCursorInstantEditScroll) return 1;
 
         const smoothness = this.plugin.settings.followCursorSmoothness;
         const dynamicAnimation = this.plugin.settings.followCursorDynamicAnimation;
@@ -196,7 +153,7 @@ export class FollowCursor {
         );
 
         // Calculate scroll intensity to skip animation steps.
-        if (dynamicAnimation && this.recentEdit) {
+        if (dynamicAnimation && isEdit) {
             this.calculateScrollIntensity();
         }
 
