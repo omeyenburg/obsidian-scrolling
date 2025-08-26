@@ -157,14 +157,14 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
     }
 
-    createHeading(name: string, desc?: string): Setting {
+    private createHeading(name: string, desc?: string): Setting {
         const heading = new Setting(this.containerEl).setName(name).setHeading();
         this.setDesc(heading, desc);
         this.settingsEnabled = true;
         return heading;
     }
 
-    createSetting(name: string, desc?: string, onReset?: () => void): Setting {
+    private createSetting(name: string, desc?: string, onReset?: () => void): Setting {
         const setting = new Setting(this.containerEl).setName(name);
         this.setDesc(setting, desc);
 
@@ -337,8 +337,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private displayHorizontalScrollingSettings() {
-        if (!Platform.isDesktop) return;
-
         this.containerEl.createEl("br");
         this.createHeading("Horizontal scrolling");
 
@@ -355,6 +353,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
+        if (!Platform.isDesktop) return;
         this.createSetting(
             "File tree",
             "Allow horizontal scrolling in the file tree and show a scrollbar.",
