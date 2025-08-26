@@ -16,6 +16,9 @@ function isScrolledToBottom(el: HTMLElement): boolean {
 export class Events {
     private readonly plugin: ScrollingPlugin;
 
+    private lastTouchX = 0;
+    private lastTouchY = 0;
+
     private scrollEventSkip = false;
     private readonly scrollHandler: (event: Event) => void;
 
@@ -44,9 +47,18 @@ export class Events {
         this.plugin = plugin;
         this.scrollHandler = this.unboundScrollHandler.bind(this);
 
-        /* MouseScroll */
+        /* MouseScroll & CodeBlock */
         if (Platform.isDesktop) {
             plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
+                capture: true,
+                passive: false,
+            });
+        } else if (Platform.isMobile) {
+            plugin.registerDomEvent(document, "touchstart", this.touchStartHandler.bind(this), {
+                capture: true,
+                passive: true,
+            });
+            plugin.registerDomEvent(document, "touchmove", this.touchMoveHandler.bind(this), {
                 capture: true,
                 passive: false,
             });
@@ -54,16 +66,6 @@ export class Events {
 
         /* FollowCursor */
         plugin.registerDomEvent(document, "keydown", this.keyHandler.bind(this), { passive: true });
-
-        // Suppress first invocation
-        let initialEditorChange = plugin.app.workspace.on("editor-change", () => {
-            plugin.app.workspace.offref(initialEditorChange);
-            plugin.registerEvent(
-                plugin.app.workspace.on("editor-change", this.editHandler.bind(this)),
-            );
-        });
-        plugin.registerEvent(initialEditorChange);
-
         plugin.registerEditorExtension(
             EditorView.updateListener.of(this.viewUpdateHandler.bind(this)),
         );
@@ -211,10 +213,6 @@ export class Events {
         this.plugin.restoreScroll.storeStateDebounced();
     }
 
-    private editHandler(editor: Editor): void {
-        // this.plugin.followCursor.editHandler(editor);
-    }
-
     private viewUpdateHandler(update: ViewUpdate): void {
         if (this.plugin.followScroll.skipCursor) {
             this.plugin.followScroll.skipCursor = false;
@@ -245,6 +243,24 @@ export class Events {
 
     private isWithinScrollContext(el: HTMLElement): boolean {
         return el === this.lastWheelScrollElement || this.lastWheelScrollElement.contains(el);
+    }
+
+    private touchStartHandler(event: TouchEvent): void {
+        this.lastTouchX = event.touches[0].clientX;
+        this.lastTouchY = event.touches[0].clientY;
+    }
+
+    private touchMoveHandler(event: TouchEvent): void {
+        const touchX = event.touches[0].clientX;
+        const touchY = event.touches[0].clientY;
+
+        const deltaX = this.lastTouchX - touchX;
+        const deltaY = this.lastTouchY - touchY;
+
+        this.lastTouchX = touchX
+        this.lastTouchY = touchY
+
+        this.plugin.codeBlock.touchHandler(event, deltaX, deltaY);
     }
 
     private wheelHandler(event: WheelEvent): void {

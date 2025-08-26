@@ -132,6 +132,40 @@ export class CodeBlock {
         }
     }
 
+    public touchHandler(event: TouchEvent, deltaX: number, deltaY: number): void {
+        const target = event.target as Element;
+        const parent = target?.parentElement;
+
+        // Fast exit for non-code blocks
+        if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
+        if (
+            !target?.classList?.contains("HyperMD-codeblock") &&
+            !parent?.classList?.contains("HyperMD-codeblock")
+        ) {
+            return;
+        }
+
+        // Only do the full check when we know we are in a code block
+        const line = this.insideCodeBlock(parent?.classList) ? parent : target;
+        if (line === target && !this.insideCodeBlock(target?.classList)) return;
+
+        const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
+
+        if (
+            isHorizontalScroll ||
+            event.timeStamp - this.lastHorizontalTimeStamp < this.DELTA_TIME_THRESHOLD
+        ) {
+            this.horizontalWheelScroll(deltaX, line);
+            this.lastHorizontalTimeStamp = event.timeStamp;
+
+            if (this.currentScrollVelocity) {
+                event.preventDefault();
+            }
+        } else {
+            this.verticalWheelScrollDebouncer(line);
+        }
+    }
+
     public cursorHandler(isEdit: boolean): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
