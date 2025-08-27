@@ -257,8 +257,8 @@ export class Events {
         const deltaX = this.lastTouchX - touchX;
         const deltaY = this.lastTouchY - touchY;
 
-        this.lastTouchX = touchX
-        this.lastTouchY = touchY
+        this.lastTouchX = touchX;
+        this.lastTouchY = touchY;
 
         this.plugin.codeBlock.touchHandler(event, deltaX, deltaY);
     }
@@ -269,7 +269,7 @@ export class Events {
         if (!event.deltaY) return;
         if (
             !(
-                (Platform.isDesktop && this.plugin.settings.scrollMode === "disabled") ||
+                (Platform.isDesktop && this.plugin.settings.scrollMode === "simulated") ||
                 this.plugin.settings.cursorScrollEnabled
             )
         )
