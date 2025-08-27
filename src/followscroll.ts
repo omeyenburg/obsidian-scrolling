@@ -12,9 +12,11 @@ export class FollowScroll {
     private readonly CURSOR_SKIP_DELAY = 500;
 
     public readonly wheelHandler: Debouncer<[HTMLElement], void>;
+    public readonly cursorHandler: Debouncer<[void], void>;
 
     // Balanced between performance and visual response
-    private readonly UPDATE_INTERVAL = 70;
+    private readonly WHEEL_INTERVAL = 70;
+    private readonly CURSOR_INTERVAL = 150;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -27,9 +29,10 @@ export class FollowScroll {
             true,
         );
 
-        this.wheelHandler = debounce(this.applyScroll.bind(this), this.UPDATE_INTERVAL, false);
+        this.wheelHandler = debounce(this.wheelHandlerDebounced.bind(this), this.WHEEL_INTERVAL, false);
+        this.cursorHandler = debounce(this.cursorHandlerDebounced.bind(this), this.CURSOR_INTERVAL, false);
 
-        window.requestAnimationFrame(this.cursorHandler.bind(this));
+        window.setTimeout(this.cursorHandler.bind(this), 1000);
     }
 
     public leafChangeHandler(): void {
@@ -37,7 +40,7 @@ export class FollowScroll {
     }
 
     // Store the offset from the scroll top
-    public cursorHandler(): void {
+    public cursorHandlerDebounced(): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor) return;
         const block = editor.cm.lineBlockAt(editor.posToOffset(editor.getCursor()));
@@ -46,10 +49,11 @@ export class FollowScroll {
             (block.top + block.bottom) / 2 -
             scrollDOM.scrollTop +
             scrollDOM.getBoundingClientRect().top;
+
         this.relativeLineOffset = Math.max(0, Math.min(scrollDOM.clientHeight, relativeLineOffset));
     }
 
-    private applyScroll(el: HTMLElement): void {
+    private wheelHandlerDebounced(el: HTMLElement): void {
         if (!this.plugin.settings.cursorScrollEnabled) return;
         if (this.relativeLineOffset == null) return;
 
