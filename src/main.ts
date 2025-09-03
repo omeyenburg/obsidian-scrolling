@@ -7,6 +7,8 @@ import { FollowScroll } from "./followscroll";
 import { MouseScroll } from "./mousescroll";
 import { RestoreScroll } from "./restorescroll";
 import { Scrollbar } from "./scrollbar";
+import { PreviewShortcuts } from "./previewshortcuts";
+import { setupCommands } from "./commands";
 
 import { Events } from "./events";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "./settings";
@@ -21,6 +23,7 @@ export default class ScrollingPlugin extends Plugin {
     mouseScroll!: MouseScroll;
     restoreScroll!: RestoreScroll;
     scrollbar!: Scrollbar;
+    previewShortcuts!: PreviewShortcuts;
 
     events!: Events;
 
@@ -35,10 +38,13 @@ export default class ScrollingPlugin extends Plugin {
         this.mouseScroll = new MouseScroll(this);
         this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
+        this.previewShortcuts = new PreviewShortcuts(this);
 
         this.events = new Events(this);
 
         await this.restoreScroll.loadData();
+
+        setupCommands(this);
 
         console.log("ScrollingPlugin loaded");
     }
