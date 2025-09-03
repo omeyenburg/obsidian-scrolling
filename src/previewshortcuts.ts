@@ -1,4 +1,4 @@
-import { MarkdownView } from "obsidian";
+import { MarkdownView, Platform } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -21,6 +21,8 @@ export class PreviewShortcuts {
     }
 
     public keyDownHandler(event: KeyboardEvent) {
+        if (Platform.isMobile) return;
+
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || view.getMode() !== "preview") return;
 

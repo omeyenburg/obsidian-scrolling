@@ -49,5 +49,5 @@ function scrollToTop(el: Element) {
 }
 
 function scrollToBottom(el: Element) {
-    el.scrollTo({ top: 99999999999 });
+    el.scrollTo({ top: 1000000000 });
 }
