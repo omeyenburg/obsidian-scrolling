@@ -49,26 +49,43 @@ export class Events {
 
         /* MouseScroll & CodeBlock */
         if (Platform.isDesktop) {
-            plugin.registerDomEvent(document, "wheel", this.wheelHandler.bind(this), {
-                capture: true,
-                passive: false,
-            });
+            plugin.registerDomEvent(
+                plugin.app.workspace.containerEl,
+                "wheel",
+                this.wheelHandler.bind(this),
+                {
+                    capture: true,
+                    passive: false,
+                },
+            );
         } else if (Platform.isMobile) {
-            plugin.registerDomEvent(document, "touchstart", this.touchStartHandler.bind(this), {
-                capture: true,
-                passive: true,
-            });
-            plugin.registerDomEvent(document, "touchmove", this.touchMoveHandler.bind(this), {
-                capture: true,
-                passive: false,
-            });
+            plugin.registerDomEvent(
+                plugin.app.workspace.containerEl,
+                "touchstart",
+                this.touchStartHandler.bind(this),
+                {
+                    capture: true,
+                    passive: true,
+                },
+            );
+            plugin.registerDomEvent(
+                plugin.app.workspace.containerEl,
+                "touchmove",
+                this.touchMoveHandler.bind(this),
+                {
+                    capture: true,
+                    passive: true,
+                },
+            );
         }
 
         /* PreviewShortcuts */
         plugin.registerDomEvent(document, "keyup", this.keyUpHandler.bind(this), { passive: true });
 
         /* FollowCursor & PreviewShortcuts */
-        plugin.registerDomEvent(document, "keydown", this.keyDownHandler.bind(this), { passive: true });
+        plugin.registerDomEvent(document, "keydown", this.keyDownHandler.bind(this), {
+            passive: true,
+        });
 
         /* FollowCursor */
         plugin.registerEditorExtension(
