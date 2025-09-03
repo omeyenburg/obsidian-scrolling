@@ -29,7 +29,7 @@ export class FollowCursor {
         });
     }
 
-    public keyHandler(): void {
+    public keyDownHandler(): void {
         this.recentMouseUp = false;
     }
 

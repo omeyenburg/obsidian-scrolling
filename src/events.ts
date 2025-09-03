@@ -64,8 +64,13 @@ export class Events {
             });
         }
 
+        /* PreviewShortcuts */
+        plugin.registerDomEvent(document, "keyup", this.keyUpHandler.bind(this), { passive: true });
+
+        /* FollowCursor & PreviewShortcuts */
+        plugin.registerDomEvent(document, "keydown", this.keyDownHandler.bind(this), { passive: true });
+
         /* FollowCursor */
-        plugin.registerDomEvent(document, "keydown", this.keyHandler.bind(this), { passive: true });
         plugin.registerEditorExtension(
             EditorView.updateListener.of(this.viewUpdateHandler.bind(this)),
         );
@@ -204,8 +209,13 @@ export class Events {
         this.plugin.restoreScroll.quitHandler();
     }
 
-    private keyHandler(): void {
-        this.plugin.followCursor.keyHandler();
+    private keyUpHandler(): void {
+        this.plugin.previewShortcuts.keyUpHandler();
+    }
+
+    private keyDownHandler(event: KeyboardEvent): void {
+        this.plugin.previewShortcuts.keyDownHandler(event);
+        this.plugin.followCursor.keyDownHandler();
     }
 
     private mouseUpHandler(): void {
