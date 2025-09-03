@@ -46,6 +46,7 @@
     overflow-x: auto;
     word-wrap: normal;
     white-space: nowrap;
+    touch-action: pan-y pinch-zoom;
 }
 
 .scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {

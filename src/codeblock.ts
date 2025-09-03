@@ -157,10 +157,6 @@ export class CodeBlock {
         ) {
             this.horizontalWheelScroll(deltaX, line);
             this.lastHorizontalTimeStamp = event.timeStamp;
-
-            if (this.currentScrollVelocity) {
-                event.preventDefault();
-            }
         } else {
             this.verticalWheelScrollDebouncer(line);
         }
