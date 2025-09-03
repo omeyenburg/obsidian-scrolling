@@ -26,6 +26,10 @@ export interface ScrollingPluginSettings {
     scrollbarVisibility: string; // hide, scroll, show
     scrollbarWidth: number;
 
+    readingLineScrollEnabled: boolean;
+    readingHalfPageScrollEnabled: boolean;
+    readingTopBottomScrollEnabled: boolean;
+
     scrollMode: string; // disabled, native, simulated
 
     nativeScrollMultiplier: number;
@@ -66,6 +70,10 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
 
+    readingLineScrollEnabled: true,
+    readingHalfPageScrollEnabled: true,
+    readingTopBottomScrollEnabled: true,
+
     scrollMode: "disabled",
 
     nativeScrollMultiplier: 1,
@@ -103,6 +111,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayHorizontalScrollingSettings();
         this.displayRestoreScrollSettings();
         this.displayScrollbarSettings();
+        this.displayReadModeKeybinds();
         this.displayMouseScrollSettings();
 
         this.createHeading("Issues & feature requests").setDesc(
@@ -558,6 +567,49 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
         }
+    }
+
+    private displayReadModeKeybinds() {
+        if (Platform.isMobile) return;
+
+        this.containerEl.createEl("br");
+        this.createHeading("Reading mode");
+
+        this.createSetting(
+            "Line scroll keybinds",
+            "Scroll by single lines with j/k.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.readingLineScrollEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.readingLineScrollEnabled = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        this.createSetting(
+            "Half page scroll keybinds",
+            "Scroll half pages with ctrl-d/ctrl-u.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.readingHalfPageScrollEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.readingHalfPageScrollEnabled = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        this.createSetting(
+            "Top/bottom scroll keybinds",
+            "Scroll to top/bottom with g/G.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.readingTopBottomScrollEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.readingTopBottomScrollEnabled = value;
+                    await this.plugin.saveSettings();
+                }),
+        );
     }
 
     private displayMouseScrollSettings() {
