@@ -1,4 +1,4 @@
-import { MarkdownView } from "obsidian";
+import { MarkdownView, Platform } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -14,9 +14,13 @@ export function setupCommands(plugin: ScrollingPlugin): void {
         name: "to bottom",
         callback: scrollCallbackWrapper(plugin, scrollToBottom),
     });
+
+    if (Platform.isDesktop) return;
+    plugin.addRibbonIcon("arrow-up-to-line", "Scroll to top", scrollCallbackWrapper(plugin, scrollToTop))
+    plugin.addRibbonIcon("arrow-down-to-line", "Scroll to bottom", scrollCallbackWrapper(plugin, scrollToBottom))
 }
 
-function scrollCallbackWrapper(plugin: ScrollingPlugin, func: (el: Element) => void) {
+function scrollCallbackWrapper(plugin: ScrollingPlugin, scrollFunc: (el: Element) => void) {
     return () => {
         const view = plugin.app.workspace.getActiveFileView();
         if (!view) return false;
@@ -40,7 +44,7 @@ function scrollCallbackWrapper(plugin: ScrollingPlugin, func: (el: Element) => v
                 return;
         }
 
-        func(scroller);
+        scrollFunc(scroller);
     };
 }
 
