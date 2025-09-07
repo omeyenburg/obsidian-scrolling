@@ -19,6 +19,7 @@ export interface ScrollingPluginSettings {
 
     restoreScrollMode: string; // scroll, cursor, top, bottom
     restoreScrollLimit: number; // negative values for no limit
+    restoreScrollDelay: number;
     restoreScrollAllFiles: boolean;
     restoreScrollFileEnabled: boolean;
     restoreScrollFilePath: string;
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
     restoreScrollMode: "scroll",
     restoreScrollLimit: -1,
+    restoreScrollDelay: 100,
     restoreScrollAllFiles: true,
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
@@ -398,6 +400,20 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.restoreScrollMode = value;
                     this.display();
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        this.createSetting(
+            "Delay after opening a note",
+            "Number of milliseconds to wait before restoring scroll after a note is opened",
+            () => (this.plugin.settings.restoreScrollDelay = DEFAULT_SETTINGS.restoreScrollDelay),
+        ).addSlider((slider) =>
+            slider
+                .setValue(this.plugin.settings.restoreScrollDelay)
+                .setLimits(0, 300, 10)
+                .onChange(async (value) => {
+                    this.plugin.settings.restoreScrollDelay = value;
                     await this.plugin.saveSettings();
                 }),
         );
