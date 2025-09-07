@@ -136,18 +136,24 @@ export class RestoreScroll {
 
         if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
             if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
-                view.setEphemeralState({ cursor, focus: true });
-                view.editor.scrollIntoView(cursor, true);
+                window.setTimeout(() => {
+                    view.setEphemeralState({ cursor, focus: true });
+                    view.editor.scrollIntoView(cursor, true);
+                }, this.plugin.settings.restoreScrollDelay);
             } else {
-                view.setEphemeralState({ scroll });
+                window.setTimeout(() => {
+                    view.setEphemeralState({ scroll });
+                }, this.plugin.settings.restoreScrollDelay);
             }
         } else if (scrollTop && this.plugin.settings.restoreScrollAllFiles) {
-            window.requestAnimationFrame(() => {
-                const scroller = getScroller(view);
-                if (scroller) {
-                    scroller.scrollTop = scrollTop;
-                }
-            });
+            window.setTimeout(() => {
+                window.requestAnimationFrame(() => {
+                    const scroller = getScroller(view);
+                    if (scroller) {
+                        scroller.scrollTop = scrollTop;
+                    }
+                });
+            }, this.plugin.settings.restoreScrollDelay);
         }
     }
 
