@@ -4,51 +4,86 @@ import type { default as ScrollingPlugin } from "./main";
 import { RestoreScroll } from "./restorescroll";
 
 export interface ScrollingPluginSettings {
+    /** Scroll viewport when moving the cursor or editing. */
     followCursorEnabled: boolean;
+    /** Distance the cursor may be moved from the center. (0-100) */
     followCursorRadius: number;
+    /** Centering animation smoothness. (0-100) */
     followCursorSmoothness: number;
+    /** Skip scroll animation when editing. */
     followCursorInstantEditScroll: boolean;
+    /** Trigger scroll on mouse click. */
     followCursorEnableMouse: boolean;
+    /** Trigger scroll on mouse selection. (hidden) */
     followCursorEnableSelection: boolean;
+    /** Reduce animation frames when many triggering events occur. (hidden) */
     followCursorDynamicAnimation: boolean;
 
+    /** Move cursor while scrolling manually. Desktop only. */
     cursorScrollEnabled: boolean;
 
+    /** Disable code wrapping & enable horizontal code scrolling. */
     horizontalScrollingCodeBlockEnabled: boolean;
+    /** Horizontal scrolling in file tree. Desktop only. */
     horizontalScrollingFileTreeEnabled: boolean;
 
+    /** Which position to restore. Values: scroll, cursor, top, bottom */
     restoreScrollMode: string;
+    /** Number of scroll position entries. Use negative values to ignore the limit. */
     restoreScrollLimit: number;
+    /** Delay before restoring the position in ms. (0-300) */
     restoreScrollDelay: number;
+    /** Only restore position in Markdown source, or also in images, PDFs and Markdown preview. */
     restoreScrollAllFiles: boolean;
+    /** Store position entries on disk. */
     restoreScrollFileEnabled: boolean;
+    /** Path to cache file. */
     restoreScrollFilePath: string;
 
+    /** Zoom when hovering over images. Desktop only. (Zoom guesture & vertical scroll while holding ctrl) */
     imageZoomEnabled: boolean;
 
+    /** When to show the scrollbar. Hidden on MacOS. Values: hide, scroll, show */
     scrollbarVisibility: string;
+    /** Width of scrollbars. Linux only. (0-30) */
     scrollbarWidth: number;
 
+    /** Enable keybinds to scroll by single lines in reading mode. */
     readingLineScrollEnabled: boolean;
+    /** Enable keybinds to scroll by half pages in reading mode. */
     readingHalfPageScrollEnabled: boolean;
+    /** Enable keybinds to scroll to top/bottom in reading mode. */
     readingTopBottomScrollEnabled: boolean;
 
+    /** Customization method for mouse/touchpad scroll. Values: disabled, native, simulated */
     scrollMode: string;
 
+    /** Scroll speed multiplier. Values below 1 require instant scroll. (0-3) */
     nativeScrollMultiplier: number;
+    /** Scroll speed multiplier when holding alt. (0-3) */
     nativeAltMultiplier: number;
+    /** Skip scroll animation. */
     nativeScrollInstant: boolean;
 
+    /** Invert direction of vertical scroll. (hidden) */
     simulatedMouseInvert: boolean;
+    /** Scroll speed multiplier. In percent. (1-100) */
     simulatedMouseSpeed: number;
+    /** Scroll smoothness. In percent. (0-100) */
     simulatedMouseSmoothness: number;
+    /** Enable touchpad detection. Otherwise mouse settings are always used. (hidden) */
     simulatedTouchpadEnabled: boolean;
+    /** Scroll speed multiplier. In percent. (1-100) */
     simulatedTouchpadSpeed: number;
+    /** Scroll smoothness. In percent. (0-100) */
     simulatedTouchpadSmoothness: number;
+    /** Threshold between precise and smooth scrolling. In percent. (1-100) */
     simulatedTouchpadFrictionThreshold: number;
 
+    /** Show ribbon buttons to scroll to top/bottom. (Mobile only) */
     ribbonScrollButtonsEnabled: boolean;
 
+    /** Show experimental settings. (hidden) */
     enableExperimentalSettings: boolean;
 }
 
