@@ -2,6 +2,10 @@ import { Editor, debounce } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
+/**
+ * Normalizes the delta values of the event.
+ * Swaps the X and Y axis if the shift key is held and the delta dominates on the Y axis.
+ */
 function normalizeWheelDelta(event: WheelEvent) {
     let scale = 1;
 
@@ -40,15 +44,19 @@ export class CodeBlock {
     private cachedLineCharCount = 0;
     private CACHED_BLOCK_WIDTH_TIMEOUT = 500;
 
-    // Grace period to keep horizontal/vertical scrolling alive.
-    // Higher values might cause vertical scroll detection while
-    // actually scrolling horizontally.
+    /**
+     * Grace period to keep horizontal/vertical scrolling alive.
+     * Higher values might cause vertical scroll detection while
+     * actually scrolling horizontally.
+     */
     private readonly DELTA_TIME_THRESHOLD = 50;
 
-    // Large constant used to artificially extend line length so that
-    // each code line does not limit horizontal scrolling individually.
-    // This allows the plugin to handle the scroll boundary uniformly across
-    // all code lines in a block instead of relying on their individual widths.
+    /**
+     * Large constant used to artificially extend line length so that
+     * each code line does not limit horizontal scrolling individually.
+     * This allows the plugin to handle the scroll boundary uniformly across
+     * all code lines in a block instead of relying on their individual widths.
+     */
     private readonly EXTRA_LINE_LENGTH = 1_000_000;
     private readonly EXTRA_LINE_LENGTH_WITH_PADDING = 1_000_000 + 15;
 
@@ -75,6 +83,10 @@ export class CodeBlock {
         });
     }
 
+    /**
+     * Update wrapping of code blocks when toggling this feature.
+     * Called on plugin load and change of settings.
+     */
     public updateStyle(): void {
         if (this.plugin.settings.horizontalScrollingCodeBlockEnabled) {
             document.body.addClass("scrolling-horizontal-code-blocks");
@@ -83,6 +95,10 @@ export class CodeBlock {
         }
     }
 
+    /**
+     * On leaf change.
+     * Resets cached values.
+     */
     public leafChangeHandler(): void {
         this.cachedCursor = null;
         this.currentScrollWidth = null;
@@ -100,22 +116,27 @@ export class CodeBlock {
         this.updateCursorPassive();
     }
 
-    public wheelHandler(event: WheelEvent): void {
+    /**
+     * On wheel event. *Desktop only*.
+     * Scrolls multiple connected code lines simultanously.
+     * Returns true if the wheel event is handled successfully.
+     */
+    public wheelHandler(event: WheelEvent): boolean {
         const target = event.target as Element;
         const parent = target?.parentElement;
 
         // Fast exit for non-code blocks
-        if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
+        if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return false;
         if (
             !target?.classList?.contains("HyperMD-codeblock") &&
             !parent?.classList?.contains("HyperMD-codeblock")
         ) {
-            return;
+            return false;
         }
 
         // Only do the full check when we know we are in a code block
         const line = this.insideCodeBlock(parent?.classList) ? parent : target;
-        if (line === target && !this.insideCodeBlock(target?.classList)) return;
+        if (line === target && !this.insideCodeBlock(target?.classList)) return false;
 
         let { deltaX, deltaY } = normalizeWheelDelta(event);
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
@@ -126,12 +147,20 @@ export class CodeBlock {
         ) {
             this.horizontalWheelScroll(deltaX, line);
             this.lastHorizontalTimeStamp = event.timeStamp;
+
             event.preventDefault();
-        } else {
-            this.verticalWheelScrollDebouncer(line);
+            return true;
         }
+
+        this.verticalWheelScrollDebouncer(line);
+        return false;
     }
 
+    /**
+     * On touch move event. *Mobile only*.
+     * Scrolls multiple connected code lines simultanously.
+     * Assumes that code elements do not handle horizontal scroll natively (css).
+     */
     public touchHandler(event: TouchEvent, deltaX: number, deltaY: number): void {
         const target = event.target as Element;
         const parent = target?.parentElement;
@@ -162,9 +191,13 @@ export class CodeBlock {
         }
     }
 
-    public cursorHandler(isEdit: boolean): void {
-        const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
+    /**
+     * On view update (document edit, text cursor movement).
+     * Updates code blocks and code block length.
+     * Scrolls to keep cursor in view.
+     */
+    public viewUpdateHandler(editor: Editor, isEdit: boolean): void {
+        if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
 
         const self = this;
         editor.cm.requestMeasure({
@@ -236,7 +269,9 @@ export class CodeBlock {
         });
     }
 
-    // Returns cursor element with caching
+    /**
+     * Returns the cached cursor element of the Vim cursor.
+     */
     private getCursorEl(editor: Editor): HTMLElement | null {
         if (this.cachedCursor && this.cachedCursor.isConnected) {
             return this.cachedCursor;
@@ -246,17 +281,29 @@ export class CodeBlock {
         return this.cachedCursor;
     }
 
+    /**
+     * Updates newly loaded code block lines when scrolling vertically.
+     * (Code mirror adds and removes lines on the fly)
+     */
     private verticalWheelScroll(line: Element): void {
         this.searchCodeLines(line);
         this.updateHorizontalScroll();
     }
 
+    /**
+     * Collects all code lines around the specified line.
+     * Updates the scrollable width of the code block in pixels based on the longest code line.
+     */
     private updateWidthAndBlock(line: Element): void {
         const width = this.searchCodeLines(line) - this.EXTRA_LINE_LENGTH - line.clientWidth;
         this.currentScrollWidth = Math.max(0, width);
     }
 
-    private horizontalWheelScroll(deltaX: number, line: Element) {
+    /**
+     * Initiates horizontal scroll animation.
+     * Also updates the current code block once.
+     */
+    private horizontalWheelScroll(deltaX: number, line: Element): void {
         if (!this.codeBlockLines.contains(line) || this.currentScrollWidth === null) {
             this.updateWidthAndBlock(line);
         } else {
@@ -273,6 +320,10 @@ export class CodeBlock {
         this.animateScroll();
     }
 
+    /**
+     * Scrolls horizontally over multiple animation frames.
+     * Updates cursor, as it moves in/out of the viewport.
+     */
     private animateScroll(): void {
         this.currentScrollLeft += this.currentScrollVelocity;
 
@@ -291,11 +342,15 @@ export class CodeBlock {
 
         this.updateHorizontalScroll();
 
-        // Cursor must be updated, otherwise it would not move at all while scrolling
+        // Cursor must be updated, otherwise it would not move at all while scrolling.
         this.updateCursorPassive();
     }
 
-    private updateCursorPassive() {
+    /**
+     * Updates cursor on screen without triggering a scroll in code mirror.
+     * Hides Vim's fat cursor, if it is scrolled to the left or right of the viewport.
+     */
+    private updateCursorPassive(): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || !this.codeBlockLines.length) return;
 
@@ -340,14 +395,20 @@ export class CodeBlock {
         });
     }
 
-    private updateHorizontalScroll() {
+    /**
+     * Applies current horizontal scroll position to all currently cached code lines.
+     * Assumes that codeBlockLines is correct.
+     */
+    private updateHorizontalScroll(): void {
         this.codeBlockLines.forEach((el: Element) => {
             el.scrollLeft = this.currentScrollLeft;
         });
     }
 
-    // Searches for code lines around line
-    // Returns the maximum length of all lines
+    /**
+     * Searches for code lines around line.
+     * Returns the maximum length of all lines.
+     */
     private searchCodeLines(line: Element): number {
         if (this.insideCodeBlock(line.classList)) {
             this.codeBlockLines = [line];
@@ -355,16 +416,10 @@ export class CodeBlock {
             this.codeBlockLines = [];
         }
 
-        return Math.max(
-            line.scrollWidth,
-            this.searchCodeLinesAbove(line),
-            this.searchCodeLinesBelow(line),
-        );
-    }
+        let maxScrollWidthWithExtension = line.scrollWidth;
 
-    private searchCodeLinesBelow(line: Element): number {
-        let maxScrollWidthWithExtension = 0;
         let next = line.nextElementSibling;
+        let prev = line.previousElementSibling;
 
         while (next && this.insideCodeBlock(next.classList)) {
             this.codeBlockLines.push(next);
@@ -373,13 +428,6 @@ export class CodeBlock {
             }
             next = next.nextElementSibling;
         }
-
-        return maxScrollWidthWithExtension;
-    }
-
-    private searchCodeLinesAbove(line: Element): number {
-        let maxScrollWidthWithExtension = 0;
-        let prev = line.previousElementSibling;
 
         while (prev && this.insideCodeBlock(prev.classList)) {
             this.codeBlockLines.push(prev);
@@ -392,6 +440,10 @@ export class CodeBlock {
         return maxScrollWidthWithExtension;
     }
 
+    /**
+     * Returns true, if the class list indicates,
+     * that the related element is a scrollable code line.
+     */
     private insideCodeBlock(classes: DOMTokenList): boolean {
         let isCode = false;
         for (let i = 0; i < classes.length; i++) {

@@ -73,7 +73,7 @@ export class Scrollbar {
         if (Platform.isMacOS) return;
         if (this.plugin.settings.scrollbarVisibility != "scroll") return;
 
-        const el = event.currentTarget as HTMLElement;
+        const el = event.target as HTMLElement;
         if (!el) return;
 
         // Update timeout

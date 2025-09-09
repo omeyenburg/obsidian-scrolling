@@ -11,6 +11,11 @@ export class ImageZoom {
         this.plugin = plugin;
     }
 
+    /**
+     * On wheel event. Desktop only.
+     * While hovering over an image, this will zoom if the zoom guesture is used or the user scrolles while pressing ctrl.
+     * Returns true if the wheel event is handled successfully.
+     */
     public wheelHandler(event: WheelEvent): boolean {
         if (!this.plugin.settings.imageZoomEnabled) return false;
 

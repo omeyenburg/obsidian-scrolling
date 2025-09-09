@@ -12,7 +12,7 @@ export class FollowScroll {
     private readonly CURSOR_SKIP_DELAY = 500;
 
     public readonly wheelHandler: Debouncer<[HTMLElement], void>;
-    public readonly cursorHandler: Debouncer<[void], void>;
+    public readonly viewUpdateHandler: Debouncer<[Editor], void>;
 
     // Balanced between performance and visual response
     private readonly WHEEL_INTERVAL = 70;
@@ -29,20 +29,43 @@ export class FollowScroll {
             true,
         );
 
-        this.wheelHandler = debounce(this.wheelHandlerDebounced.bind(this), this.WHEEL_INTERVAL, false);
-        this.cursorHandler = debounce(this.cursorHandlerDebounced.bind(this), this.CURSOR_INTERVAL, false);
+        this.wheelHandler = debounce(
+            this.wheelHandlerDebounced.bind(this),
+            this.WHEEL_INTERVAL,
+            false,
+        );
 
-        window.setTimeout(this.cursorHandler.bind(this), 1000);
+        this.viewUpdateHandler = debounce(
+            this.viewUpdateDebounced.bind(this),
+            this.CURSOR_INTERVAL,
+            false,
+        );
     }
 
+    /**
+     * Once on layout ready.
+     * Updates the relative position on screen of the line of the cursor.
+     */
+    public layoutReadyHandler(): void {
+        const editor = this.plugin.app.workspace.activeEditor?.editor;
+        if (!editor) return;
+
+        this.viewUpdateHandler(editor);
+    }
+
+    /**
+     * On leaf change.
+     * Resets relative position on screen of the line of the cursor.
+     */
     public leafChangeHandler(): void {
         this.relativeLineOffset = null;
     }
 
-    // Store the offset from the scroll top
-    public cursorHandlerDebounced(): void {
-        const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor) return;
+    /**
+     * On view update (document edit, text cursor movement).
+     * Updates the relative position on screen of the line of the cursor.
+     */
+    public viewUpdateDebounced(editor: Editor): void {
         const block = editor.cm.lineBlockAt(editor.posToOffset(editor.getCursor()));
         const scrollDOM = editor.cm.scrollDOM;
         const relativeLineOffset =
@@ -53,6 +76,10 @@ export class FollowScroll {
         this.relativeLineOffset = Math.max(0, Math.min(scrollDOM.clientHeight, relativeLineOffset));
     }
 
+    /**
+     * On wheel event. Desktop only.
+     * Moves the cursor to the cached relative position on screen.
+     */
     private wheelHandlerDebounced(el: HTMLElement): void {
         if (!this.plugin.settings.cursorScrollEnabled) return;
         if (this.relativeLineOffset == null) return;
@@ -76,7 +103,7 @@ export class FollowScroll {
             y: scrollRect.top + this.relativeLineOffset,
         };
 
-        // NOTE: This will never return a position inside a table
+        // NOTE: This will never return a position inside a table.
         const pos = cm.posAtCoords(coords);
         if (!pos) return;
 
@@ -86,6 +113,10 @@ export class FollowScroll {
         this.setCursorPosition(editor, lineNumber);
     }
 
+    /**
+     * Moves the text cursor to a specified line number.
+     * Does not scroll the view to show the cursor.
+     */
     private setCursorPosition(editor: Editor, line: number): void {
         // Prevent updating relative line offset
         this.skipCursor = true;

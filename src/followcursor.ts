@@ -1,4 +1,4 @@
-import { Editor, MarkdownView } from "obsidian";
+import { Editor } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -29,39 +29,45 @@ export class FollowCursor {
         });
     }
 
+    /**
+     * On key down event.
+     * Resets mouse up indicator early.
+     */
     public keyDownHandler(): void {
         this.recentMouseUp = false;
     }
 
+    /**
+     * On mouse up event.
+     * Blocks scroll trigger unless mouse invocation is enabled through settings.
+     */
     public mouseUpHandler(): void {
         this.recentMouseUp = true;
 
         // recentMouseUp will be reset either when a key is pressed or 100 ms pass.
         // This timeout is needed, because the keydown event is not reliable:
         // In normal mode of vim, keydown events are pretty much inaccessible.
-        // Already wasted too much time with this.
         window.setTimeout(() => (this.recentMouseUp = false), this.MOUSE_UP_TIMEOUT);
     }
 
-    public cursorHandler(isEdit: boolean): void {
-        // Get the editor
-        const markdownView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!markdownView?.editor) return;
-
-        if (markdownView.file) {
-            this.plugin.restoreScroll.storeStateDebounced(markdownView.file);
-        }
-
+    /**
+     * On view update (document edit, text cursor movement)
+     * Invokes scroll animation.
+     */
+    public viewUpdateHandler(editor: Editor, isEdit: boolean): void {
         // Cancel if mouse up, unless this setting allows it.
         if (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse) return;
 
         // Cancel if selecting, unless this setting allows it.
-        if (!this.plugin.settings.followCursorEnableSelection)
-            if (markdownView.editor.somethingSelected()) return;
+        if (!this.plugin.settings.followCursorEnableSelection && editor.somethingSelected()) return;
 
-        this.invokeScroll(markdownView.editor, isEdit);
+        this.invokeScroll(editor, isEdit);
     }
 
+    /**
+     * Calculates goal position, distance and scroll steps for scroll animation.
+     * Initiates scroll animation if centering scroll is required.
+     */
     private invokeScroll(editor: Editor, isEdit: boolean): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
@@ -96,6 +102,9 @@ export class FollowCursor {
         this.animate(editor, goal, signedGoalDistance / steps, steps);
     }
 
+    /**
+     * Scrolls to the goal over a specified number of frames.
+     */
     private animate(editor: Editor, goal: number, stepSize: number, step: number): void {
         if (step <= 0) return;
 
@@ -105,6 +114,9 @@ export class FollowCursor {
         );
     }
 
+    /**
+     * Measures intensity of events triggering centering scroll.
+     */
     private calculateScrollIntensity(): void {
         const time = performance.now();
         const elapsed = time - this.scrollLastEvent;
@@ -137,6 +149,10 @@ export class FollowCursor {
         return signedGoalDistance;
     }
 
+    /**
+     * Returns number of frames for scroll animation.
+     * Returns 1 step for instant scroll on edit.
+     */
     private calculateSteps(
         signedGoalDistance: number,
         scrollerHeight: number,
