@@ -8,7 +8,8 @@ import { MouseScroll } from "./mousescroll";
 import { RestoreScroll } from "./restorescroll";
 import { Scrollbar } from "./scrollbar";
 import { PreviewShortcuts } from "./previewshortcuts";
-import { setupCommands } from "./commands";
+import { ImageZoom } from "./imagezoom";
+import { Commands } from "./commands";
 
 import { Events } from "./events";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "./settings";
@@ -24,6 +25,8 @@ export default class ScrollingPlugin extends Plugin {
     restoreScroll!: RestoreScroll;
     scrollbar!: Scrollbar;
     previewShortcuts!: PreviewShortcuts;
+    imageZoom!: ImageZoom;
+    commands!: Commands;
 
     events!: Events;
 
@@ -39,12 +42,12 @@ export default class ScrollingPlugin extends Plugin {
         this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
         this.previewShortcuts = new PreviewShortcuts(this);
+        this.imageZoom = new ImageZoom(this);
+        this.commands = new Commands(this);
 
         this.events = new Events(this);
 
         await this.restoreScroll.loadData();
-
-        setupCommands(this);
 
         console.log("ScrollingPlugin loaded");
     }

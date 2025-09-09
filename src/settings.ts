@@ -9,41 +9,45 @@ export interface ScrollingPluginSettings {
     followCursorSmoothness: number;
     followCursorInstantEditScroll: boolean;
     followCursorEnableMouse: boolean;
-    followCursorEnableSelection: boolean; // Not exposed in the settings
-    followCursorDynamicAnimation: boolean; // Not exposed in the settings
+    followCursorEnableSelection: boolean;
+    followCursorDynamicAnimation: boolean;
 
     cursorScrollEnabled: boolean;
 
     horizontalScrollingCodeBlockEnabled: boolean;
     horizontalScrollingFileTreeEnabled: boolean;
 
-    restoreScrollMode: string; // scroll, cursor, top, bottom
-    restoreScrollLimit: number; // negative values for no limit
+    restoreScrollMode: string;
+    restoreScrollLimit: number;
     restoreScrollDelay: number;
     restoreScrollAllFiles: boolean;
     restoreScrollFileEnabled: boolean;
     restoreScrollFilePath: string;
 
-    scrollbarVisibility: string; // hide, scroll, show
+    imageZoomEnabled: boolean;
+
+    scrollbarVisibility: string;
     scrollbarWidth: number;
 
     readingLineScrollEnabled: boolean;
     readingHalfPageScrollEnabled: boolean;
     readingTopBottomScrollEnabled: boolean;
 
-    scrollMode: string; // disabled, native, simulated
+    scrollMode: string;
 
     nativeScrollMultiplier: number;
     nativeAltMultiplier: number;
     nativeScrollInstant: boolean;
 
-    simulatedMouseInvert: boolean; // Not exposed in the settings
+    simulatedMouseInvert: boolean;
     simulatedMouseSpeed: number;
     simulatedMouseSmoothness: number;
-    simulatedTouchpadEnabled: boolean; // Not exposed in the settings. Only enables touchpad detection.
+    simulatedTouchpadEnabled: boolean;
+    simulatedTouchpadSpeed: number;
     simulatedTouchpadSmoothness: number;
     simulatedTouchpadFrictionThreshold: number;
-    simulatedTouchpadSpeed: number;
+
+    ribbonScrollButtonsEnabled: boolean;
 
     enableExperimentalSettings: boolean;
 }
@@ -69,6 +73,8 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
 
+    imageZoomEnabled: true,
+
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
 
@@ -89,6 +95,8 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     simulatedTouchpadSmoothness: 75,
     simulatedTouchpadFrictionThreshold: 20,
     simulatedTouchpadSpeed: 50,
+
+    ribbonScrollButtonsEnabled: true,
 
     enableExperimentalSettings: false,
 };
@@ -112,9 +120,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayCursorScrollSettings();
         this.displayHorizontalScrollingSettings();
         this.displayRestoreScrollSettings();
+        this.displayImageZoomSettings();
         this.displayScrollbarSettings();
         this.displayReadModeKeybinds();
         this.displayMouseScrollSettings();
+        this.displayRibbonSettings();
 
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
@@ -364,7 +374,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        if (!Platform.isDesktop) return;
+        if (Platform.isMobile) return;
         this.createSetting(
             "File tree",
             "Allow horizontal scrolling in the file tree and show a scrollbar.",
@@ -539,6 +549,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
         });
     }
 
+    private displayImageZoomSettings() {
+        if (Platform.isMobile) return;
+
+        this.containerEl.createEl("br");
+        this.createHeading("Scroll to zoom images");
+
+        this.createSetting(
+            "Enabled",
+            "Hover over an image and scroll while holding the ctrl key to zoom.",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.imageZoomEnabled).onChange(async (value) => {
+                this.plugin.settings.imageZoomEnabled = value;
+                await this.plugin.saveSettings();
+            }),
+        );
+    }
+
     private displayScrollbarSettings() {
         this.containerEl.createEl("br");
         this.createHeading("Scrollbar appearance");
@@ -591,21 +618,19 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.containerEl.createEl("br");
         this.createHeading("Reading mode");
 
-        this.createSetting(
-            "Line scroll keybinds",
-            "Scroll by single lines with j/k.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.readingLineScrollEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.readingLineScrollEnabled = value;
-                    await this.plugin.saveSettings();
-                }),
+        this.createSetting("Line scroll keybinds", "Scroll by single lines with j/k.").addToggle(
+            (toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.readingLineScrollEnabled)
+                    .onChange(async (value) => {
+                        this.plugin.settings.readingLineScrollEnabled = value;
+                        await this.plugin.saveSettings();
+                    }),
         );
 
         this.createSetting(
             "Half page scroll keybinds",
-            "Scroll half pages with ctrl-d/ctrl-u.",
+            "Scroll half pages with d/u.",
         ).addToggle((toggle) =>
             toggle
                 .setValue(this.plugin.settings.readingHalfPageScrollEnabled)
@@ -803,5 +828,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
         }
+    }
+
+    private displayRibbonSettings() {
+        if (Platform.isDesktop) return;
+
+        this.containerEl.createEl("br");
+        this.createHeading("Ribbon commands");
+
+        this.createSetting(
+            "Commands for scrolling to top/bottom",
+            "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.ribbonScrollButtonsEnabled).onChange(async (value) => {
+                this.plugin.settings.ribbonScrollButtonsEnabled = value;
+                this.plugin.commands.updateRibbonButtons();
+                await this.plugin.saveSettings();
+            }),
+        );
     }
 }
