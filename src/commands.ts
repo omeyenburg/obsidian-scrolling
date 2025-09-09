@@ -1,4 +1,4 @@
-import { MarkdownView } from "obsidian";
+import { Platform, MarkdownView } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -35,6 +35,8 @@ export class Commands {
     }
 
     public updateRibbonButtons(): void {
+        if (Platform.isDesktop) return;
+
         if (this.plugin.settings.ribbonScrollButtonsEnabled) {
             this.addScrollRibbonButtons();
         } else {
@@ -65,6 +67,9 @@ export class Commands {
         }
     }
 
+    /**
+     * Invokes a scroll function with the scroller element in pdf, image and markdown files.
+     */
     private scrollCallbackWrapper(scrollFunc: (el: Element) => void) {
         return () => {
             const view = this.plugin.app.workspace.getActiveFileView();
