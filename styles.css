@@ -71,3 +71,20 @@
     overflow-x: auto;
     display: block;
 }
+
+/* Image zoom */
+img {
+    transform-origin: top left;
+    vertical-align: bottom;
+}
+
+span:has(img).image-embed {
+    display: inline-block;
+    overflow: hidden;
+}
+
+div:has(img).image-container {
+    display: block;
+    overflow: hidden;
+    /* padding-bottom: var(--scrolling-image-file-container-padding-bottom) */
+}
