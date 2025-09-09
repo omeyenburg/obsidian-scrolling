@@ -10,6 +10,8 @@ function getLineHeight() {
 
 export class PreviewShortcuts {
     private plugin: ScrollingPlugin;
+
+    private goal: number | null = null;
     private scroller: Element | null = null;
 
     constructor(plugin: ScrollingPlugin) {
@@ -22,6 +24,7 @@ export class PreviewShortcuts {
 
     public keyDownHandler(event: KeyboardEvent) {
         if (Platform.isMobile) return;
+        if (event.ctrlKey || event.altKey || event.metaKey) return;
 
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || view.getMode() !== "preview") return;
@@ -29,34 +32,27 @@ export class PreviewShortcuts {
         this.scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
         if (!this.scroller) return;
 
-        if (event.ctrlKey) {
-            switch (event.key) {
-                case "u":
-                    this.scrollHalfPage(-1);
-                    break;
-                case "d":
-                    this.scrollHalfPage(1);
-                    break;
-                default:
-                    this.goal = null;
-            }
-        } else {
-            switch (event.key) {
-                case "k":
-                    this.scrollLine(-1);
-                    break;
-                case "j":
-                    this.scrollLine(1);
-                    break;
-                case "g":
-                    this.scrollToTop();
-                    break;
-                case "G":
-                    this.scrollToBottom();
-                    break;
-                default:
-                    this.goal = null;
-            }
+        switch (event.key) {
+            case "k":
+                this.scrollLine(-1);
+                break;
+            case "j":
+                this.scrollLine(1);
+                break;
+            case "u":
+                this.scrollHalfPage(-1);
+                break;
+            case "d":
+                this.scrollHalfPage(1);
+                break;
+            case "g":
+                this.scrollToTop();
+                break;
+            case "G":
+                this.scrollToBottom();
+                break;
+            default:
+                this.goal = null;
         }
     }
 
@@ -64,7 +60,6 @@ export class PreviewShortcuts {
         this.scroller.scrollBy({ top: (this.scroller.clientHeight * direction) / 2 });
     }
 
-    private goal = null;
     private scrollLine(direction: -1 | 1) {
         if (this.goal !== null) {
             this.scroller.scrollTo({ top: this.goal });
