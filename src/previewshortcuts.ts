@@ -18,10 +18,18 @@ export class PreviewShortcuts {
         this.plugin = plugin;
     }
 
+    /**
+     * On key up event.
+     * Resets goal for line scroll animation.
+     */
     public keyUpHandler() {
         this.goal = null;
     }
 
+    /**
+     * On key down event.
+     * Handles specific vim motion keys and scrolls.
+     */
     public keyDownHandler(event: KeyboardEvent) {
         if (Platform.isMobile) return;
         if (event.ctrlKey || event.altKey || event.metaKey) return;

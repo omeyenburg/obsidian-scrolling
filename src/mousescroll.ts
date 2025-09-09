@@ -58,12 +58,17 @@ export class MouseScroll {
         });
     }
 
-    // Reset velocity on file change
+    /**
+     * Reset velocity on file change.
+     */
     public leafChangeHandler() {
         this.touchpadVelocity = 0;
         window.cancelAnimationFrame(this.mouseAnimationFrame);
     }
 
+    /**
+     * On wheel event. Desktop only.
+     */
     public wheelHandler(
         event: WheelEvent,
         el: HTMLElement,
@@ -119,8 +124,10 @@ export class MouseScroll {
         event.preventDefault();
     }
 
-    // Really good approximation of the default scrolling in Obsidian.
-    // Defaults: smoothness=150, speed=1
+    /**
+     * Really good approximation of the default scrolling in Obsidian.
+     * Defaults: smoothness=150, speed=1
+     */
     private startMouseScroll(el: HTMLElement, deltaY: number): void {
         if (!el) return;
         window.cancelAnimationFrame(this.mouseAnimationFrame);
@@ -139,9 +146,7 @@ export class MouseScroll {
         const changeY = deltaY * speed * invert;
         this.mouseTarget = start + changeY;
 
-        // this.mouseAnimationFrame = window.requestAnimationFrame(() =>
         this.animateMouseScroll(el, start, startTime, smoothness, changeY);
-        // );
     }
 
     private animateMouseScroll(
@@ -167,8 +172,11 @@ export class MouseScroll {
         }
     }
 
-    // Similar to touchpad scrolling in obsidian.
-    // Defaults: smoothness=0.75, speed=0.25, frictionThreshold=20
+    /**
+     * Begin a scroll animation (assumes touchpad).
+     * Similar to touchpad scrolling in obsidian.
+     * Defaults: smoothness=0.75, speed=0.25, frictionThreshold=20
+     */
     private startTouchpadScroll(el: HTMLElement, deltaY: number): void {
         if (el !== this.currentEl) {
             window.cancelAnimationFrame(this.touchpadAnimationFrame);
@@ -203,6 +211,11 @@ export class MouseScroll {
         }
     }
 
+    /**
+     * Primary touchpad animation.
+     * Scrolls the file viewport over multiple frames.
+     * Calls itself recursively.
+     */
     private animateTouchpadScroll(el: HTMLElement) {
         if (Math.abs(this.touchpadVelocity) > this.MIN_VELOCITY) {
             const now = performance.now();
@@ -229,6 +242,11 @@ export class MouseScroll {
         }
     }
 
+    /**
+     * Secondary touchpad animation.
+     * Runs when a different element is scrolled.
+     * Continues the scroll animation without relying on the class state.
+     */
     private decoupledTouchpadScroll(el: HTMLElement, velocity: number, friction: number) {
         if (Math.abs(velocity) > this.MIN_VELOCITY) {
             el.scrollTop = el.scrollTop + velocity * this.DEFAULT_FRAME_TIME;
@@ -241,6 +259,11 @@ export class MouseScroll {
         }
     }
 
+    /**
+     * Heuristically determines whether the current wheel event
+     * came from a touchpad rather than a traditional mouse wheel.
+     * Updates `touchpadLastUse` internally to support grace period detection.
+     */
     private isTouchpad(
         event: WheelEvent & { wheelDeltaY?: number },
         now: number,
@@ -303,6 +326,10 @@ export class MouseScroll {
         return false;
     }
 
+    /**
+     * Determines whether the current wheel event marks the start of a new scroll batch.
+     * Longer pauses between scrolls are more likely to signal a new batch.
+     */
     private getIsStart(deltaTime: number): boolean {
         const threshold = Math.min(
             this.MIN_START_TRESHOLD + this.avgDelay,
@@ -312,6 +339,10 @@ export class MouseScroll {
         return deltaTime > threshold;
     }
 
+    /**
+     * Updates rolling statistics about scroll event timing and batch sizes.
+     * This feeds into touchpad/mouse detection heuristics.
+     */
     public analyzeDelay(deltaTime: number): boolean {
         const isStart = this.getIsStart(deltaTime);
         if (isStart) {
@@ -336,6 +367,11 @@ export class MouseScroll {
         return isStart;
     }
 
+    /**
+     * Calculates an "intensity" score for a wheel event based on delta magnitude
+     * and event spacing.
+     * Intensity is later used as part of the mouse vs. touchpad classification.
+     */
     private getIntensity(deltaTime: number, deltaY: number): number {
         if (deltaTime < this.MAX_INTENSITY_INTERVAL && this.intervalSum !== null) {
             // modified EWMA (exponential weighted moving average)

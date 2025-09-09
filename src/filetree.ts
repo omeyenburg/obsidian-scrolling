@@ -15,6 +15,10 @@ export class FileTree {
         });
     }
 
+    /**
+     * Update file tree styles to allow horizontal scrolling.
+     * Called on plugin load and change of settings.
+     */
     public updateStyle(): void {
         // Only proceed if state changed.
         const isEnabled = this.plugin.settings.horizontalScrollingFileTreeEnabled;
