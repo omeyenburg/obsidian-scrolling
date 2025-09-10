@@ -63,7 +63,7 @@ body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-begin
 }
 
 /* Scrollable code in reading view */
-body.scrolling-horizontal-code-blocks .markdown-preview-view code {
+body.scrolling-horizontal-code-blocks .markdown-preview-view pre > code {
     white-space: pre;
     overflow-x: auto;
     display: block;
