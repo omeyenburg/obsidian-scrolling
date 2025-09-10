@@ -6,47 +6,47 @@
  */
 
 /* Hide specific scrollbars in files */
-.scrolling-visibility-hide *::-webkit-scrollbar {
+body.scrolling-visibility-hide *::-webkit-scrollbar {
   display: none;
 }
 
 /* Hide scrollbar temporarily */
-.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar,
-.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-thumb,
-.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-track {
+body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar,
+body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-thumb,
+body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-track {
     background: transparent !important;
 }
 
 /* Scrollbar width */
-.scrolling-scrollbar-width *::-webkit-scrollbar {
+body.scrolling-scrollbar-width *::-webkit-scrollbar {
   width: var(--scrolling-scrollbar-width) !important;
   height: var(--scrolling-scrollbar-width) !important;
 }
 
 /* Horizontal scrollbar for file tree */
-.scrolling-filetree-horizontal .nav-files-container {
+body.scrolling-filetree-horizontal .nav-files-container {
     overflow: auto;
 }
 
-.scrolling-filetree-horizontal .nav-files-container > div {
+body.scrolling-filetree-horizontal .nav-files-container > div {
     min-width: max-content;
     min-height: max-content;
 }
 
-.scrolling-filetree-horizontal .tree-item-self.nav-file-title,
-.scrolling-filetree-horizontal .tree-item-self.nav-folder-title {
+body.scrolling-filetree-horizontal .tree-item-self.nav-file-title,
+body.scrolling-filetree-horizontal .tree-item-self.nav-folder-title {
     flex-shrink: 0;
 }
 
 /* Scrollable code in editing view */
-.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
+body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
     overflow-x: auto;
     word-wrap: normal;
     white-space: nowrap;
     touch-action: pan-y pinch-zoom;
 }
 
-.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
+body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
     content: '';
     display: inline-block;
     position: absolute;
@@ -54,34 +54,33 @@
     height: 1px;
 }
 
-.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line::-webkit-scrollbar {
+body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line::-webkit-scrollbar {
     display: none;
 }
 
-.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-begin.HyperMD-codeblock-begin-bg.HyperMD-codeblock-bg.cm-line {
+body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-begin.HyperMD-codeblock-begin-bg.HyperMD-codeblock-bg.cm-line {
     padding-bottom: 0.6rem;
 }
 
 /* Scrollable code in reading view */
-.scrolling-horizontal-code-blocks .markdown-preview-view code {
+body.scrolling-horizontal-code-blocks .markdown-preview-view code {
     white-space: pre;
     overflow-x: auto;
     display: block;
 }
 
 /* Image zoom */
-img {
+body.scrolling-image-zoom-enabled img {
     transform-origin: top left;
     vertical-align: bottom;
 }
 
-span:has(img).image-embed {
+body.scrolling-image-zoom-enabled span.image-embed:has(img) {
     display: inline-block;
     overflow: hidden;
 }
 
-div:has(img).image-container {
+body.scrolling-image-zoom-enabled div.image-container:has(img) {
     display: block;
     overflow: hidden;
-    /* padding-bottom: var(--scrolling-image-file-container-padding-bottom) */
 }

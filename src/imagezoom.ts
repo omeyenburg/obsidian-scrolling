@@ -3,12 +3,25 @@ import type { default as ScrollingPlugin } from "./main";
 export class ImageZoom {
     private readonly plugin: ScrollingPlugin;
 
-    private readonly ZOOM_FACTOR = 1.05; // TODO: !
+    private readonly SMALL_ZOOM_FACTOR = 1.05;
+    private readonly LARGE_ZOOM_FACTOR = 1.2;
     private readonly MIN_SCALE = 1;
     private readonly MAX_SCALE = 100;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
+
+        this.updateStyles();
+
+        plugin.register(() => document.body.classList.remove("scrolling-image-zoom-enabled"));
+    }
+
+    public updateStyles() {
+        if (this.plugin.settings.imageZoomEnabled) {
+            document.body.classList.add("scrolling-image-zoom-enabled");
+        } else {
+            document.body.classList.remove("scrolling-image-zoom-enabled");
+        }
     }
 
     /**
@@ -39,11 +52,14 @@ export class ImageZoom {
         }
         */
 
+        const zoomFactor =
+            Math.abs(event.deltaY) < 100 ? this.SMALL_ZOOM_FACTOR : this.LARGE_ZOOM_FACTOR;
+
         let scale: number;
         if (event.deltaY < 0) {
-            scale = Math.min(this.MAX_SCALE, oldScale * this.ZOOM_FACTOR);
+            scale = Math.min(this.MAX_SCALE, oldScale * zoomFactor);
         } else {
-            scale = Math.max(this.MIN_SCALE, oldScale / this.ZOOM_FACTOR);
+            scale = Math.max(this.MIN_SCALE, oldScale / zoomFactor);
         }
 
         const imageRect = target.getBoundingClientRect();
