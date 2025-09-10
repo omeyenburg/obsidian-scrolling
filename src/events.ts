@@ -1,4 +1,4 @@
-import { View, Platform, Editor, FileView, TAbstractFile, WorkspaceLeaf } from "obsidian";
+import { View, Platform, TAbstractFile, WorkspaceLeaf } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
@@ -27,30 +27,24 @@ export class Events {
 
     private skipViewUpdate = false;
 
-    public manualPreventCursor = false;
-
-    private readonly LEAF_CHANGE_SCROLL_EVENT_DELAY = 500;
-    private readonly IMAGE_EXTENSIONS = new Set([
-        "png",
-        "jpg",
-        "jpeg",
-        "gif",
-        "svg",
-        "webp",
-        "bmp",
-        "ico",
-        "apng",
-        "avif",
-    ]);
-
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
         this.scrollHandler = this.unboundScrollHandler.bind(this);
 
+        this.attachHandlers();
+        this.attachWrappers();
+    }
+
+    private attachHandlers(): void {
+        const vault = this.plugin.app.vault;
+        const workspace = this.plugin.app.workspace;
+
+        workspace.onLayoutReady(this.layoutReadyHandler.bind(this));
+
         /* MouseScroll & CodeBlock */
         if (Platform.isDesktop) {
-            plugin.registerDomEvent(
-                plugin.app.workspace.containerEl,
+            this.plugin.registerDomEvent(
+                workspace.containerEl,
                 "wheel",
                 this.wheelHandler.bind(this),
                 {
@@ -59,8 +53,8 @@ export class Events {
                 },
             );
         } else if (Platform.isMobile) {
-            plugin.registerDomEvent(
-                plugin.app.workspace.containerEl,
+            this.plugin.registerDomEvent(
+                workspace.containerEl,
                 "touchstart",
                 this.touchStartHandler.bind(this),
                 {
@@ -68,8 +62,8 @@ export class Events {
                     passive: true,
                 },
             );
-            plugin.registerDomEvent(
-                plugin.app.workspace.containerEl,
+            this.plugin.registerDomEvent(
+                workspace.containerEl,
                 "touchmove",
                 this.touchMoveHandler.bind(this),
                 {
@@ -80,40 +74,47 @@ export class Events {
         }
 
         /* PreviewShortcuts */
-        plugin.registerDomEvent(document, "keyup", this.keyUpHandler.bind(this), { passive: true });
+        this.plugin.registerDomEvent(document, "keyup", this.keyUpHandler.bind(this), {
+            passive: true,
+        });
 
         /* FollowCursor & PreviewShortcuts */
-        plugin.registerDomEvent(document, "keydown", this.keyDownHandler.bind(this), {
+        this.plugin.registerDomEvent(document, "keydown", this.keyDownHandler.bind(this), {
             passive: true,
         });
 
         /* FollowCursor */
-        plugin.registerEditorExtension(
+        this.plugin.registerEditorExtension(
             EditorView.updateListener.of(this.viewUpdateHandler.bind(this)),
         );
 
         /* FollowCursor & RestoreScroll */
         if (Platform.isDesktop) {
-            plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this), {
+            this.plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this), {
                 passive: true,
             });
         }
 
         /* MouseScroll, Scrollbar & RestoreScroll */
-        plugin.registerEvent(
-            plugin.app.workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
+        this.plugin.registerEvent(
+            workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
         );
-        window.requestAnimationFrame(() => this.attachScrollHandler());
+
+        this.plugin.registerDomEvent(document, "scroll", this.scrollHandler, {
+            capture: true,
+            passive: true,
+        });
 
         /* RestoreScroll */
-        plugin.registerEvent(plugin.app.vault.on("delete", this.deleteFileHandler.bind(this)));
-        plugin.registerEvent(plugin.app.vault.on("rename", this.renameFileHandler.bind(this)));
-        plugin.registerEvent(plugin.app.workspace.on("quit", this.quitHandler.bind(this)));
-        plugin.registerEvent(plugin.app.workspace.on("file-open", this.openFileHandler.bind(this)));
+        this.plugin.registerEvent(vault.on("delete", this.deleteFileHandler.bind(this)));
+        this.plugin.registerEvent(vault.on("rename", this.renameFileHandler.bind(this)));
+        this.plugin.registerEvent(workspace.on("quit", this.quitHandler.bind(this)));
+        this.plugin.registerEvent(workspace.on("file-open", this.openFileHandler.bind(this)));
+    }
 
-        // Wrap WorkspaceLeaf.setViewState
+    private attachWrappers(): void {
         const self = this;
-        plugin.register(
+        this.plugin.register(
             around(WorkspaceLeaf.prototype, {
                 setViewState(old) {
                     return async function (...args) {
@@ -125,7 +126,7 @@ export class Events {
             }),
         );
 
-        plugin.register(
+        this.plugin.register(
             around(View.prototype, {
                 setEphemeralState(old) {
                     return async function (...args) {
@@ -138,69 +139,14 @@ export class Events {
         );
     }
 
-    private attachScrollHandler(): void {
-        const view = this.plugin.app.workspace.getActiveViewOfType(FileView);
-        if (!view || !view.file) return;
-
-        // Avoid scroll events after attach
-        this.scrollEventSkip = true;
-        window.setTimeout(
-            () => (this.scrollEventSkip = false),
-            this.LEAF_CHANGE_SCROLL_EVENT_DELAY,
-        );
-
-        if (view.file.extension === "md") {
-            this.attachScrollHandlerMarkdown(view);
-        } else if (view.file.extension === "pdf") {
-            this.attachScrollHandlerPdf(view);
-        } else if (this.IMAGE_EXTENSIONS.has(view.file.extension.toLowerCase())) {
-            this.attachScrollHandlerImage(view);
-        }
-    }
-
-    private attachScrollHandlerMarkdown(view: FileView) {
-        const editScroller = view.contentEl.querySelector(".cm-scroller") as HTMLElement;
-        const viewScroller = view.contentEl.querySelector(".markdown-preview-view") as HTMLElement;
-        if (!editScroller || !viewScroller) return;
-
-        this.plugin.scrollbar.registerScrollbar(editScroller);
-        this.plugin.scrollbar.registerScrollbar(viewScroller);
-
-        editScroller.removeEventListener("scroll", this.scrollHandler);
-        viewScroller.removeEventListener("scroll", this.scrollHandler);
-
-        this.plugin.registerDomEvent(editScroller, "scroll", this.scrollHandler, { passive: true });
-        this.plugin.registerDomEvent(viewScroller, "scroll", this.scrollHandler, { passive: true });
-    }
-
-    private attachScrollHandlerPdf(view: FileView) {
-        const scroller = view.contentEl.querySelector(".pdf-viewer-container") as HTMLElement;
-        if (!scroller) return;
-
-        this.plugin.scrollbar.registerScrollbar(scroller);
-
-        scroller.removeEventListener("scroll", this.scrollHandler);
-        scroller.addEventListener("scroll", this.scrollHandler);
-        this.plugin.register(() => scroller.removeEventListener("scroll", this.scrollHandler));
-    }
-
-    private attachScrollHandlerImage(view: FileView) {
-        const scroller = view.contentEl.querySelector(".image-container")
-            ?.parentElement as HTMLElement;
-        if (!scroller) return;
-
-        this.plugin.scrollbar.registerScrollbar(scroller);
-
-        scroller.removeEventListener("scroll", this.scrollHandler);
-        scroller.addEventListener("scroll", this.scrollHandler);
-        this.plugin.register(() => scroller.removeEventListener("scroll", this.scrollHandler));
+    private layoutReadyHandler(): void {
+        this.plugin.followScroll.layoutReadyHandler();
     }
 
     private leafChangeHandler(): void {
         this.plugin.mouseScroll.leafChangeHandler();
         this.plugin.followScroll.leafChangeHandler();
         this.plugin.codeBlock.leafChangeHandler();
-        this.attachScrollHandler();
     }
 
     private unboundScrollHandler(event: Event): void {
@@ -222,6 +168,9 @@ export class Events {
         this.plugin.restoreScroll.renameFileHandler(file, old);
     }
 
+    /**
+     * May run before Obsidian quits.
+     */
     private quitHandler(): void {
         this.plugin.restoreScroll.quitHandler();
     }
@@ -263,20 +212,31 @@ export class Events {
         // Only proceed if its a cursor or edit event
         if (!update.selectionSet && !update.docChanged) return;
 
-        this.plugin.codeBlock.cursorHandler(update.docChanged);
-        this.plugin.followCursor.cursorHandler(update.docChanged);
-        this.plugin.followScroll.cursorHandler();
+        this.plugin.restoreScroll.storeStateDebounced();
+
+        const editor = this.plugin.app.workspace.activeEditor?.editor;
+        if (!editor) return;
+
+        this.plugin.codeBlock.viewUpdateHandler(editor, update.docChanged);
+        this.plugin.followCursor.viewUpdateHandler(editor, update.docChanged);
+        this.plugin.followScroll.viewUpdateHandler(editor);
     }
 
     private isWithinScrollContext(el: HTMLElement): boolean {
         return el === this.lastWheelScrollElement || this.lastWheelScrollElement.contains(el);
     }
 
+    /**
+     * Mobile only.
+     */
     private touchStartHandler(event: TouchEvent): void {
         this.lastTouchX = event.touches[0].clientX;
         this.lastTouchY = event.touches[0].clientY;
     }
 
+    /**
+     * Mobile only.
+     */
     private touchMoveHandler(event: TouchEvent): void {
         const touchX = event.touches[0].clientX;
         const touchY = event.touches[0].clientY;
@@ -290,8 +250,15 @@ export class Events {
         this.plugin.codeBlock.touchHandler(event, deltaX, deltaY);
     }
 
+    /**
+     * Desktop only.
+     */
     private wheelHandler(event: WheelEvent): void {
-        this.plugin.codeBlock.wheelHandler(event);
+        let eventHandled = this.plugin.imageZoom.wheelHandler(event);
+        if (eventHandled) return;
+
+        eventHandled = this.plugin.codeBlock.wheelHandler(event);
+        if (eventHandled) return;
 
         if (!event.deltaY) return;
         if (
