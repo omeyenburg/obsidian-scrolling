@@ -6,17 +6,14 @@
  */
 
 /* Hide specific scrollbars in files */
-.scrolling-visibility-hide .pdf-viewer-container::-webkit-scrollbar,
-.scrolling-visibility-hide .markdown-source-view::-webkit-scrollbar,
-.scrolling-visibility-hide .markdown-preview-view::-webkit-scrollbar,
-.scrolling-visibility-hide .cm-scroller::-webkit-scrollbar {
+.scrolling-visibility-hide *::-webkit-scrollbar {
   display: none;
 }
 
-/* Hide scrollbar on containers with scrolling-transparent class */
-.scrolling-visibility-scroll .scrolling-transparent::-webkit-scrollbar,
-.scrolling-visibility-scroll .scrolling-transparent::-webkit-scrollbar-thumb,
-.scrolling-visibility-scroll .scrolling-transparent::-webkit-scrollbar-track {
+/* Hide scrollbar temporarily */
+.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar,
+.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-thumb,
+.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-track {
     background: transparent !important;
 }
 
