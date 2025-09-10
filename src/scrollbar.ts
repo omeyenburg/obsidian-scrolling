@@ -39,16 +39,12 @@ export class Scrollbar {
 
     private scrollTimeouts = new Map<HTMLElement, number>();
 
-    private readonly SCROLLBAR_IDLE_TIMEOUT = 500;
+    private readonly SCROLLBAR_IDLE_TIMEOUT = 1000;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
         this.updateStyle();
         plugin.register(cleanup);
-    }
-
-    public registerScrollbar(scroller: HTMLElement): void {
-        scroller.classList.add("scrolling-transparent");
     }
 
     public scrollHandler(event: Event): void {
@@ -83,7 +79,7 @@ export class Scrollbar {
         }
 
         // Show scrollbar on target element
-        el.classList.remove("scrolling-transparent");
+        el.classList.add("scrolling-show-temporary");
 
         // Hide scrollbar after delay
         const timeoutId = window.setTimeout(
@@ -94,7 +90,7 @@ export class Scrollbar {
     }
 
     private hideScrollbarTemporary(el: HTMLElement) {
-        el.classList.add("scrolling-transparent");
+        el.classList.remove("scrolling-show-temporary");
         this.scrollTimeouts.delete(el);
     }
 }
