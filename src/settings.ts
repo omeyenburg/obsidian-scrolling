@@ -35,6 +35,8 @@ export interface ScrollingPluginSettings {
     restoreScrollDelay: number;
     /** Only restore position in Markdown source, or also in images, PDFs and Markdown preview. */
     restoreScrollAllFiles: boolean;
+    /** Even restore position if Markdown link to file was used. */
+    restoreScrollFileLink: boolean;
     /** Store position entries on disk. */
     restoreScrollFileEnabled: boolean;
     /** Path to cache file. */
@@ -105,6 +107,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollLimit: -1,
     restoreScrollDelay: 100,
     restoreScrollAllFiles: true,
+    restoreScrollFileLink: false,
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
 
@@ -509,6 +512,16 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
 
         this.createSetting(
+            "Restore position on link use",
+            "Enable restoring scroll position when clicking links to files (not headings).\n",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.restoreScrollFileLink).onChange(async (value) => {
+                this.plugin.settings.restoreScrollFileLink = value;
+                await this.plugin.saveSettings();
+            }),
+        );
+
+        this.createSetting(
             "Store positions in file",
             "Save positions inside a file to keep them after Obsidian restarts.",
         ).addToggle((toggle) =>
@@ -663,16 +676,14 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
         );
 
-        this.createSetting(
-            "Half page scroll keybinds",
-            "Scroll half pages with d/u.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.readingHalfPageScrollEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.readingHalfPageScrollEnabled = value;
-                    await this.plugin.saveSettings();
-                }),
+        this.createSetting("Half page scroll keybinds", "Scroll half pages with d/u.").addToggle(
+            (toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.readingHalfPageScrollEnabled)
+                    .onChange(async (value) => {
+                        this.plugin.settings.readingHalfPageScrollEnabled = value;
+                        await this.plugin.saveSettings();
+                    }),
         );
 
         this.createSetting(
@@ -873,13 +884,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Commands for scrolling to top/bottom",
-            "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.",
+            "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
         ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.ribbonScrollButtonsEnabled).onChange(async (value) => {
-                this.plugin.settings.ribbonScrollButtonsEnabled = value;
-                this.plugin.commands.updateRibbonButtons();
-                await this.plugin.saveSettings();
-            }),
+            toggle
+                .setValue(this.plugin.settings.ribbonScrollButtonsEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.ribbonScrollButtonsEnabled = value;
+                    this.plugin.commands.updateRibbonButtons();
+                    await this.plugin.saveSettings();
+                }),
         );
     }
 }
