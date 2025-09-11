@@ -120,7 +120,7 @@ export class RestoreScroll {
             this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
         if (
             headingLinkUsed ||
-            this.recentLinkUse && !this.plugin.settings.restoreScrollFileLink ||
+            (this.recentLinkUse && !this.plugin.settings.restoreScrollFileLink) ||
             this.plugin.settings.restoreScrollMode === "top"
         ) {
             // Reset recent link use
@@ -178,7 +178,10 @@ export class RestoreScroll {
         // Cancel any further calculations if link has been used.
         const headingLinkUsed =
             this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
-        if (headingLinkUsed || this.recentLinkUse && !this.plugin.settings.restoreScrollFileLink) {
+        if (
+            headingLinkUsed ||
+            (this.recentLinkUse && !this.plugin.settings.restoreScrollFileLink)
+        ) {
             // Reset recent link use
             this.recentLinkUse = false;
             window.clearTimeout(this.recentLinkTimeout);
@@ -191,24 +194,29 @@ export class RestoreScroll {
 
         if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
             if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
+                view.setEphemeralState({ cursor, focus: true });
+                view.editor.scrollIntoView(cursor, true);
+
+                if (this.plugin.settings.restoreScrollDelay === 0) return;
                 window.setTimeout(() => {
                     view.setEphemeralState({ cursor, focus: true });
                     view.editor.scrollIntoView(cursor, true);
                 }, this.plugin.settings.restoreScrollDelay);
             } else {
+                view.setEphemeralState({ scroll });
+
+                if (this.plugin.settings.restoreScrollDelay === 0) return;
                 window.setTimeout(() => {
                     view.setEphemeralState({ scroll });
                 }, this.plugin.settings.restoreScrollDelay);
             }
         } else if (scrollTop && this.plugin.settings.restoreScrollAllFiles) {
-            window.setTimeout(() => {
-                window.requestAnimationFrame(() => {
-                    const scroller = getScroller(view);
-                    if (scroller) {
-                        scroller.scrollTop = scrollTop;
-                    }
-                });
-            }, this.plugin.settings.restoreScrollDelay);
+            window.requestAnimationFrame(() => {
+                const scroller = getScroller(view);
+                if (scroller) {
+                    scroller.scrollTop = scrollTop;
+                }
+            });
         }
     }
 
