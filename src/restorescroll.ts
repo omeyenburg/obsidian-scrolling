@@ -47,6 +47,9 @@ export class RestoreScroll {
     public readonly storeStateDebounced: Debouncer<[], void>;
     public readonly writeStateFileDebounced: Debouncer<[], void>;
 
+    private recentLinkUse = false;
+    private recentLinkTimeout: number;
+
     // Prime numbers :)
     private readonly STORE_INTERVAL = 97;
     private readonly FILE_WRITE_INTERVAL = 293;
@@ -66,6 +69,19 @@ export class RestoreScroll {
             this.FILE_WRITE_INTERVAL,
             true,
         );
+
+        const originalOpenLinkText = plugin.app.workspace.openLinkText;
+        plugin.app.workspace.openLinkText = async (...args) => {
+            this.recentLinkUse = true;
+            try {
+                return await originalOpenLinkText.apply(plugin.app.workspace, args);
+            } finally {
+                window.clearTimeout(this.recentLinkTimeout);
+                this.recentLinkTimeout = window.setTimeout(() => {
+                    this.recentLinkUse = false;
+                }, 10);
+            }
+        };
     }
 
     /**
@@ -100,8 +116,17 @@ export class RestoreScroll {
         this.expectEphemeralState = false;
 
         // Cancel any further calculations if link has been used.
-        const linkUsed = this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
-        if (linkUsed || this.plugin.settings.restoreScrollMode === "top") {
+        const headingLinkUsed =
+            this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
+        if (
+            headingLinkUsed ||
+            this.recentLinkUse && !this.plugin.settings.restoreScrollFileLink ||
+            this.plugin.settings.restoreScrollMode === "top"
+        ) {
+            // Reset recent link use
+            this.recentLinkUse = false;
+            window.clearTimeout(this.recentLinkTimeout);
+
             // Skip following viewStateHandler invocation.
             this.skipViewStateHandler = true;
             window.setTimeout(() => (this.skipViewStateHandler = false), 0);
@@ -145,11 +170,20 @@ export class RestoreScroll {
         this.writeStateFileDebounced();
 
         if (this.skipViewStateHandler) return;
-
         if (this.plugin.settings.restoreScrollMode === "top") return;
 
         // Must be file view
         if (!view || !(view instanceof FileView) || !view.file) return;
+
+        // Cancel any further calculations if link has been used.
+        const headingLinkUsed =
+            this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
+        if (headingLinkUsed || this.recentLinkUse && !this.plugin.settings.restoreScrollFileLink) {
+            // Reset recent link use
+            this.recentLinkUse = false;
+            window.clearTimeout(this.recentLinkTimeout);
+            return;
+        }
 
         const ephemeralState = this.ephemeralStates[view.file.path];
         if (!ephemeralState) return;
