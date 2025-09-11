@@ -258,7 +258,7 @@ export class Events {
         if (!event.deltaY) return;
         if (
             !(
-                (Platform.isDesktop && this.plugin.settings.scrollMode === "simulated") ||
+                (Platform.isDesktop && this.plugin.settings.scrollMode !== "disabled") ||
                 this.plugin.settings.cursorScrollEnabled
             )
         )
