@@ -38,36 +38,28 @@ export class Events {
         workspace.onLayoutReady(this.layoutReadyHandler.bind(this));
 
         /* MouseScroll & CodeBlock */
-        if (Platform.isDesktop) {
-            this.plugin.registerDomEvent(
-                workspace.containerEl,
-                "wheel",
-                this.wheelHandler.bind(this),
-                {
-                    capture: true,
-                    passive: false,
-                },
-            );
-        } else if (Platform.isMobile) {
-            this.plugin.registerDomEvent(
-                workspace.containerEl,
-                "touchstart",
-                this.touchStartHandler.bind(this),
-                {
-                    capture: true,
-                    passive: true,
-                },
-            );
-            this.plugin.registerDomEvent(
-                workspace.containerEl,
-                "touchmove",
-                this.touchMoveHandler.bind(this),
-                {
-                    capture: true,
-                    passive: true,
-                },
-            );
-        }
+        this.plugin.registerDomEvent(workspace.containerEl, "wheel", this.wheelHandler.bind(this), {
+            capture: true,
+            passive: false,
+        });
+        this.plugin.registerDomEvent(
+            workspace.containerEl,
+            "touchstart",
+            this.touchStartHandler.bind(this),
+            {
+                capture: true,
+                passive: true,
+            },
+        );
+        this.plugin.registerDomEvent(
+            workspace.containerEl,
+            "touchmove",
+            this.touchMoveHandler.bind(this),
+            {
+                capture: true,
+                passive: true,
+            },
+        );
 
         /* PreviewShortcuts */
         this.plugin.registerDomEvent(document, "keyup", this.keyUpHandler.bind(this), {
