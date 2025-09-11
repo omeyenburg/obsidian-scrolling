@@ -105,7 +105,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
     restoreScrollMode: "scroll",
     restoreScrollLimit: -1,
-    restoreScrollDelay: 100,
+    restoreScrollDelay: 0,
     restoreScrollAllFiles: true,
     restoreScrollFileLink: false,
     restoreScrollFileEnabled: true,
@@ -179,13 +179,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 frag.createEl("a", {
                     text: "discussion page",
                     href: "https://github.com/omeyenburg/obsidian-scrolling/discussions",
-                });
-                frag.createEl("span", {
-                    text: " or send an email to ",
-                });
-                frag.createEl("a", {
-                    text: "omeyenburg@gmail.com",
-                    href: "mailto:omeyenburg@gmail.com",
                 });
                 frag.createEl("span", {
                     text: ".",
@@ -454,7 +447,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Delay after opening a note",
-            "Number of milliseconds to wait before restoring scroll after a note is opened",
+            "Number of milliseconds to wait before restoring position.\nUse if restoring works unreliably.",
             () => (this.plugin.settings.restoreScrollDelay = DEFAULT_SETTINGS.restoreScrollDelay),
         ).addSlider((slider) =>
             slider
@@ -724,6 +717,19 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         if (this.plugin.settings.scrollMode === "native") {
             this.createSetting(
+                "Disable smooth scrolling",
+                "Scroll instantly without transition effect.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.nativeScrollInstant)
+                    .onChange(async (value) => {
+                        this.plugin.settings.nativeScrollInstant = value;
+                        this.display();
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+            this.createSetting(
                 "Scroll speed multiplier",
                 "Increase the scroll speed. Slowing speed down with values below 1 is only supported with 'Disable smooth scrolling'",
                 () =>
@@ -751,19 +757,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     .setLimits(1 - 0.9 * +this.plugin.settings.nativeScrollInstant, 3, 0.1)
                     .onChange(async (value) => {
                         this.plugin.settings.nativeAltMultiplier = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Disable smooth scrolling",
-                "Scroll instantly without transition effect.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.nativeScrollInstant)
-                    .onChange(async (value) => {
-                        this.plugin.settings.nativeScrollInstant = value;
-                        this.display();
                         await this.plugin.saveSettings();
                     }),
             );
