@@ -25,31 +25,31 @@ export class CodeBlock {
 
     private codeBlockLines: Element[] = [];
 
+    private scrollHandlerAnimationFrame: number | null = null;
+
+    private lastScroller: Element | null = null;
+    private lastScrollTop: number | null = null;
+    private isScrollingVertically = false;
+
     private currentScrollLeft = 0;
     private currentScrollVelocity = 0;
-    private lastHorizontalTimeStamp = 0;
 
     private currentScrollWidth: number | null = null;
     private scrollAnimationFrame: number | null = null;
 
     private readonly verticalWheelScrollDebouncer: (line: Element) => void;
+    private readonly updateCursorPassive: () => void;
 
     private cachedCursor: HTMLElement | null = null;
 
     private readonly FRICTION_COFFICIENT = 0.8;
 
-    private cachedBlockWidth = 0;
+    private cachedBlockRect: DOMRect | null = null;
+    private cachedSizerLeft: number | null = null;
     private cachedBlockWidthTimeStamp = 0;
     private cachedLineWidth = 0;
     private cachedLineCharCount = 0;
     private CACHED_BLOCK_WIDTH_TIMEOUT = 500;
-
-    /**
-     * Grace period to keep horizontal/vertical scrolling alive.
-     * Higher values might cause vertical scroll detection while
-     * actually scrolling horizontally.
-     */
-    private readonly DELTA_TIME_THRESHOLD = 50;
 
     /**
      * Large constant used to artificially extend line length so that
@@ -60,12 +60,20 @@ export class CodeBlock {
     private readonly EXTRA_LINE_LENGTH = 1_000_000;
     private readonly EXTRA_LINE_LENGTH_WITH_PADDING = 1_000_000 + 15;
 
+    private readonly SCROLL_FACTOR = 0.4;
+
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
         this.verticalWheelScrollDebouncer = debounce(
             this.verticalWheelScroll.bind(this),
             50,
+            false,
+        );
+
+        this.updateCursorPassive = debounce(
+            this._dispatchedUpdateCursorPassive.bind(this),
+            5,
             false,
         );
 
@@ -78,7 +86,6 @@ export class CodeBlock {
 
         plugin.register(() => {
             window.cancelAnimationFrame(this.scrollAnimationFrame);
-            document.body.style.removeProperty("--scrolling-scrollbar-width");
             document.body.removeClass("scrolling-horizontal-code-blocks");
         });
     }
@@ -95,6 +102,51 @@ export class CodeBlock {
         }
     }
 
+    /*
+     * On scroll.
+     * Checks if vertical scroll occurred.
+     */
+    public scrollHandler(event: Event): void {
+        if (this.isScrollingVertically || this.scrollHandlerAnimationFrame !== null) return;
+
+        this.scrollHandlerAnimationFrame = window.setTimeout(() => {
+            this.scrollHandlerAnimationFrame = null;
+            const editor = this.plugin.app.workspace.activeEditor?.editor;
+            editor.cm.requestMeasure({
+                key: "code-scroll-handler",
+                read: (_view) => {
+                    const target = event.target as Element;
+                    const newScrollTop = target.scrollTop;
+
+                    if (this.lastScroller !== target) {
+                        this.lastScroller = target;
+                        return;
+                    }
+
+                    if (this.lastScrollTop === null) {
+                        this.lastScrollTop = newScrollTop;
+                        return;
+                    }
+
+                    if (this.lastScrollTop !== newScrollTop) {
+                        this.isScrollingVertically = true;
+                        this.lastScrollTop = newScrollTop;
+                    }
+                },
+            });
+        }, 50);
+    }
+
+    /**
+     * On scroll end. Per axis.
+     * Marks end of vertical scroll.
+     */
+    public scrollEndHandler(): void {
+        this.isScrollingVertically = false;
+        window.clearTimeout(this.scrollHandlerAnimationFrame);
+        this.scrollHandlerAnimationFrame = null;
+    }
+
     /**
      * On leaf change.
      * Resets cached values.
@@ -104,7 +156,9 @@ export class CodeBlock {
         this.currentScrollWidth = null;
 
         this.currentScrollLeft = 0;
-        this.lastHorizontalTimeStamp = 0;
+
+        this.lastScrollTop = null;
+        this.isScrollingVertically = false;
 
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
@@ -141,14 +195,8 @@ export class CodeBlock {
         let { deltaX, deltaY } = normalizeWheelDelta(event);
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
 
-        if (
-            isHorizontalScroll ||
-            event.timeStamp - this.lastHorizontalTimeStamp < this.DELTA_TIME_THRESHOLD
-        ) {
+        if (isHorizontalScroll && !this.isScrollingVertically) {
             this.horizontalWheelScroll(deltaX, line);
-            this.lastHorizontalTimeStamp = event.timeStamp;
-
-            event.preventDefault();
             return true;
         }
 
@@ -181,11 +229,13 @@ export class CodeBlock {
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
 
         if (
-            isHorizontalScroll ||
-            event.timeStamp - this.lastHorizontalTimeStamp < this.DELTA_TIME_THRESHOLD
+            isHorizontalScroll &&
+            !this.isScrollingVertically
         ) {
             this.horizontalWheelScroll(deltaX, line);
-            this.lastHorizontalTimeStamp = event.timeStamp;
+
+            // Stop Obsidian from expanding the side panels
+            event.stopPropagation();
         } else {
             this.verticalWheelScrollDebouncer(line);
         }
@@ -199,74 +249,61 @@ export class CodeBlock {
     public viewUpdateHandler(editor: Editor, isEdit: boolean): void {
         if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
 
-        const self = this;
-        editor.cm.requestMeasure({
-            key: "cursor-active",
-            read(view) {
-                const cursorEl = self.getCursorEl(editor);
+        const cursorEl = this.getCursorEl(editor);
 
-                const lineEl = editor.cm.contentDOM.querySelector(".cm-line.cm-active");
-                if (!lineEl?.classList?.contains("HyperMD-codeblock")) {
-                    self.codeBlockLines = [];
-                    return { valid: false, cursorEl };
-                }
+        const lineEl = editor.cm.contentDOM.querySelector(".cm-line.cm-active");
+        if (!lineEl?.classList?.contains("HyperMD-codeblock")) {
+            this.codeBlockLines = [];
+            return;
+        }
 
-                if (!self.codeBlockLines.contains(lineEl) || isEdit) {
-                    self.updateWidthAndBlock(lineEl);
-                    self.currentScrollLeft = Math.min(
-                        self.currentScrollLeft,
-                        self.currentScrollWidth,
-                    );
-                }
+        if (!this.codeBlockLines.contains(lineEl) || isEdit) {
+            this.updateWidthAndBlock(lineEl);
+            this.currentScrollLeft = Math.min(this.currentScrollLeft, this.currentScrollWidth);
+        }
 
-                const pos = view.state.selection.main.head;
-                const line = view.state.doc.lineAt(pos);
-                const col = pos - line.from;
+        const pos = editor.cm.state.selection.main.head;
+        const line = editor.cm.state.doc.lineAt(pos);
+        const col = pos - line.from;
 
-                const charWidth = view.defaultCharacterWidth;
+        const charWidth = editor.cm.defaultCharacterWidth;
 
-                // Cache bounding rect widths
-                const now = performance.now();
-                if (now - self.cachedBlockWidthTimeStamp > self.CACHED_BLOCK_WIDTH_TIMEOUT) {
-                    self.cachedBlockWidthTimeStamp = now;
-                    self.cachedBlockWidth = lineEl.getBoundingClientRect().width;
-                    self.cachedLineWidth = lineEl.firstElementChild.getBoundingClientRect().width;
-                    self.cachedLineCharCount = line.length;
-                } else {
-                    self.cachedLineWidth += charWidth * (line.length - self.cachedLineCharCount);
-                    self.cachedLineCharCount = line.length;
-                }
+        // Cache bounding rect widths
+        const now = performance.now();
+        if (now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT) {
+            this.cachedBlockWidthTimeStamp = now;
+            this.cachedBlockRect = lineEl.getBoundingClientRect();
+            this.cachedLineWidth = lineEl.firstElementChild.getBoundingClientRect().width;
+            this.cachedLineCharCount = line.length;
+            this.cachedSizerLeft = editor.cm.contentDOM.parentElement.getBoundingClientRect().left;
+        } else {
+            this.cachedLineWidth += charWidth * (line.length - this.cachedLineCharCount);
+            this.cachedLineCharCount = line.length;
+        }
 
-                const cursorScroll = line.length ? self.cachedLineWidth * (col / line.length) : 0;
+        const cursorScroll = line.length ? this.cachedLineWidth * (col / line.length) : 0;
 
-                self.currentScrollLeft = Math.min(
-                    cursorScroll,
-                    Math.max(
-                        cursorScroll - self.cachedBlockWidth + charWidth * (cursorEl ? 5 : 4),
-                        self.currentScrollLeft,
-                    ),
-                );
+        this.currentScrollLeft = Math.min(
+            cursorScroll,
+            Math.max(
+                cursorScroll - this.cachedBlockRect.width + charWidth * (cursorEl ? 5 : 4),
+                this.currentScrollLeft,
+            ),
+        );
 
-                return { valid: true, cursorEl: cursorEl };
-            },
-            write(measure, view) {
-                // Cursor is now in view
-                if (measure.cursorEl) {
-                    measure.cursorEl.style.visibility = "visible";
-                }
+        // Cursor is now in view
+        if (cursorEl && cursorEl.style.display !== "block") {
+            cursorEl.style.display = "block";
+        }
 
-                // Abort if cursor not in code block
-                if (!measure.valid) return;
+        this.updateHorizontalScroll();
 
-                self.updateHorizontalScroll();
-
-                // Tell CodeMirror to update cursor
-                window.requestAnimationFrame(() => {
-                    self.plugin.followScroll.skipCursor = true;
-                    view.dispatch({ selection: editor.cm.state.selection });
-                });
-            },
-        });
+        // Tell CodeMirror to update cursor
+        // Timeout fixes bug that causes duplicating text on mobile.
+        if (this.cachedCursor !== null) {
+            this.plugin.followScroll.skipCursor = true;
+            editor.cm.dispatch({ selection: editor.cm.state.selection });
+        }
     }
 
     /**
@@ -277,7 +314,19 @@ export class CodeBlock {
             return this.cachedCursor;
         }
 
-        this.cachedCursor = editor.cm.scrollDOM.querySelector<HTMLElement>(".cm-cursor-primary");
+        const cursorLayerList = editor.cm.scrollDOM.getElementsByClassName("cm-vimCursorLayer");
+        if (cursorLayerList.length < 1) {
+            this.cachedCursor = null;
+            return null;
+        }
+
+        const cursorList = cursorLayerList[0].getElementsByClassName("cm-cursor-primary");
+        if (cursorList.length < 1) {
+            this.cachedCursor = null;
+            return null;
+        }
+
+        this.cachedCursor = cursorList[0] as HTMLElement;
         return this.cachedCursor;
     }
 
@@ -286,8 +335,16 @@ export class CodeBlock {
      * (Code mirror adds and removes lines on the fly)
      */
     private verticalWheelScroll(line: Element): void {
-        this.searchCodeLines(line);
-        this.updateHorizontalScroll();
+        const editor = this.plugin.app.workspace.activeEditor?.editor;
+        editor.cm.requestMeasure({
+            key: "vertical-wheel-scroll",
+            read: () => {
+                this.searchCodeLines(line);
+            },
+            write: (_measure, _view) => {
+                this.updateHorizontalScroll();
+            },
+        });
     }
 
     /**
@@ -311,7 +368,7 @@ export class CodeBlock {
             this.codeBlockLines.filter((e) => e.isConnected);
         }
 
-        this.currentScrollVelocity = deltaX;
+        this.currentScrollVelocity = deltaX * this.SCROLL_FACTOR;
 
         // Restore previous position
         this.currentScrollLeft = this.codeBlockLines[0].scrollLeft;
@@ -350,49 +407,45 @@ export class CodeBlock {
      * Updates cursor on screen without triggering a scroll in code mirror.
      * Hides Vim's fat cursor, if it is scrolled to the left or right of the viewport.
      */
-    private updateCursorPassive(): void {
+    private _dispatchedUpdateCursorPassive(): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || !this.codeBlockLines.length) return;
 
         // Cursor must be updated, otherwise it would not move at all while scrolling
-        this.plugin.followScroll.skipCursor = true;
-        editor.cm.dispatch({
-            selection: editor.cm.state.selection,
-            effects: [], // Do not update viewport
-        });
+        // Timeout fixes bug that causes duplicating text on mobile.
+        if (this.cachedCursor !== null) {
+            this.plugin.followScroll.skipCursor = true;
+            editor.cm.dispatch({
+                selection: editor.cm.state.selection,
+                effects: [], // Do not update viewport
+            });
+        }
 
         let cursorEl: Element | null;
 
-        editor.cm.requestMeasure({
-            key: "cursor-passive",
-            read: (_view) => {
-                // This is only necessary with block cursor in vim mode. .cm-cursor-primary will select that.
-                cursorEl = this.getCursorEl(editor);
-                if (!cursorEl) return;
-                if (!(cursorEl instanceof HTMLElement)) return;
+        // This is only necessary with block cursor in vim mode. .cm-cursor-primary will select that.
+        cursorEl = this.getCursorEl(editor);
+        if (!cursorEl) return;
+        if (!(cursorEl instanceof HTMLElement)) return;
 
-                // Compute visibility
-                const cursorRect = cursorEl.getBoundingClientRect();
-                const codeBlockEl = this.codeBlockLines[0].parentElement;
-                if (!this.codeBlockLines[0].parentElement) {
-                    this.codeBlockLines = [];
-                    return;
-                }
+        if (this.cachedBlockRect === null) {
+            this.cachedBlockRect = this.codeBlockLines[0].getBoundingClientRect();
+        }
 
-                const codeBlockRect = codeBlockEl.getBoundingClientRect();
+        if (this.cachedSizerLeft === null) {
+            this.cachedSizerLeft = editor.cm.contentDOM.parentElement.getBoundingClientRect().left;
+        }
 
-                const isVisible =
-                    cursorRect.left >= codeBlockRect.left &&
-                    cursorRect.right <= codeBlockRect.right;
+        const off = this.cachedBlockRect.left - this.cachedSizerLeft;
+        const cursorLeft = Number.parseFloat(cursorEl.style.left) + off;
 
-                return isVisible;
-            },
-            write: (isVisible, _view) => {
-                if (!cursorEl) return;
-                if (!(cursorEl instanceof HTMLElement)) return;
-                cursorEl.style.visibility = isVisible ? "visible" : "hidden";
-            },
-        });
+        const isVisible =
+            cursorLeft >= this.cachedBlockRect.left &&
+            cursorLeft + editor.cm.defaultCharacterWidth * 0.5 <= this.cachedBlockRect.right;
+
+        const display = isVisible ? "block" : "none";
+        if (cursorEl.style.display === display) return;
+        cursorEl.style.display = display;
     }
 
     /**

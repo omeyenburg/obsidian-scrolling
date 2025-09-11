@@ -19,9 +19,6 @@ export class Events {
     private lastTouchX = 0;
     private lastTouchY = 0;
 
-    private scrollEventSkip = false;
-    private readonly scrollHandler: (event: Event) => void;
-
     private lastWheelEventTime = 0;
     private lastWheelScrollElement: HTMLElement | null;
 
@@ -29,7 +26,6 @@ export class Events {
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
-        this.scrollHandler = this.unboundScrollHandler.bind(this);
 
         this.attachHandlers();
         this.attachWrappers();
@@ -95,12 +91,16 @@ export class Events {
             });
         }
 
-        /* MouseScroll, Scrollbar & RestoreScroll */
+        /* CodeBlock, MouseScroll, Scrollbar & RestoreScroll */
         this.plugin.registerEvent(
             workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
         );
 
-        this.plugin.registerDomEvent(document, "scroll", this.scrollHandler, {
+        this.plugin.registerDomEvent(document, "scroll", this.scrollHandler.bind(this), {
+            capture: true,
+            passive: true,
+        });
+        this.plugin.registerDomEvent(document, "scrollend", this.scrollEndHandler.bind(this), {
             capture: true,
             passive: true,
         });
@@ -149,11 +149,14 @@ export class Events {
         this.plugin.codeBlock.leafChangeHandler();
     }
 
-    private unboundScrollHandler(event: Event): void {
-        if (this.scrollEventSkip) return;
-
+    private scrollHandler(event: Event): void {
         this.plugin.scrollbar.scrollHandler(event);
         this.plugin.restoreScroll.scrollHandler();
+        this.plugin.codeBlock.scrollHandler(event);
+    }
+
+    private scrollEndHandler(): void {
+        this.plugin.codeBlock.scrollEndHandler();
     }
 
     private openFileHandler(): void {
