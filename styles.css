@@ -40,16 +40,16 @@ body.scrolling-filetree-horizontal .tree-item-self.nav-folder-title {
 
 /* Scrollable code in editing view */
 body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
-    overflow-x: auto;
-    word-wrap: normal;
+    overflow-x: hidden;
     white-space: nowrap;
+    position: relative;
+    will-change: scroll-position;
     touch-action: pan-y pinch-zoom;
 }
 
 body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
     content: '';
     display: inline-block;
-    position: absolute;
     width: var(--scrolling-extra-line-length);
     height: 1px;
 }
