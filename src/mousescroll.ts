@@ -26,8 +26,8 @@ export class MouseScroll {
     private readonly MIN_VELOCITY = 0.01;
     private readonly TOUCHPAD_GRACE_PERIOD = 50;
 
-    private readonly MIN_START_TRESHOLD = 200;
-    private readonly MAX_START_TRESHOLD = 500;
+    private readonly MIN_START_THRESHOLD = 200;
+    private readonly MAX_START_THRESHOLD = 500;
 
     private intervalSum: number | null = null;
     private readonly MAX_INTENSITY_INTERVAL = 600;
@@ -332,8 +332,8 @@ export class MouseScroll {
      */
     private getIsStart(deltaTime: number): boolean {
         const threshold = Math.min(
-            this.MIN_START_TRESHOLD + this.avgDelay,
-            this.MAX_START_TRESHOLD,
+            this.MIN_START_THRESHOLD + this.avgDelay,
+            this.MAX_START_THRESHOLD,
         );
 
         return deltaTime > threshold;

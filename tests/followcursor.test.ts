@@ -7,6 +7,7 @@ const mockPlugin = {
         followCursorSmoothness: 0,
         followCursorRadius: 0,
     },
+    register: jest.fn(),
 };
 
 // Mock performance.now
@@ -62,7 +63,7 @@ describe("MouseScroll", () => {
             mockPlugin.settings.followCursorSmoothness = 0;
             mockPlugin.settings.followCursorDynamicAnimation = false;
 
-            const result = followcursor["calculateSteps"](100, 100);
+            const result = followcursor["calculateSteps"](100, 100, false);
             expect(result).toBeGreaterThanOrEqual(1);
         });
 
@@ -70,8 +71,8 @@ describe("MouseScroll", () => {
             mockPlugin.settings.followCursorSmoothness = 100;
             mockPlugin.settings.followCursorDynamicAnimation = false;
 
-            const fewSteps = followcursor["calculateSteps"](10, 100);
-            const manySteps = followcursor["calculateSteps"](100, 100);
+            const fewSteps = followcursor["calculateSteps"](10, 100, false);
+            const manySteps = followcursor["calculateSteps"](100, 100, false);
 
             expect(manySteps).toBeGreaterThan(fewSteps);
         });
@@ -83,7 +84,7 @@ describe("MouseScroll", () => {
             // Simulate high intensity manually
             followcursor["scrollIntensity"] = 1000;
 
-            const result = followcursor["calculateSteps"](100, 10);
+            const result = followcursor["calculateSteps"](100, 10, false);
             const expectedReduction = Math.ceil(
                 Math.sqrt(Math.max(1, Math.ceil(2 * (100 / 100) * Math.sqrt(100)))),
             );

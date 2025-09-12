@@ -7,6 +7,7 @@ const mockPlugin = {
         touchpadEnabled: true,
     },
     registerDomEvent: jest.fn(),
+    register: jest.fn(),
 };
 
 // Mock performance.now
@@ -184,19 +185,19 @@ describe("MouseScroll", () => {
     describe("getIsStart", () => {
         test("returns true when deltaTime > threshold + avgDelay", () => {
             mouseScroll["avgDelay"] = 10;
-            const result = mouseScroll.analyzeDelay(MouseScroll["MIN_START_TRESHOLD"] + 11);
+            const result = mouseScroll.analyzeDelay(mouseScroll["MIN_START_THRESHOLD"] + 11);
             expect(result).toBe(true);
         });
 
         test("returns false when deltaTime < threshold + avgDelay", () => {
             mouseScroll["avgDelay"] = 10;
-            const result = mouseScroll.analyzeDelay(MouseScroll["MIN_START_TRESHOLD"] + 9);
+            const result = mouseScroll.analyzeDelay(mouseScroll["MIN_START_THRESHOLD"] + 9);
             expect(result).toBe(false);
         });
 
         test("avgDelay is capped", () => {
             mouseScroll["avgDelay"] = 1000;
-            const deltaTime = MouseScroll["MIN_START_TRESHOLD"] + 500;
+            const deltaTime = mouseScroll["MIN_START_THRESHOLD"] + 500;
             const result = mouseScroll["getIsStart"](deltaTime);
             expect(result).toBe(true);
         });
@@ -212,12 +213,12 @@ describe("MouseScroll", () => {
         });
 
         test("keeps delays array bounded", () => {
-            (MouseScroll as any)["MAX_DELAY_SAMPLES"] = 5;
+            (mouseScroll as any)["MAX_DELAY_SAMPLES"] = 5;
             mouseScroll["delays"] = [1, 2, 3, 4, 5];
             const result = mouseScroll.analyzeDelay(6); // triggers shift
             expect(result).toBe(false);
             expect(mouseScroll["delays"].length).toBeLessThanOrEqual(
-                MouseScroll["MAX_DELAY_SAMPLES"],
+                mouseScroll["MAX_DELAY_SAMPLES"],
             );
             expect(mouseScroll["delays"]).toEqual([2, 3, 4, 5, 6]);
         });
