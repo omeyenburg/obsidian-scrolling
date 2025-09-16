@@ -24,6 +24,8 @@ export interface ScrollingPluginSettings {
 
     /** Disable code wrapping & enable horizontal code scrolling. */
     horizontalScrollingCodeBlockEnabled: boolean;
+    /** Cut off long mathjax lines & make them scrollable. */
+    horizontalScrollingMathjaxEnabled: boolean;
     /** Horizontal scrolling in file tree. Desktop only. */
     horizontalScrollingFileTreeEnabled: boolean;
 
@@ -101,6 +103,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     cursorScrollEnabled: false,
 
     horizontalScrollingCodeBlockEnabled: false,
+    horizontalScrollingMathjaxEnabled: false,
     horizontalScrollingFileTreeEnabled: false,
 
     restoreScrollMode: "scroll",
@@ -394,13 +397,26 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Code blocks",
-            "Allow horizontal scrolling of code blocks in your notes.",
+            "Disable code wrapping & allow horizontal scrolling in code blocks.",
         ).addToggle((toggle) =>
             toggle
                 .setValue(this.plugin.settings.horizontalScrollingCodeBlockEnabled)
                 .onChange(async (value) => {
                     this.plugin.settings.horizontalScrollingCodeBlockEnabled = value;
                     this.plugin.codeBlock.updateStyle();
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        this.createSetting(
+            "Inline MathJax",
+            "Scroll inline MathJax without scrolling the entire document.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.horizontalScrollingMathjaxEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.horizontalScrollingMathjaxEnabled = value;
+                    this.plugin.mathJax.updateStyle();
                     await this.plugin.saveSettings();
                 }),
         );
