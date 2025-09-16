@@ -176,21 +176,22 @@ export class CodeBlock {
      * Returns true if the wheel event is handled successfully.
      */
     public wheelHandler(event: WheelEvent): boolean {
-        const target = event.target as Element;
-        const parent = target?.parentElement;
-
         // Fast exit for non-code blocks
         if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return false;
-        if (
-            !target?.classList?.contains("HyperMD-codeblock") &&
-            !parent?.classList?.contains("HyperMD-codeblock")
-        ) {
-            return false;
+
+        let line = event.target as Element;
+        if (line.classList.contains("cm-indent")) {
+            line = line.parentElement.parentElement;
+        } else if (line.classList.contains("cm-hmd-codeblock")) {
+            line = line.parentElement;
         }
 
-        // Only do the full check when we know we are in a code block
-        const line = this.insideCodeBlock(parent?.classList) ? parent : target;
-        if (line === target && !this.insideCodeBlock(target?.classList)) return false;
+        if (!line.classList.contains("HyperMD-codeblock")) return false;
+        if (
+            line.classList.contains("HyperMD-codeblock-begin") ||
+            line.classList.contains("HyperMD-codeblock-end")
+        )
+            return false;
 
         let { deltaX, deltaY } = normalizeWheelDelta(event);
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
@@ -210,28 +211,26 @@ export class CodeBlock {
      * Assumes that code elements do not handle horizontal scroll natively (css).
      */
     public touchHandler(event: TouchEvent, deltaX: number, deltaY: number): void {
-        const target = event.target as Element;
-        const parent = target?.parentElement;
-
         // Fast exit for non-code blocks
         if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
-        if (
-            !target?.classList?.contains("HyperMD-codeblock") &&
-            !parent?.classList?.contains("HyperMD-codeblock")
-        ) {
-            return;
+
+        let line = event.target as Element;
+        if (line.classList.contains("cm-indent")) {
+            line = line.parentElement.parentElement;
+        } else if (line.classList.contains("cm-hmd-codeblock")) {
+            line = line.parentElement;
         }
 
-        // Only do the full check when we know we are in a code block
-        const line = this.insideCodeBlock(parent?.classList) ? parent : target;
-        if (line === target && !this.insideCodeBlock(target?.classList)) return;
+        if (!line.classList.contains("HyperMD-codeblock")) return;
+        if (
+            line.classList.contains("HyperMD-codeblock-begin") ||
+            line.classList.contains("HyperMD-codeblock-end")
+        )
+            return;
 
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
 
-        if (
-            isHorizontalScroll &&
-            !this.isScrollingVertically
-        ) {
+        if (isHorizontalScroll && !this.isScrollingVertically) {
             this.horizontalWheelScroll(deltaX, line);
 
             // Stop Obsidian from expanding the side panels
