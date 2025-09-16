@@ -61,7 +61,6 @@ export class CodeBlock {
      * all code lines in a block instead of relying on their individual widths.
      */
     private readonly EXTRA_LINE_LENGTH = 1_000_000;
-    private readonly EXTRA_LINE_LENGTH_WITH_PADDING = 1_000_000 + 15;
 
     private readonly SCROLL_FACTOR = 0.4;
 
@@ -82,7 +81,7 @@ export class CodeBlock {
 
         document.body.style.setProperty(
             "--scrolling-extra-line-length",
-            `${this.EXTRA_LINE_LENGTH_WITH_PADDING}px`,
+            `${this.EXTRA_LINE_LENGTH}px`,
         );
 
         this.updateStyle();
