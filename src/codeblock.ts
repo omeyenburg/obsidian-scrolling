@@ -39,7 +39,6 @@ export class CodeBlock {
 
     private readonly verticalWheelScrollDebouncer: (line: Element) => void;
     private readonly updateCursorPassive: () => void;
-    private readonly updateWidthAndBlockDebouncer: (lineEl: Element) => void;
 
     private cachedCursor: HTMLElement | null = null;
 
@@ -51,6 +50,9 @@ export class CodeBlock {
     private cachedLineWidth = 0;
     private cachedLineCharCount = 0;
     private CACHED_BLOCK_WIDTH_TIMEOUT = 500;
+
+    private lastHorizontalScrollTimeStamp = 0;
+    private readonly CODE_BLOCK_WIDTH_TIMEOUT = 200;
 
     /**
      * Large constant used to artificially extend line length so that
@@ -75,12 +77,6 @@ export class CodeBlock {
         this.updateCursorPassive = debounce(
             this._dispatchedUpdateCursorPassive.bind(this),
             5,
-            false,
-        );
-
-        this.updateWidthAndBlockDebouncer = debounce(
-            this.updateWidthAndBlock.bind(this),
-            200,
             false,
         );
 
@@ -187,7 +183,16 @@ export class CodeBlock {
         if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return false;
 
         let line = event.target as Element;
-        if (line.classList.contains("cm-indent")) {
+
+        // Support scrolling on indent & collapse indicator
+        if (line.localName === "path") {
+            line = line.parentElement.parentElement;
+        } else if (line.localName === "svg") {
+            line = line.parentElement;
+        }
+        if (line.classList.contains("collapse-indicator")) {
+            line = line.parentElement.parentElement.parentElement;
+        } else if (line.classList.contains("cm-indent")) {
             line = line.parentElement.parentElement;
         } else if (line.classList.contains("cm-hmd-codeblock")) {
             line = line.parentElement;
@@ -204,7 +209,7 @@ export class CodeBlock {
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
 
         if (isHorizontalScroll && !this.isScrollingVertically) {
-            this.horizontalWheelScroll(deltaX, line);
+            this.horizontalWheelScroll(deltaX, line, event.timeStamp);
             return true;
         }
 
@@ -238,7 +243,7 @@ export class CodeBlock {
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
 
         if (isHorizontalScroll && !this.isScrollingVertically) {
-            this.horizontalWheelScroll(deltaX, line);
+            this.horizontalWheelScroll(deltaX, line, event.timeStamp);
 
             // Stop Obsidian from expanding the side panels
             event.stopPropagation();
@@ -368,13 +373,16 @@ export class CodeBlock {
      * Initiates horizontal scroll animation.
      * Also updates the current code block once.
      */
-    private horizontalWheelScroll(deltaX: number, line: Element): void {
+    private horizontalWheelScroll(deltaX: number, line: Element, now: number): void {
         if (!this.codeBlockLines.contains(line) || this.currentScrollWidth === null) {
             this.updateWidthAndBlock(line);
+            this.lastHorizontalScrollTimeStamp = now;
+        } else if (now - this.lastHorizontalScrollTimeStamp > this.CODE_BLOCK_WIDTH_TIMEOUT) {
+            this.updateWidthAndBlock(line);
+            this.lastHorizontalScrollTimeStamp = now;
         } else {
             // Remove dead lines
             this.codeBlockLines.filter((e) => e.isConnected);
-            this.updateWidthAndBlockDebouncer(line);
         }
 
         this.currentScrollVelocity = deltaX * this.SCROLL_FACTOR;
@@ -383,6 +391,8 @@ export class CodeBlock {
         this.currentScrollLeft = this.codeBlockLines[0].scrollLeft;
 
         window.cancelAnimationFrame(this.scrollAnimationFrame);
+        if (!this.currentScrollWidth) return;
+
         this.animateScroll();
     }
 
@@ -430,10 +440,8 @@ export class CodeBlock {
             });
         }
 
-        let cursorEl: Element | null;
-
         // This is only necessary with block cursor in vim mode. .cm-cursor-primary will select that.
-        cursorEl = this.getCursorEl(editor);
+        const cursorEl = this.getCursorEl(editor);
         if (!cursorEl) return;
         if (!(cursorEl instanceof HTMLElement)) return;
 
