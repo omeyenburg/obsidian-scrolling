@@ -39,6 +39,7 @@ export class CodeBlock {
 
     private readonly verticalWheelScrollDebouncer: (line: Element) => void;
     private readonly updateCursorPassive: () => void;
+    private readonly updateWidthAndBlockDebouncer: (lineEl: Element) => void;
 
     private cachedCursor: HTMLElement | null = null;
 
@@ -74,6 +75,12 @@ export class CodeBlock {
         this.updateCursorPassive = debounce(
             this._dispatchedUpdateCursorPassive.bind(this),
             5,
+            false,
+        );
+
+        this.updateWidthAndBlockDebouncer = debounce(
+            this.updateWidthAndBlock.bind(this),
+            200,
             false,
         );
 
@@ -166,7 +173,7 @@ export class CodeBlock {
         const lineEl = editor.cm.contentDOM.querySelector(".cm-line.cm-active");
         if (!lineEl) return;
 
-        this.searchCodeLines(lineEl);
+        this.updateWidthAndBlock(lineEl);
         this.updateCursorPassive();
     }
 
@@ -340,7 +347,7 @@ export class CodeBlock {
         editor.cm.requestMeasure({
             key: "vertical-wheel-scroll",
             read: () => {
-                this.searchCodeLines(line);
+                this.updateWidthAndBlock(line);
             },
             write: (_measure, _view) => {
                 this.updateHorizontalScroll();
@@ -367,6 +374,7 @@ export class CodeBlock {
         } else {
             // Remove dead lines
             this.codeBlockLines.filter((e) => e.isConnected);
+            this.updateWidthAndBlockDebouncer(line);
         }
 
         this.currentScrollVelocity = deltaX * this.SCROLL_FACTOR;
