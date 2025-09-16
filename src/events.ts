@@ -207,6 +207,15 @@ export class Events {
         // Only proceed if its a cursor or edit event
         if (!update.selectionSet && !update.docChanged) return;
 
+        // Cancel if selection change is irrelevant, e.g. user copies selected text.
+        if (!update.docChanged) {
+            const range = update.state.selection.ranges[0];
+            const previousRange = update.startState.selection.ranges[0];
+            if (range.head === previousRange.head) return;
+            if (previousRange.from < previousRange.to && range.head === previousRange.head - 1)
+                return;
+        }
+
         this.plugin.restoreScroll.storeStateDebounced();
 
         const editor = this.plugin.app.workspace.activeEditor?.editor;
