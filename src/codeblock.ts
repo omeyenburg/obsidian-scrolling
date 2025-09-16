@@ -335,6 +335,8 @@ export class CodeBlock {
      */
     private verticalWheelScroll(line: Element): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
+        if (!editor) return;
+
         editor.cm.requestMeasure({
             key: "vertical-wheel-scroll",
             read: () => {
