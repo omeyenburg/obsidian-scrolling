@@ -2,6 +2,7 @@ import { Plugin } from "obsidian";
 
 import { CodeBlock } from "./codeblock";
 import { FileTree } from "./filetree";
+import { MathJax } from "./mathjax";
 import { FollowCursor } from "./followcursor";
 import { FollowScroll } from "./followscroll";
 import { MouseScroll } from "./mousescroll";
@@ -19,6 +20,7 @@ export default class ScrollingPlugin extends Plugin {
 
     codeBlock!: CodeBlock;
     fileTree!: FileTree;
+    mathJax!: MathJax;
     followCursor!: FollowCursor;
     followScroll!: FollowScroll;
     mouseScroll!: MouseScroll;
@@ -36,6 +38,7 @@ export default class ScrollingPlugin extends Plugin {
 
         this.codeBlock = new CodeBlock(this);
         this.fileTree = new FileTree(this);
+        this.mathJax = new MathJax(this);
         this.followCursor = new FollowCursor(this);
         this.followScroll = new FollowScroll(this);
         this.mouseScroll = new MouseScroll(this);

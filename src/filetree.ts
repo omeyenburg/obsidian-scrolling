@@ -11,7 +11,7 @@ export class FileTree {
         window.requestAnimationFrame(this.updateStyle.bind(this));
 
         plugin.register(() => {
-            document.body.removeClass("scrolling-filetree-horizontal");
+            document.body.removeClass("scrolling-horizontal-filetree");
         });
     }
 
@@ -26,9 +26,9 @@ export class FileTree {
         this.fileTreeScrollEnabled = isEnabled;
 
         if (isEnabled) {
-            document.body.addClass("scrolling-filetree-horizontal");
+            document.body.addClass("scrolling-horizontal-filetree");
         } else {
-            document.body.removeClass("scrolling-filetree-horizontal");
+            document.body.removeClass("scrolling-horizontal-filetree");
         }
     }
 }
