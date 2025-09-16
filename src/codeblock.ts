@@ -1,4 +1,5 @@
 import { Editor, debounce } from "obsidian";
+import { Line } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -278,23 +279,7 @@ export class CodeBlock {
 
         const charWidth = editor.cm.defaultCharacterWidth;
 
-        // Cache bounding rect widths
-        const now = performance.now();
-        if (now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT) {
-            this.cachedBlockWidthTimeStamp = now;
-            this.cachedBlockRect = lineEl.getBoundingClientRect();
-
-            this.cachedLineWidth = 0;
-            for (let i = 0; i < lineEl.children.length; i++) {
-                this.cachedLineWidth += lineEl.children[i].getBoundingClientRect().width;
-            }
-
-            this.cachedLineCharCount = line.length;
-            this.cachedSizerLeft = editor.cm.contentDOM.parentElement.getBoundingClientRect().left;
-        } else {
-            this.cachedLineWidth += charWidth * (line.length - this.cachedLineCharCount);
-            this.cachedLineCharCount = line.length;
-        }
+        this.updateCachedValues(editor, lineEl, line);
 
         const cursorScroll = line.length ? this.cachedLineWidth * (col / line.length) : 0;
 
@@ -318,6 +303,28 @@ export class CodeBlock {
         if (this.cachedCursor !== null) {
             this.plugin.followScroll.skipCursor = true;
             editor.cm.dispatch({ selection: editor.cm.state.selection });
+        }
+    }
+
+    /**
+     * If timeout has passed, update cachedLineCharCount, cachedBlockRect, cachedSizerLeft & cachedLineWidth.
+     */
+    private updateCachedValues(editor: Editor, lineEl: Element, line?: Line): void {
+        if (line)
+            this.cachedLineCharCount = line.length;
+
+        const now = performance.now();
+        if (now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT) {
+            this.cachedBlockWidthTimeStamp = now;
+            this.cachedBlockRect = lineEl.getBoundingClientRect();
+            this.cachedSizerLeft = editor.cm.contentDOM.parentElement.getBoundingClientRect().left;
+
+            this.cachedLineWidth = 0;
+            for (let i = 0; i < lineEl.children.length; i++) {
+                this.cachedLineWidth += lineEl.children[i].getBoundingClientRect().width;
+            }
+        } else {
+            this.cachedLineWidth += editor.cm.defaultCharacterWidth * (this.cachedLineCharCount - this.cachedLineCharCount);
         }
     }
 
@@ -449,13 +456,7 @@ export class CodeBlock {
         if (!cursorEl) return;
         if (!(cursorEl instanceof HTMLElement)) return;
 
-        if (this.cachedBlockRect === null) {
-            this.cachedBlockRect = this.codeBlockLines[0].getBoundingClientRect();
-        }
-
-        if (this.cachedSizerLeft === null) {
-            this.cachedSizerLeft = editor.cm.contentDOM.parentElement.getBoundingClientRect().left;
-        }
+        this.updateCachedValues(editor, this.codeBlockLines[0])
 
         const off = this.cachedBlockRect.left - this.cachedSizerLeft;
         const cursorLeft = Number.parseFloat(cursorEl.style.left) + off;

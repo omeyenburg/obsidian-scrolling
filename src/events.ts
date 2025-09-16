@@ -200,7 +200,7 @@ export class Events {
             }
         }
 
-        if (this.skipViewUpdate) return;
+        if (this.skipViewUpdate && !update.selectionSet) return;
         this.skipViewUpdate = true;
         window.requestAnimationFrame(() => (this.skipViewUpdate = false));
 
@@ -209,10 +209,14 @@ export class Events {
 
         // Cancel if selection change is irrelevant, e.g. user copies selected text.
         if (!update.docChanged) {
-            const range = update.state.selection.ranges[0];
-            const previousRange = update.startState.selection.ranges[0];
-            if (range.head === previousRange.head && range.anchor !== range.anchor) return;
-            if (previousRange.from < previousRange.to && range.head === previousRange.head - 1)
+            const selection = update.state.selection.main;
+            const previousSelection = update.startState.selection.main;
+            if (selection.head === previousSelection.head && selection.anchor !== selection.anchor)
+                return;
+            if (
+                previousSelection.from < previousSelection.to &&
+                selection.head === previousSelection.head - 1
+            )
                 return;
         }
 
