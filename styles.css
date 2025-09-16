@@ -35,12 +35,17 @@ body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm
 body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
     content: '';
     display: inline-block;
-    width: var(--scrolling-extra-line-length);
+    width: calc(var(--scrolling-extra-line-length) + var(--size-4-4));
     height: 1px;
 }
 
 body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line::-webkit-scrollbar {
     display: none;
+}
+
+body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line br {
+    height: 0px;
+    content: "";
 }
 
 body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-begin.HyperMD-codeblock-begin-bg.HyperMD-codeblock-bg.cm-line {
