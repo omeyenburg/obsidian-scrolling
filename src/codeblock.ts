@@ -284,7 +284,12 @@ export class CodeBlock {
         if (now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT) {
             this.cachedBlockWidthTimeStamp = now;
             this.cachedBlockRect = lineEl.getBoundingClientRect();
-            this.cachedLineWidth = lineEl.firstElementChild.getBoundingClientRect().width;
+
+            this.cachedLineWidth = 0
+            for (let i = 0; i < lineEl.children.length; i++) {
+                this.cachedLineWidth += lineEl.children[i].getBoundingClientRect().width;
+            }
+
             this.cachedLineCharCount = line.length;
             this.cachedSizerLeft = editor.cm.contentDOM.parentElement.getBoundingClientRect().left;
         } else {
