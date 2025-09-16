@@ -211,7 +211,7 @@ export class Events {
         if (!update.docChanged) {
             const range = update.state.selection.ranges[0];
             const previousRange = update.startState.selection.ranges[0];
-            if (range.head === previousRange.head) return;
+            if (range.head === previousRange.head && range.anchor !== range.anchor) return;
             if (previousRange.from < previousRange.to && range.head === previousRange.head - 1)
                 return;
         }

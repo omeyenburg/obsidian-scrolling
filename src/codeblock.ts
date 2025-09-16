@@ -285,7 +285,7 @@ export class CodeBlock {
             this.cachedBlockWidthTimeStamp = now;
             this.cachedBlockRect = lineEl.getBoundingClientRect();
 
-            this.cachedLineWidth = 0
+            this.cachedLineWidth = 0;
             for (let i = 0; i < lineEl.children.length; i++) {
                 this.cachedLineWidth += lineEl.children[i].getBoundingClientRect().width;
             }
