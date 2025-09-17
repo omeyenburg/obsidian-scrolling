@@ -207,17 +207,20 @@ export class Events {
         // Only proceed if its a cursor or edit event
         if (!update.selectionSet && !update.docChanged) return;
 
-        // Cancel if selection change is irrelevant, e.g. user copies selected text.
+        // Cancel if selection change is irrelevant.
+        // e.g. user copies selected text or changes vim mode.
         if (!update.docChanged) {
             const selection = update.state.selection.main;
             const previousSelection = update.startState.selection.main;
-            if (selection.head === previousSelection.head && selection.anchor !== selection.anchor)
-                return;
-            if (
-                previousSelection.from < previousSelection.to &&
-                selection.head === previousSelection.head - 1
-            )
-                return;
+
+            if (selection.head === previousSelection.head) {
+                if (selection.anchor !== previousSelection.anchor) return;
+            } else if (selection.head === previousSelection.head - 1) {
+                if (previousSelection.from < previousSelection.to) return;
+                if (selection.assoc !== previousSelection.assoc) return;
+            } else if (selection.head === previousSelection.head + 1) {
+                if (selection.assoc !== previousSelection.assoc) return;
+            }
         }
 
         this.plugin.restoreScroll.storeStateDebounced();
