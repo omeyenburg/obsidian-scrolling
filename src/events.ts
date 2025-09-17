@@ -104,6 +104,17 @@ export class Events {
         this.plugin.registerEvent(workspace.on("file-open", this.openFileHandler.bind(this)));
     }
 
+    private attachResizeHandler() {
+        const observer = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                this.plugin.imageZoom.resizeHandler(entry.target);
+            }
+        });
+        const containerEl = this.plugin.app.workspace.containerEl;
+        const markdownSource = containerEl.getElementsByClassName("markdown-source-view")[0];
+        observer.observe(markdownSource);
+    }
+
     private attachWrappers(): void {
         const self = this;
         this.plugin.register(
@@ -132,6 +143,7 @@ export class Events {
     }
 
     private layoutReadyHandler(): void {
+        this.attachResizeHandler();
         this.plugin.followScroll.layoutReadyHandler();
     }
 
