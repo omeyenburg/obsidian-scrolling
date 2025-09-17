@@ -30,16 +30,16 @@ export class CodeBlock {
 
     private lastScroller: Element | null = null;
     private lastScrollTop: number | null = null;
+    private lastScrollerClientHeight = 0;
     private isScrollingVertically = false;
 
     private currentScrollLeft = 0;
     private currentScrollVelocity = 0;
 
     private currentScrollWidth: number | null = null;
-    private scrollAnimationFrame: number | null = null;
+    private scrollAnimationFrame = 0;
 
     private readonly verticalWheelScrollDebouncer: (line: Element) => void;
-    private readonly updateCursorPassive: () => void;
 
     private cachedCursor: HTMLElement | null = null;
 
@@ -71,12 +71,6 @@ export class CodeBlock {
         this.verticalWheelScrollDebouncer = debounce(
             this.verticalWheelScroll.bind(this),
             50,
-            false,
-        );
-
-        this.updateCursorPassive = debounce(
-            this._dispatchedUpdateCursorPassive.bind(this),
-            5,
             false,
         );
 
@@ -120,6 +114,11 @@ export class CodeBlock {
                 read: (_view) => {
                     const target = event.target as Element;
                     const newScrollTop = target.scrollTop;
+
+                    if (this.lastScrollerClientHeight !== target.clientHeight) {
+                        this.lastScrollerClientHeight = target.clientHeight;
+                        return;
+                    }
 
                     if (this.lastScroller !== target) {
                         this.lastScroller = target;
@@ -191,7 +190,10 @@ export class CodeBlock {
             line = line.parentElement;
         }
         if (line.classList.contains("collapse-indicator")) {
-            line = line.parentElement.parentElement.parentElement;
+            line = line.parentElement.parentElement;
+            if (line.classList.contains("cm-hmd-codeblock")) {
+                line = line.parentElement;
+            }
         } else if (line.classList.contains("cm-indent")) {
             line = line.parentElement.parentElement;
         } else if (line.classList.contains("cm-hmd-codeblock")) {
@@ -310,8 +312,7 @@ export class CodeBlock {
      * If timeout has passed, update cachedLineCharCount, cachedBlockRect, cachedSizerLeft & cachedLineWidth.
      */
     private updateCachedValues(editor: Editor, lineEl: Element, line?: Line): void {
-        if (line)
-            this.cachedLineCharCount = line.length;
+        if (line) this.cachedLineCharCount = line.length;
 
         const now = performance.now();
         if (now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT) {
@@ -324,7 +325,9 @@ export class CodeBlock {
                 this.cachedLineWidth += lineEl.children[i].getBoundingClientRect().width;
             }
         } else {
-            this.cachedLineWidth += editor.cm.defaultCharacterWidth * (this.cachedLineCharCount - this.cachedLineCharCount);
+            this.cachedLineWidth +=
+                editor.cm.defaultCharacterWidth *
+                (this.cachedLineCharCount - this.cachedLineCharCount);
         }
     }
 
@@ -388,7 +391,10 @@ export class CodeBlock {
         if (!this.codeBlockLines.contains(line) || this.currentScrollWidth === null) {
             this.updateWidthAndBlock(line);
             this.lastHorizontalScrollTimeStamp = now;
-        } else if (now - this.lastHorizontalScrollTimeStamp > this.CODE_BLOCK_WIDTH_TIMEOUT) {
+        } else if (
+            now - this.lastHorizontalScrollTimeStamp > this.CODE_BLOCK_WIDTH_TIMEOUT &&
+            !this.scrollAnimationFrame
+        ) {
             this.updateWidthAndBlock(line);
             this.lastHorizontalScrollTimeStamp = now;
         } else {
@@ -437,13 +443,13 @@ export class CodeBlock {
      * Updates cursor on screen without triggering a scroll in code mirror.
      * Hides Vim's fat cursor, if it is scrolled to the left or right of the viewport.
      */
-    private _dispatchedUpdateCursorPassive(): void {
+    private updateCursorPassive(): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || !this.codeBlockLines.length) return;
 
         // Cursor must be updated, otherwise it would not move at all while scrolling
         // Timeout fixes bug that causes duplicating text on mobile.
-        if (this.cachedCursor !== null) {
+        if (this.cachedCursor !== null && this.cachedCursor.isConnected && editor.hasFocus()) {
             this.plugin.followScroll.skipCursor = true;
             editor.cm.dispatch({
                 selection: editor.cm.state.selection,
@@ -456,7 +462,7 @@ export class CodeBlock {
         if (!cursorEl) return;
         if (!(cursorEl instanceof HTMLElement)) return;
 
-        this.updateCachedValues(editor, this.codeBlockLines[0])
+        this.updateCachedValues(editor, this.codeBlockLines[0]);
 
         const off = this.cachedBlockRect.left - this.cachedSizerLeft;
         const cursorLeft = Number.parseFloat(cursorEl.style.left) + off;
