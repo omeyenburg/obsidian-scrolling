@@ -110,9 +110,8 @@ export class Events {
         });
 
         const containerEl = this.plugin.app.workspace.containerEl;
-        const markdownSource = containerEl.getElementsByClassName("markdown-source-view")[0];
-
-        observer.observe(markdownSource);
+        const workspaceTabContainer = containerEl.getElementsByClassName("workspace-tab-container")[0];
+        observer.observe(workspaceTabContainer);
         this.plugin.register(() => {
             observer.disconnect();
         })
