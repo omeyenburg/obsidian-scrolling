@@ -105,14 +105,17 @@ export class Events {
     }
 
     private attachResizeHandler() {
-        const observer = new ResizeObserver((entries) => {
-            for (let entry of entries) {
-                this.plugin.imageZoom.resizeHandler(entry.target);
-            }
+        const observer = new ResizeObserver(() => {
+            this.plugin.imageZoom.resizeHandler();
         });
+
         const containerEl = this.plugin.app.workspace.containerEl;
         const markdownSource = containerEl.getElementsByClassName("markdown-source-view")[0];
+
         observer.observe(markdownSource);
+        this.plugin.register(() => {
+            observer.disconnect();
+        })
     }
 
     private attachWrappers(): void {
