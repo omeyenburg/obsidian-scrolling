@@ -109,6 +109,8 @@ export class CodeBlock {
         this.scrollHandlerAnimationFrame = window.setTimeout(() => {
             this.scrollHandlerAnimationFrame = null;
             const editor = this.plugin.app.workspace.activeEditor?.editor;
+            if (!editor) return;
+
             editor.cm.requestMeasure({
                 key: "code-scroll-handler",
                 read: (_view) => {

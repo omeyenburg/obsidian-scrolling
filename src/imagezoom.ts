@@ -1,9 +1,11 @@
-import { Platform } from "obsidian";
+import { Platform, Editor, MarkdownView } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
 export class ImageZoom {
     private readonly plugin: ScrollingPlugin;
+
+    private zoomedImages: Set<HTMLElement> = new Set();
 
     private readonly SMALL_ZOOM_FACTOR = 1.07;
     private readonly LARGE_ZOOM_FACTOR = 1.2;
@@ -27,33 +29,26 @@ export class ImageZoom {
     }
 
     /**
-     * On markdown container resize.
-     * Updates image cropping.
+     * On view update.
+     * When editing the line with an image, cropping breaks.
+     * Will reset zoom.
      */
-    public resizeHandler(container: Element) {
+    public viewUpdateHandler(editor: Editor, isEdit: boolean) {
+        if (!isEdit) return;
         if (Platform.isMobile) return;
+        this.resetZoom(editor);
+    }
 
-        const view = this.plugin.app.workspace.getActiveFileView();
-        const viewType = view.getViewType();
-        if (viewType !== "markdown") return;
-
-        const images = container.getElementsByClassName("image-embed");
-        for (let imageContainer of images) {
-            const target = imageContainer.firstElementChild;
-            const imageRect = target.getBoundingClientRect();
-            const parentRect = target.parentElement.getBoundingClientRect();
-
-            if (target.parentElement.previousElementSibling.localName === "div") {
-                // x, y and height of parentRect match original image
-                const originalHeight = parentRect.height;
-                const originalWidth = (originalHeight * imageRect.width) / imageRect.height;
-                target.parentElement.style.clipPath = `inset(0 ${parentRect.width - originalWidth}px 0 0)`;
-            } else {
-                // x and width of parentRect match original image
-                const originalHeight = (parentRect.width * imageRect.height) / imageRect.width;
-                target.parentElement.style.clipPath = `inset(-${originalHeight - parentRect.height}px 0 0 0)`;
-            }
-        }
+    /**
+     * On markdown container resize.
+     * After resize cropping breaks.
+     * Will reset zoom.
+     */
+    public resizeHandler() {
+        if (Platform.isMobile) return;
+        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return;
+        this.resetZoom(view.editor);
     }
 
     /**
@@ -110,6 +105,8 @@ export class ImageZoom {
 
                 target.parentElement.style.clipPath = `inset(-${originalHeight - parentRect.height}px 0 0 0)`;
             }
+
+            this.zoomedImages.add(target);
         } else if (viewType === "image") {
             // y and height of parentRect match original image
             const originalHeight = parentRect.height;
@@ -131,5 +128,24 @@ export class ImageZoom {
         event.preventDefault();
 
         return true;
+    }
+
+    /**
+     * Reset the zoom of all registered images.
+     */
+    private resetZoom(editor: Editor) {
+        editor.cm.requestMeasure({
+            key: "reset-image-zoom",
+            read: (_view) => {},
+            write: (_measure, _view) => {
+                if (!this.zoomedImages) return;
+                this.zoomedImages.forEach((el: HTMLElement) => {
+                    el.style.scale = "";
+                    el.style.transform = "";
+                    el.parentElement.style.clipPath = "";
+                });
+                this.zoomedImages.clear();
+            },
+        });
     }
 }

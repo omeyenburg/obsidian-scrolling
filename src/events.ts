@@ -240,6 +240,7 @@ export class Events {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor) return;
 
+        this.plugin.imageZoom.viewUpdateHandler(editor, update.docChanged);
         this.plugin.codeBlock.viewUpdateHandler(editor, update.docChanged);
         this.plugin.followCursor.viewUpdateHandler(editor, update.docChanged);
         this.plugin.followScroll.viewUpdateHandler(editor);
