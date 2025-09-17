@@ -200,7 +200,7 @@ export class Events {
             }
         }
 
-        if (this.skipViewUpdate && !update.selectionSet) return;
+        if (this.skipViewUpdate && !update.docChanged && !update.selectionSet) return;
         this.skipViewUpdate = true;
         window.requestAnimationFrame(() => (this.skipViewUpdate = false));
 
