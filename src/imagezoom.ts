@@ -1,9 +1,11 @@
+import { Platform } from "obsidian";
+
 import type { default as ScrollingPlugin } from "./main";
 
 export class ImageZoom {
     private readonly plugin: ScrollingPlugin;
 
-    private readonly SMALL_ZOOM_FACTOR = 1.05;
+    private readonly SMALL_ZOOM_FACTOR = 1.07;
     private readonly LARGE_ZOOM_FACTOR = 1.2;
     private readonly MIN_SCALE = 1;
     private readonly MAX_SCALE = 100;
@@ -25,6 +27,36 @@ export class ImageZoom {
     }
 
     /**
+     * On markdown container resize.
+     * Updates image cropping.
+     */
+    public resizeHandler(container: Element) {
+        if (Platform.isMobile) return;
+
+        const view = this.plugin.app.workspace.getActiveFileView();
+        const viewType = view.getViewType();
+        if (viewType !== "markdown") return;
+
+        const images = container.getElementsByClassName("image-embed");
+        for (let imageContainer of images) {
+            const target = imageContainer.firstElementChild;
+            const imageRect = target.getBoundingClientRect();
+            const parentRect = target.parentElement.getBoundingClientRect();
+
+            if (target.parentElement.previousElementSibling.localName === "div") {
+                // x, y and height of parentRect match original image
+                const originalHeight = parentRect.height;
+                const originalWidth = (originalHeight * imageRect.width) / imageRect.height;
+                target.parentElement.style.clipPath = `inset(0 ${parentRect.width - originalWidth}px 0 0)`;
+            } else {
+                // x and width of parentRect match original image
+                const originalHeight = (parentRect.width * imageRect.height) / imageRect.width;
+                target.parentElement.style.clipPath = `inset(-${originalHeight - parentRect.height}px 0 0 0)`;
+            }
+        }
+    }
+
+    /**
      * On wheel event. Desktop only.
      * While hovering over an image, this will zoom if the zoom guesture is used or the user scrolles while pressing ctrl.
      * Returns true if the wheel event is handled successfully.
@@ -39,18 +71,6 @@ export class ImageZoom {
         if (!event.ctrlKey || event.shiftKey) return false;
 
         const oldScale = Number.parseFloat(target.style.scale) || this.MIN_SCALE;
-
-        /*
-        const oldTransform = target.style.transform;
-        const oldTranslate = oldTransform.match(/^translate\(([-.0-9]+)px, ([-.0-9]+)px\)/);
-
-        let oldTranslateX = 0;
-        let oldTranslateY = 0;
-        if (oldTranslate) {
-            oldTranslateX = Number.parseFloat(oldTranslate[1]);
-            oldTranslateY = Number.parseFloat(oldTranslate[2]);
-        }
-        */
 
         const zoomFactor =
             Math.abs(event.deltaY) < 100 ? this.SMALL_ZOOM_FACTOR : this.LARGE_ZOOM_FACTOR;
@@ -71,14 +91,27 @@ export class ImageZoom {
         const view = this.plugin.app.workspace.getActiveFileView();
         const viewType = view.getViewType();
         if (viewType === "markdown") {
-            // width & x of parentRect match image width & x
-            const originalBottom = parentRect.bottom;
-            const originalHeight = (parentRect.width * imageRect.height) / imageRect.width;
+            if (target.parentElement.previousElementSibling.localName === "div") {
+                // x, y and height of parentRect match original image
+                const originalHeight = parentRect.height;
+                const originalWidth = (originalHeight * imageRect.width) / imageRect.height;
 
-            originalTop = originalBottom - originalHeight;
-            originalLeft = parentRect.left;
+                originalTop = parentRect.top;
+                originalLeft = parentRect.left;
+
+                target.parentElement.style.clipPath = `inset(0 ${parentRect.width - originalWidth}px 0 0)`;
+            } else {
+                // x and width of parentRect match original image
+                const originalBottom = parentRect.bottom;
+                const originalHeight = (parentRect.width * imageRect.height) / imageRect.width;
+
+                originalTop = originalBottom - originalHeight;
+                originalLeft = parentRect.left;
+
+                target.parentElement.style.clipPath = `inset(-${originalHeight - parentRect.height}px 0 0 0)`;
+            }
         } else if (viewType === "image") {
-            // height & y of parentRect match image height & y
+            // y and height of parentRect match original image
             const originalHeight = parentRect.height;
             const originalWidth = (originalHeight * imageRect.width) / imageRect.height;
 
@@ -94,10 +127,6 @@ export class ImageZoom {
 
         target.style.scale = `${scale}`;
         target.style.transform = `translate(${translateX}px, ${translateY}px)`;
-
-        /*
-        target.parentElement.style.clipPath = `inset(-100px -100px -100px -100px)`;
-        */
 
         event.preventDefault();
 
