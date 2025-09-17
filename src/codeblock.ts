@@ -274,7 +274,6 @@ export class CodeBlock {
 
         if (!this.codeBlockLines.contains(lineEl) || isEdit) {
             this.updateWidthAndBlock(lineEl);
-            this.currentScrollLeft = Math.min(this.currentScrollLeft, this.currentScrollWidth);
         }
 
         const pos = editor.cm.state.selection.main.head;
@@ -288,6 +287,7 @@ export class CodeBlock {
         const cursorScroll = line.length ? this.cachedLineWidth * (col / line.length) : 0;
 
         this.currentScrollLeft = Math.min(
+            this.currentScrollWidth,
             cursorScroll,
             Math.max(
                 cursorScroll - this.cachedBlockRect.width + charWidth * (cursorEl ? 5 : 4),
@@ -303,7 +303,6 @@ export class CodeBlock {
         this.updateHorizontalScroll();
 
         // Tell CodeMirror to update cursor
-        // Timeout fixes bug that causes duplicating text on mobile.
         if (this.cachedCursor !== null) {
             this.plugin.followScroll.skipCursor = true;
             editor.cm.dispatch({ selection: editor.cm.state.selection });
