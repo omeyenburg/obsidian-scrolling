@@ -5,25 +5,27 @@
  *
  */
 
-/* Hide specific scrollbars in files */
+/* --- Scrollbar --- */
+/* hide specific scrollbars in files */
 body.scrolling-visibility-hide *::-webkit-scrollbar {
   display: none;
 }
 
-/* Hide scrollbar temporarily */
+/* hide scrollbar temporarily */
 body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar:not(:hover),
 body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-thumb:not(:hover),
 body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-track:not(:hover) {
     background: transparent !important;
 }
 
-/* Scrollbar width */
+/* scrollbar width */
 body.scrolling-scrollbar-width *::-webkit-scrollbar {
   width: var(--scrolling-scrollbar-width) !important;
   height: var(--scrolling-scrollbar-width) !important;
 }
 
-/* Scrollable code in editing view */
+/* --- Code blocks --- */
+/* source view */
 body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
     overflow-x: hidden;
     white-space: nowrap;
@@ -52,14 +54,15 @@ body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-begin
     padding-bottom: 0.6rem;
 }
 
-/* Scrollable code in reading view */
+/* reading view */
 body.scrolling-horizontal-code-blocks .markdown-preview-view pre > code {
     white-space: pre;
     overflow-x: auto;
     display: block;
 }
 
-/* Scrollable inline mathjax if it exceeds line */
+/* --- Mathjax --- */
+/* scrollable inline mathjax if exceeding view */
 body.scrolling-horizontal-mathjax span.math {
     overflow: auto;
     max-width: 100%;
@@ -67,7 +70,7 @@ body.scrolling-horizontal-mathjax span.math {
     vertical-align: middle;
 }
 
-/* Horizontal scrollbar for file tree */
+/* --- File tree --- */
 body.scrolling-horizontal-filetree .nav-files-container {
     overflow: auto;
 }
@@ -82,19 +85,26 @@ body.scrolling-horizontal-filetree .tree-item-self.nav-folder-title {
     flex-shrink: 0;
 }
 
-/* Image zoom */
-body.scrolling-image-zoom-enabled img {
+/* --- Image zoom --- */
+body.scrolling-image-zoom-enabled img:not(.cm-widgetBuffer) {
     transform-origin: top left;
     vertical-align: bottom;
 }
 
-body.scrolling-image-zoom-enabled div.image-embed:has(img),
-body.scrolling-image-zoom-enabled span.image-embed:has(img) {
-    display: inline-block;
+/* prevent overflow for inline images in source view */
+body.scrolling-image-zoom-enabled .cm-line:has(img:not(.cm-widgetBuffer)) {
     overflow: hidden;
 }
 
-body.scrolling-image-zoom-enabled div.image-container:has(img) {
+/* prevent overflow for images in tables in source view (overflow: hidden) */
+/* prevent overflow for images in tables in reading view (display: inline-block) */
+body.scrolling-image-zoom-enabled div.image-embed:has(img:not(.cm-widgetBuffer)),
+body.scrolling-image-zoom-enabled span.image-embed:has(img):not(.cm-widgetBuffer) {
+    overflow: hidden;
+    display: inline-block;
+}
+
+body.scrolling-image-zoom-enabled div.image-container:has(img):not(.cm-widgetBuffer) {
     display: block;
     overflow: hidden;
 }

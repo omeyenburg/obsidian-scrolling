@@ -86,7 +86,7 @@ export class ImageZoom {
         const view = this.plugin.app.workspace.getActiveFileView();
         const viewType = view.getViewType();
         if (viewType === "markdown") {
-            if (target.parentElement.previousElementSibling.localName === "div") {
+            if (target.parentElement.previousElementSibling?.localName === "div") {
                 // x, y and height of parentRect match original image
                 const originalHeight = parentRect.height;
                 const originalWidth = (originalHeight * imageRect.width) / imageRect.height;
