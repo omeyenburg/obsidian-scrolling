@@ -1,8 +1,6 @@
 # Scrolling
 
-A plugin for [Obsidian](https://obsidian.md/) that improves scrolling by following the cursor, remembering the scroll position and more.
-
-Feel free to contribute or leave a star if you like this plugin :)
+A plugin for [Obsidian](https://obsidian.md/) to keep the cursor centered, disable code wrapping, enable image zooming & much more.
 
 ---
 
@@ -10,28 +8,52 @@ Feel free to contribute or leave a star if you like this plugin :)
 
 Each feature is fully optional and can be toggled or configured in the plugin settings.
 
-#### Scroll follows text cursor
+#### Centered cursor
 
 - By default, Obsidian only scrolls when the cursor reaches the edge of the viewport.
 - This feature automatically scrolls the view to keep the text cursor near the center while editing or navigating.
 - Also known as '_typewriter mode_' or similar to '_scrolloff_' in Vim.
-- Can be used together with '_Cursor follows scroll_'.
+    <details>
+        <summary>Expand for preview</summary>
 
-#### Text Cursor follows scroll (Desktop only)
-
-- Normally, Obsidian allows the text cursor to move out of view when scrolling with the mouse or touchpad.
-- With this feature enabled, the text cursor is automatically moved to stay within view as you scroll.
-- Can be used together with '_Scroll follows cursor_'.
+	![Centered cursor preview](https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/followcursor.webp)
+    </details>
 
 #### Horizontal scrolling
 
+##### Code blocks
 - Disable wrapping and enable horizontal scrolling in code blocks.
+    <details>
+        <summary>Expand for preview</summary>
+
+    ![Code blocks preview](https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/codeblock.webp)
+    </details>
+
+##### Inline MathJax
+- Make inline MathJax scrollable and prevent it from extending the viewport.
+    <details>
+        <summary>Expand for preview</summary>
+
+    ![MathJax preview](https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/mathjax.webp)
+    </details>
+
+##### File tree
 - Allow horizontal scrolling in the file tree.
+    <details>
+        <summary>Expand for preview</summary>
+
+    ![Filetree preview](https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/filetree.webp)
+    </details>
 
 #### Remember scroll position
 
 - By default, Obsidian will always open files and place you at the top.
 - This feature saves your scroll position when closing a file and restores it when reopening the file later.
+    <details>
+        <summary>Expand for preview</summary>
+
+    ![Restore scroll preview](https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/restorescroll.webp)
+    </details>
 
 #### Scrollbar customization
 

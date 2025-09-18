@@ -3,7 +3,7 @@
   "name": "Scrolling",
   "version": "1.2.2",
   "minAppVersion": "1.2.7",
-  "description": "Improve scrolling and keep your cursor exactly where you want it.",
+  "description": "Keep the cursor centered, disable code wrapping, remember scroll position, enable image zooming and more.",
   "author": "omeyenburg",
   "authorUrl": "https://github.com/omeyenburg",
   "isDesktopOnly": false
