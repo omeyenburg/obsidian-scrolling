@@ -16,8 +16,6 @@ export interface ScrollingPluginSettings {
     followCursorEnableMouse: boolean;
     /** Trigger scroll on mouse selection. (hidden) */
     followCursorEnableSelection: boolean;
-    /** Reduce animation frames when many triggering events occur. (hidden) */
-    followCursorDynamicAnimation: boolean;
 
     /** Move cursor while scrolling manually. Desktop only. */
     cursorScrollEnabled: boolean;
@@ -96,7 +94,6 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     followCursorRadius: 75,
     followCursorSmoothness: 25,
     followCursorInstantEditScroll: true,
-    followCursorDynamicAnimation: true,
     followCursorEnableMouse: false,
     followCursorEnableSelection: false,
 
@@ -317,23 +314,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }),
         );
-
-        if (!this.plugin.settings.enableExperimentalSettings) {
-            this.plugin.settings.followCursorDynamicAnimation =
-                DEFAULT_SETTINGS.followCursorDynamicAnimation;
-        } else {
-            this.createSetting(
-                "Dynamic animations (Experimental)",
-                "If many scroll events happen quickly, skip animation frames to improve responsiveness.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.followCursorDynamicAnimation)
-                    .onChange(async (value) => {
-                        this.plugin.settings.followCursorDynamicAnimation = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
 
         if (Platform.isDesktop) {
             if (!this.plugin.settings.enableExperimentalSettings) {

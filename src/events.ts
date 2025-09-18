@@ -110,11 +110,12 @@ export class Events {
         });
 
         const containerEl = this.plugin.app.workspace.containerEl;
-        const workspaceTabContainer = containerEl.getElementsByClassName("workspace-tab-container")[0];
+        const workspaceTabContainer =
+            containerEl.getElementsByClassName("workspace-tab-container")[0];
         observer.observe(workspaceTabContainer);
         this.plugin.register(() => {
             observer.disconnect();
-        })
+        });
     }
 
     private attachWrappers(): void {
@@ -228,12 +229,12 @@ export class Events {
             const previousSelection = update.startState.selection.main;
 
             if (selection.head === previousSelection.head) {
-                if (selection.anchor !== previousSelection.anchor) return;
+                if (selection.anchor !== previousSelection.anchor) return; // copy
             } else if (selection.head === previousSelection.head - 1) {
-                if (previousSelection.from < previousSelection.to) return;
-                if (selection.assoc !== previousSelection.assoc) return;
+                if (previousSelection.from < previousSelection.to) return; // copy downwards in normal mode
+                if (selection.assoc === 0 && previousSelection.assoc === 1) return; // insert -> normal mode
             } else if (selection.head === previousSelection.head + 1) {
-                if (selection.assoc !== previousSelection.assoc) return;
+                if (selection.assoc === 1 && previousSelection.assoc === 0) return; // normal -> insert mode
             }
         }
 

@@ -3,7 +3,6 @@ import { FollowCursor } from "../src/followcursor";
 // Mock the ScrollingPlugin
 const mockPlugin = {
     settings: {
-        followCursorDynamicAnimation: false,
         followCursorSmoothness: 0,
         followCursorRadius: 0,
     },
@@ -61,7 +60,6 @@ describe("MouseScroll", () => {
     describe("calculateSteps", () => {
         test("returns at least 1 step", () => {
             mockPlugin.settings.followCursorSmoothness = 0;
-            mockPlugin.settings.followCursorDynamicAnimation = false;
 
             const result = followcursor["calculateSteps"](100, 100, false);
             expect(result).toBeGreaterThanOrEqual(1);
@@ -69,7 +67,6 @@ describe("MouseScroll", () => {
 
         test("returns more steps for large distance", () => {
             mockPlugin.settings.followCursorSmoothness = 100;
-            mockPlugin.settings.followCursorDynamicAnimation = false;
 
             const fewSteps = followcursor["calculateSteps"](10, 100, false);
             const manySteps = followcursor["calculateSteps"](100, 100, false);
@@ -79,7 +76,6 @@ describe("MouseScroll", () => {
 
         test("reduces steps when intensity is high or goal exceeds scrollerHeight", () => {
             mockPlugin.settings.followCursorSmoothness = 100;
-            mockPlugin.settings.followCursorDynamicAnimation = false;
 
             // Simulate high intensity manually
             followcursor["scrollIntensity"] = 1000;
