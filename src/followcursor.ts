@@ -1,4 +1,4 @@
-import { Editor } from "obsidian";
+import { Notice, Editor, MarkdownView } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -17,7 +17,8 @@ export class FollowCursor {
     private scrollIntensity = 0;
     private scrollLastEvent = 0;
 
-    private readonly INTENSITY_DECAY_RATE = 0.01;
+    private cachedViewOffset: number | null = null;
+
     private readonly INTENSITY_THRESHOLD = 3;
     private readonly MOUSE_UP_TIMEOUT = 100;
 
@@ -26,6 +27,20 @@ export class FollowCursor {
 
         plugin.register(() => {
             window.cancelAnimationFrame(this.animationFrame);
+        });
+
+        plugin.addCommand({
+            id: "show-cursor-wrap-index",
+            name: "Show cursor wrap index",
+            callback: () => {
+                const editor = plugin.app.workspace.getActiveViewOfType(MarkdownView).editor;
+                if (!editor) return;
+
+                const cm = editor.cm;
+                const cursor = editor.getCursor("head");
+
+                // CM6 offset of line start
+            },
         });
     }
 
@@ -65,41 +80,76 @@ export class FollowCursor {
     }
 
     /**
+     * Returns the relative vertical position of the line where the cursor is.
+     */
+    private getActiveLineRelativeTop(editor: Editor) {
+        const activeLineEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
+        if (!activeLineEl) return;
+
+        const cursor = activeLineEl.getBoundingClientRect();
+        const lineHeight = editor.cm.defaultLineHeight;
+
+        if (this.cachedViewOffset === null) {
+            this.cachedViewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
+        }
+
+        return cursor.top + lineHeight - this.cachedViewOffset;
+    }
+
+    /**
+     * Returns the wrapping induced vertical offset of the cursor relative to the start of the line.
+     */
+    private getCursorWrapOffset(editor: Editor) {
+        const cursorCoord = editor.getCursor("head");
+        const lineStartOffset = editor.cm.state.doc.line(cursorCoord.line + 1).from;
+        const cursorOffset = lineStartOffset + cursorCoord.ch;
+
+        const lineStartCoords = editor.cm.coordsAtPos(lineStartOffset);
+        const cursorCoords = editor.cm.coordsAtPos(cursorOffset);
+
+        if (!lineStartCoords || !cursorCoords) return 0;
+        return cursorCoords.top - lineStartCoords.top;
+    }
+
+    /**
      * Calculates goal position, distance and scroll steps for scroll animation.
      * Initiates scroll animation if centering scroll is required.
      */
     private invokeScroll(editor: Editor, isEdit: boolean): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
-        const dynamicAnimation = this.plugin.settings.followCursorDynamicAnimation;
+        const activeLineRelativeTop = this.getActiveLineRelativeTop(editor);
+        const cursorWrapOffset = this.getCursorWrapOffset(editor);
 
-        // If scrolling fast, skip animation steps
-        // (Only if not scrolling inverted and scrolling without edit (otherwise run later))
-        if (!isEdit && dynamicAnimation) {
-            this.calculateScrollIntensity();
-        } else {
-            this.scrollIntensity = 0;
-        }
+        const cursorRelativeTop = activeLineRelativeTop + cursorWrapOffset;
 
-        // Get cursor position from active line
-        const cursorEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
-        if (!cursorEl) return;
-
-        const cursor = cursorEl.getBoundingClientRect();
-        const lineHeight = editor.cm.defaultLineHeight;
-        const viewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
-
-        const cursorVerticalPosition = cursor.top + lineHeight - viewOffset;
         const scrollInfo = editor.getScrollInfo() as ScrollInfo;
-
-        const signedGoalDistance = this.calculateGoalDistance(cursorVerticalPosition, scrollInfo);
+        const signedGoalDistance = this.calculateGoalDistance(cursorRelativeTop, scrollInfo);
         if (signedGoalDistance === 0) return;
 
         const goal = scrollInfo.top + signedGoalDistance;
-        const steps = this.calculateSteps(signedGoalDistance, scrollInfo.height, isEdit);
 
         window.cancelAnimationFrame(this.animationFrame);
-        this.animate(editor, goal, signedGoalDistance / steps, steps);
+
+        const now = performance.now();
+        const deltaTime = now - this.scrollLastEvent;
+        this.scrollLastEvent = now;
+        if (deltaTime > 100) {
+            const steps = this.calculateSteps(
+                Math.abs(signedGoalDistance),
+                scrollInfo.height,
+                isEdit,
+            );
+            this.animate(editor, goal, signedGoalDistance / steps, steps);
+        } else {
+            editor.cm.requestMeasure({
+                key: "followcursor",
+                read: () => {},
+                write: () => {
+                    this.animate(editor, goal, signedGoalDistance, 1);
+                },
+            });
+        }
     }
 
     /**
@@ -115,24 +165,16 @@ export class FollowCursor {
     }
 
     /**
-     * Measures intensity of events triggering centering scroll.
+     * Returns the signed distance to the goal position relative on the screen
+     * based on the current cursor position and a valid radius from the center.
      */
-    private calculateScrollIntensity(): void {
-        const time = performance.now();
-        const elapsed = time - this.scrollLastEvent;
-
-        this.scrollLastEvent = time;
-        this.scrollIntensity =
-            Math.max(0, this.scrollIntensity - elapsed * this.INTENSITY_DECAY_RATE) + 1;
-    }
-
-    private calculateGoalDistance(cursorVerticalPosition: number, scrollInfo: ScrollInfo) {
+    private calculateGoalDistance(cursorRelativeTop: number, scrollInfo: ScrollInfo) {
         const radiusPercent = this.plugin.settings.followCursorRadius;
 
         let radius = ((scrollInfo.height / 2) * radiusPercent) / 100;
 
         const center = scrollInfo.height / 2;
-        const centerOffset = cursorVerticalPosition - center;
+        const centerOffset = cursorRelativeTop - center;
 
         let signedGoalDistance: number;
         if (centerOffset < -radius) {
@@ -153,32 +195,18 @@ export class FollowCursor {
      * Returns number of frames for scroll animation.
      * Returns 1 step for instant scroll on edit.
      */
-    private calculateSteps(
-        signedGoalDistance: number,
-        scrollerHeight: number,
-        isEdit: boolean,
-    ): number {
+    private calculateSteps(goalDistance: number, scrollerHeight: number, isEdit: boolean): number {
         if (isEdit && this.plugin.settings.followCursorInstantEditScroll) return 1;
 
         const smoothness = this.plugin.settings.followCursorSmoothness;
-        const dynamicAnimation = this.plugin.settings.followCursorDynamicAnimation;
+        let steps = Math.max(1, Math.ceil(0.02 * smoothness * Math.sqrt(goalDistance)));
 
-        let steps = Math.max(
-            1,
-            Math.ceil(2 * (smoothness / 100) * Math.sqrt(Math.abs(signedGoalDistance))),
-        );
+        if (goalDistance > scrollerHeight * 0.5) {
+            if (goalDistance > scrollerHeight) {
+                return 1;
+            }
 
-        // Calculate scroll intensity to skip animation steps.
-        if (dynamicAnimation && isEdit) {
-            this.calculateScrollIntensity();
-        }
-
-        // If scrolling fast, reduce animation steps.
-        if (
-            this.scrollIntensity > this.INTENSITY_THRESHOLD ||
-            Math.abs(signedGoalDistance) > scrollerHeight
-        ) {
-            steps = Math.ceil(Math.sqrt(steps));
+            return Math.ceil(Math.sqrt(steps));
         }
 
         return steps;
