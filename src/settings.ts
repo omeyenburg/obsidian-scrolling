@@ -151,7 +151,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     display(): void {
-        const previousScrollTop = this.containerEl.scrollTop;
+        const previousScrollBottom = this.containerEl.scrollHeight - this.containerEl.scrollTop;
         this.containerEl.empty();
 
         this.displayFollowCursorSettings();
@@ -186,7 +186,20 @@ export class ScrollingSettingTab extends PluginSettingTab {
             }),
         );
 
-        this.containerEl.scrollTop = previousScrollTop;
+        this.createSetting(
+            "Enable experimental settings",
+            "Settings that are likely to be removed or unstable in their current state.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.enableExperimentalSettings)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableExperimentalSettings = value;
+                    this.display();
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        this.containerEl.scrollTop = this.containerEl.scrollHeight - previousScrollBottom;
     }
 
     private setDesc(setting: Setting, desc: string): void {
@@ -258,11 +271,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private displayFollowCursorSettings() {
-        this.createHeading("Scroll follows text cursor");
+        this.createHeading("Centered cursor");
 
         this.createSetting(
             "Enable",
-            "Scroll the view to keep the cursor near the center when you move the cursor.\nCan be used together with 'Text cursor follows scroll'.",
+            "Scroll the view to keep the cursor near the center when you move the cursor.",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.followCursorEnabled).onChange(async (value) => {
                 this.plugin.settings.followCursorEnabled = value;
@@ -356,13 +369,18 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
     private displayCursorScrollSettings() {
         if (Platform.isMobile) return;
+        if (!this.plugin.settings.enableExperimentalSettings) {
+            this.plugin.settings.cursorScrollEnabled =
+                DEFAULT_SETTINGS.cursorScrollEnabled;
+            return;
+        }
 
         this.containerEl.createEl("br");
-        this.createHeading("Text cursor follows scroll");
+        this.createHeading("Text cursor follows scroll (Experimental)");
 
         this.createSetting(
             "Enable",
-            "Move the cursor to stay visible when scrolling manually.\nCan be used together with 'Scroll follows text cursor'.",
+            "Move the cursor to stay visible when scrolling manually.\nCan be used together with 'Centered cursor'.",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.cursorScrollEnabled).onChange(async (value) => {
                 this.plugin.settings.cursorScrollEnabled = value;
