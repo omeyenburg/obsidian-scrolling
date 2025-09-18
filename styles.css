@@ -26,7 +26,7 @@ body.scrolling-scrollbar-width *::-webkit-scrollbar {
 
 /* --- Code blocks --- */
 /* source view */
-body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
     overflow-x: hidden;
     white-space: nowrap;
     position: relative;
@@ -34,31 +34,37 @@ body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm
     touch-action: pan-y pinch-zoom;
 }
 
-body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
     content: '';
     display: inline-block;
     width: calc(var(--scrolling-extra-line-length) + var(--size-4-4));
     height: 1px;
+    cursor: text;
 }
 
-body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line::-webkit-scrollbar {
+body.scrolling-horizontal-code-blocks .markdown-source-view .cm-indent::before {
+    cursor: text;
+}
+
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line::-webkit-scrollbar {
     display: none;
 }
 
-body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line br {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line br {
     height: 0px;
     content: "";
 }
 
-body.scrolling-horizontal-code-blocks .HyperMD-codeblock.HyperMD-codeblock-begin.HyperMD-codeblock-begin-bg.HyperMD-codeblock-bg.cm-line {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-begin.HyperMD-codeblock-begin-bg.HyperMD-codeblock-bg.cm-line {
     padding-bottom: 0.6rem;
 }
 
-/* reading view */
+/* preview view */
 body.scrolling-horizontal-code-blocks .markdown-preview-view pre > code {
     white-space: pre;
     overflow-x: auto;
     display: block;
+    cursor: text;
 }
 
 /* --- Mathjax --- */
@@ -97,7 +103,7 @@ body.scrolling-image-zoom-enabled .cm-line:has(img:not(.cm-widgetBuffer)) {
 }
 
 /* prevent overflow for images in tables in source view (overflow: hidden) */
-/* prevent overflow for images in tables in reading view (display: inline-block) */
+/* prevent overflow for images in tables in preview view (display: inline-block) */
 body.scrolling-image-zoom-enabled div.image-embed:has(img:not(.cm-widgetBuffer)),
 body.scrolling-image-zoom-enabled span.image-embed:has(img):not(.cm-widgetBuffer) {
     overflow: hidden;
