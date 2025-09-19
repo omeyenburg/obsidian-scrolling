@@ -55,6 +55,16 @@ Each feature is fully optional and can be toggled or configured in the plugin se
     ![Restore scroll preview](https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/restorescroll.webp)
     </details>
 
+#### Scroll to zoom images
+
+- Zoom into an image based on your mouse pointer position.
+- Hover over an image and scroll while holding the ctrl key.
+    <details>
+        <summary>Expand for preview</summary>
+
+    ![Image zoom preview](https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/imagezoom.webp)
+    </details>
+
 #### Scrollbar customization
 
 - Customize when the scrollbar is shown or hidden.
