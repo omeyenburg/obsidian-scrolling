@@ -1,4 +1,5 @@
-import { Notice, Editor, MarkdownView } from "obsidian";
+import { Editor } from "obsidian";
+import { syntaxTree } from "@codemirror/language";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -14,12 +15,8 @@ export class FollowCursor {
     private recentMouseUp = false;
 
     private animationFrame = 0;
-    private scrollIntensity = 0;
     private scrollLastEvent = 0;
 
-    private cachedViewOffset: number | null = null;
-
-    private readonly INTENSITY_THRESHOLD = 3;
     private readonly MOUSE_UP_TIMEOUT = 100;
 
     constructor(plugin: ScrollingPlugin) {
@@ -27,20 +24,6 @@ export class FollowCursor {
 
         plugin.register(() => {
             window.cancelAnimationFrame(this.animationFrame);
-        });
-
-        plugin.addCommand({
-            id: "show-cursor-wrap-index",
-            name: "Show cursor wrap index",
-            callback: () => {
-                const editor = plugin.app.workspace.getActiveViewOfType(MarkdownView).editor;
-                if (!editor) return;
-
-                const cm = editor.cm;
-                const cursor = editor.getCursor("head");
-
-                // CM6 offset of line start
-            },
         });
     }
 
@@ -80,48 +63,44 @@ export class FollowCursor {
     }
 
     /**
-     * Returns the relative vertical position of the line where the cursor is.
-     */
-    private getActiveLineRelativeTop(editor: Editor) {
-        const activeLineEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
-        if (!activeLineEl) return;
-
-        const cursor = activeLineEl.getBoundingClientRect();
-        const lineHeight = editor.cm.defaultLineHeight;
-
-        if (this.cachedViewOffset === null) {
-            this.cachedViewOffset = editor.cm.scrollDOM.getBoundingClientRect().top;
-        }
-
-        return cursor.top + lineHeight - this.cachedViewOffset;
-    }
-
-    /**
-     * Returns the wrapping induced vertical offset of the cursor relative to the start of the line.
-     */
-    private getCursorWrapOffset(editor: Editor) {
-        const cursorCoord = editor.getCursor("head");
-        const lineStartOffset = editor.cm.state.doc.line(cursorCoord.line + 1).from;
-        const cursorOffset = lineStartOffset + cursorCoord.ch;
-
-        const lineStartCoords = editor.cm.coordsAtPos(lineStartOffset);
-        const cursorCoords = editor.cm.coordsAtPos(cursorOffset);
-
-        if (!lineStartCoords || !cursorCoords) return 0;
-        return cursorCoords.top - lineStartCoords.top;
-    }
-
-    /**
      * Calculates goal position, distance and scroll steps for scroll animation.
      * Initiates scroll animation if centering scroll is required.
      */
     private invokeScroll(editor: Editor, isEdit: boolean): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
-        const activeLineRelativeTop = this.getActiveLineRelativeTop(editor);
-        const cursorWrapOffset = this.getCursorWrapOffset(editor);
+        const now = performance.now();
+        const deltaTime = now - this.scrollLastEvent;
+        this.scrollLastEvent = now;
 
-        const cursorRelativeTop = activeLineRelativeTop + cursorWrapOffset;
+        if (deltaTime < 10) return;
+
+        const activeLineEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
+        if (!activeLineEl) return;
+
+        let isTable = false;
+        const { from } = editor.cm.state.selection.main;
+        const tree = syntaxTree(editor.cm.state as any);
+        let node = tree.resolve(from, -1);
+        while (node) {
+            if (node.name.startsWith("HyperMD-table")) {
+                isTable = true;
+                break;
+            }
+            node = node.parent;
+        }
+
+        let cursorRelativeTop: number;
+        if (isTable) {
+            cursorRelativeTop = activeLineEl.getBoundingClientRect().top;
+        } else {
+            const cursorCoord = editor.getCursor("head");
+            const lineStartOffset = editor.cm.state.doc.line(cursorCoord.line + 1).from;
+            const cursorOffset = lineStartOffset + cursorCoord.ch;
+
+            const cursorCoords = editor.cm.coordsAtPos(cursorOffset);
+            cursorRelativeTop = cursorCoords.top;
+        }
 
         const scrollInfo = editor.getScrollInfo() as ScrollInfo;
         const signedGoalDistance = this.calculateGoalDistance(cursorRelativeTop, scrollInfo);
@@ -131,10 +110,7 @@ export class FollowCursor {
 
         window.cancelAnimationFrame(this.animationFrame);
 
-        const now = performance.now();
-        const deltaTime = now - this.scrollLastEvent;
-        this.scrollLastEvent = now;
-        if (deltaTime > 100) {
+        if (deltaTime > 100 && !isTable) {
             const steps = this.calculateSteps(
                 Math.abs(signedGoalDistance),
                 scrollInfo.height,
