@@ -2,6 +2,7 @@ import { Editor, Debouncer, debounce } from "obsidian";
 import { EditorSelection } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "./main";
+import { clamp } from "./utility";
 
 export class FollowScroll {
     private plugin: ScrollingPlugin;
@@ -73,7 +74,7 @@ export class FollowScroll {
             scrollDOM.scrollTop +
             scrollDOM.getBoundingClientRect().top;
 
-        this.relativeLineOffset = Math.max(0, Math.min(scrollDOM.clientHeight, relativeLineOffset));
+        this.relativeLineOffset = clamp(relativeLineOffset, 0, scrollDOM.clientHeight);
     }
 
     /**

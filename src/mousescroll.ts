@@ -1,6 +1,7 @@
 import { Platform } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
+import { clamp } from "./utility";
 
 function easeOut(t: number): number {
     return 1 - (1 - t) ** 2;
@@ -91,13 +92,12 @@ export class MouseScroll {
             : this.plugin.settings.nativeScrollMultiplier;
 
         if (this.plugin.settings.nativeScrollInstant) {
-            event.preventDefault()
+            event.preventDefault();
             el.scrollBy({
                 top: event.deltaY * increasePercent,
                 behavior: "instant",
             });
-        }
-        else {
+        } else {
             el.scrollBy(null, event.deltaY * (increasePercent - 1));
         }
     }
@@ -219,17 +219,14 @@ export class MouseScroll {
     private animateTouchpadScroll(el: HTMLElement) {
         if (Math.abs(this.touchpadVelocity) > this.MIN_VELOCITY) {
             const now = performance.now();
-            const deltaTime = Math.max(8, Math.min(now - this.touchpadLastAnimation, 60));
+            const deltaTime = clamp(now - this.touchpadLastAnimation, 8, 60);
             this.touchpadLastAnimation = now;
 
             const dest = el.scrollTop + this.touchpadVelocity * deltaTime;
             el.scrollTop = dest;
 
             this.touchpadVelocity *= this.touchpadFriction;
-            this.touchpadFriction = Math.max(
-                0,
-                Math.min(this.MAX_FRICTION, this.touchpadFriction + 0.05),
-            );
+            this.touchpadFriction = clamp(this.touchpadFriction + 0.05, 0, this.MAX_FRICTION);
 
             this.touchpadAnimationFrame = window.requestAnimationFrame(() =>
                 this.animateTouchpadScroll(el),
@@ -251,7 +248,7 @@ export class MouseScroll {
         if (Math.abs(velocity) > this.MIN_VELOCITY) {
             el.scrollTop = el.scrollTop + velocity * this.DEFAULT_FRAME_TIME;
             velocity *= friction;
-            friction = Math.max(0, Math.min(this.MAX_FRICTION, friction + 0.05));
+            friction = clamp(friction + 0.05, 0, this.MAX_FRICTION);
             window.setTimeout(
                 () => this.decoupledTouchpadScroll(el, velocity, friction),
                 this.DEFAULT_FRAME_TIME,
