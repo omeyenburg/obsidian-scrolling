@@ -1,6 +1,7 @@
 import { Platform, Editor, MarkdownView } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
+import { clamp } from "./utility";
 
 export class ImageZoom {
     private readonly plugin: ScrollingPlugin;
@@ -9,6 +10,7 @@ export class ImageZoom {
 
     private readonly SMALL_ZOOM_FACTOR = 1.07;
     private readonly LARGE_ZOOM_FACTOR = 1.2;
+
     private readonly MIN_SCALE = 1;
     private readonly MAX_SCALE = 100;
 
@@ -20,6 +22,9 @@ export class ImageZoom {
         plugin.register(() => document.body.classList.remove("scrolling-image-zoom-enabled"));
     }
 
+    /**
+     * Apply or remove custom image styles based on current setting.
+     */
     public updateStyles() {
         if (this.plugin.settings.imageZoomEnabled) {
             document.body.classList.add("scrolling-image-zoom-enabled");
@@ -52,6 +57,34 @@ export class ImageZoom {
     }
 
     /**
+     * Reset the zoom of all registered images.
+     */
+    private resetZoom(editor: Editor) {
+        editor.cm.requestMeasure({
+            key: "reset-image-zoom",
+            read: (_view) => {},
+            write: (_measure, _view) => {
+                if (!this.zoomedImages) return;
+                this.zoomedImages.forEach((target: HTMLElement) => {
+                    target.style.transform = "";
+                    target.dataset.zoomData = "";
+                    target.dataset.scale = "";
+                    target.dataset.translateX = "";
+                    target.dataset.translateY = "";
+                    target.dataset.viewportLeft = "";
+                    target.dataset.viewportTop = "";
+                    target.dataset.viewportRight = "";
+                    target.dataset.viewportBottom = "";
+                    target.dataset.viewportWidth = "";
+                    target.dataset.viewportHeight = "";
+                    target.parentElement.style.clipPath = "";
+                });
+                this.zoomedImages.clear();
+            },
+        });
+    }
+
+    /**
      * On wheel event. Desktop only.
      * While hovering over an image, this will zoom if the zoom guesture is used or the user scrolles while pressing ctrl.
      * Returns true if the wheel event is handled successfully.
@@ -62,68 +95,50 @@ export class ImageZoom {
         const target = event.target as HTMLElement;
         if (target.localName !== "img") return false;
 
-        // Zoom guesture is sent as wheel event with ctrlKey set to true.
+        // Touchpad zoom gesture can be detected when wheel event with ctrlKey set to true.
         if (!event.ctrlKey || event.shiftKey) return false;
 
-        const oldScale = Number.parseFloat(target.style.scale) || this.MIN_SCALE;
-
-        const zoomFactor =
-            Math.abs(event.deltaY) < 100 ? this.SMALL_ZOOM_FACTOR : this.LARGE_ZOOM_FACTOR;
-
-        let scale: number;
-        if (event.deltaY < 0) {
-            scale = Math.min(this.MAX_SCALE, oldScale * zoomFactor);
-        } else {
-            scale = Math.max(this.MIN_SCALE, oldScale / zoomFactor);
+        if (target.dataset.zoomData !== "true") {
+            const supportedView = this.initializeImage(target);
+            if (!supportedView) return;
         }
 
-        const imageRect = target.getBoundingClientRect();
-        const parentRect = target.parentElement.getBoundingClientRect();
+        const viewportTop = Number(target.dataset.viewportTop);
+        const viewportLeft = Number(target.dataset.viewportLeft);
+        const viewportRight = Number(target.dataset.viewportRight);
+        const viewportBottom = Number(target.dataset.viewportBottom);
+        const viewportWidth = Number(target.dataset.viewportWidth);
+        const viewportHeight = Number(target.dataset.viewportHeight);
 
-        let originalLeft: number;
-        let originalTop: number;
+        const prevScale = Number.parseFloat(target.dataset.scale) || this.MIN_SCALE;
+        const prevTranslateX = Number.parseFloat(target.dataset.translateX) || 0;
+        const prevTranslateY = Number.parseFloat(target.dataset.translateY) || 0;
 
-        const view = this.plugin.app.workspace.getActiveFileView();
-        const viewType = view.getViewType();
-        if (viewType === "markdown") {
-            if (target.parentElement.previousElementSibling?.localName === "div") {
-                // x, y and height of parentRect match original image
-                const originalHeight = parentRect.height;
-                const originalWidth = (originalHeight * imageRect.width) / imageRect.height;
+        const mouseX = event.clientX - viewportLeft;
+        const mouseY = event.clientY - viewportTop;
 
-                originalTop = parentRect.top;
-                originalLeft = parentRect.left;
+        const zoomFactor = this.getZoomFactor(event.deltaY);
+        const scale = clamp(prevScale * zoomFactor, this.MIN_SCALE, this.MAX_SCALE);
 
-                target.parentElement.style.clipPath = `inset(0 ${parentRect.width - originalWidth}px 0 0)`;
-            } else {
-                // x and width of parentRect match original image
-                const originalBottom = parentRect.bottom;
-                const originalHeight = (parentRect.width * imageRect.height) / imageRect.width;
+        let translateX = mouseX - (mouseX - prevTranslateX) * (scale / prevScale);
+        let translateY = mouseY - (mouseY - prevTranslateY) * (scale / prevScale);
 
-                originalTop = originalBottom - originalHeight;
-                originalLeft = parentRect.left;
+        const postLeft = viewportLeft + translateX;
+        const postTop = viewportTop + translateY;
+        const postRight = postLeft + viewportWidth * scale;
+        const postBottom = postTop + viewportHeight * scale;
 
-                target.parentElement.style.clipPath = `inset(-${originalHeight - parentRect.height}px 0 0 0)`;
-            }
+        // Clamp translation
+        if (translateX > 0) translateX = 0;
+        if (translateY > 0) translateY = 0;
+        if (postRight < viewportRight) translateX += viewportRight - postRight;
+        if (postBottom < viewportBottom) translateY += viewportBottom - postBottom;
 
-            this.zoomedImages.add(target);
-        } else if (viewType === "image") {
-            // y and height of parentRect match original image
-            const originalHeight = parentRect.height;
-            const originalWidth = (originalHeight * imageRect.width) / imageRect.height;
+        target.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
 
-            originalTop = parentRect.top;
-            originalLeft = parentRect.left + parentRect.width / 2 - originalWidth / 2;
-        } else return;
-
-        const mouseX = event.clientX - originalLeft;
-        const mouseY = event.clientY - originalTop;
-
-        const translateX = (1 / scale - 1) * mouseX;
-        const translateY = (1 / scale - 1) * mouseY;
-
-        target.style.scale = `${scale}`;
-        target.style.transform = `translate(${translateX}px, ${translateY}px)`;
+        target.dataset.scale = scale.toString();
+        target.dataset.translateX = translateX.toString();
+        target.dataset.translateY = translateY.toString();
 
         event.preventDefault();
 
@@ -131,21 +146,60 @@ export class ImageZoom {
     }
 
     /**
-     * Reset the zoom of all registered images.
+     * Store initial dimensions of image.
+     * Change clippath or height to parent Element based on view type.
+     * Returns whether view is supported for image zooming.
      */
-    private resetZoom(editor: Editor) {
-        editor.cm.requestMeasure({
-            key: "reset-image-zoom",
-            read: (_view) => {},
-            write: (_measure, _view) => {
-                if (!this.zoomedImages) return;
-                this.zoomedImages.forEach((el: HTMLElement) => {
-                    el.style.scale = "";
-                    el.style.transform = "";
-                    el.parentElement.style.clipPath = "";
-                });
-                this.zoomedImages.clear();
-            },
-        });
+    private initializeImage(target: HTMLElement): boolean {
+        if (!target.parentElement) return false;
+
+        const imageRect = target.getBoundingClientRect();
+        const parentRect = target.parentElement.getBoundingClientRect();
+
+        const view = this.plugin.app.workspace.getActiveFileView();
+        const viewType = view.getViewType();
+        if (viewType === "markdown") {
+            if (target.parentElement.previousElementSibling?.localName === "div") {
+                // Single image on one line
+                target.parentElement.style.clipPath = `inset(0 ${parentRect.width - imageRect.width}px ${parentRect.bottom - imageRect.bottom}px 0)`;
+            } else {
+                // Inline image with text before
+                target.parentElement.style.clipPath = `inset(-${imageRect.height - parentRect.height + parentRect.bottom - imageRect.bottom}px 0 ${parentRect.bottom - imageRect.bottom}px 0)`;
+            }
+        } else if (viewType === "image") {
+            target.parentElement.style.height = "100%";
+        } else return false;
+
+        target.dataset.zoomData = "true";
+        target.dataset.viewportLeft = imageRect.left.toString();
+        target.dataset.viewportTop = imageRect.top.toString();
+        target.dataset.viewportRight = imageRect.right.toString();
+        target.dataset.viewportBottom = imageRect.bottom.toString();
+        target.dataset.viewportWidth = imageRect.width.toString();
+        target.dataset.viewportHeight = imageRect.height.toString();
+
+        this.zoomedImages.add(target);
+
+        return true
+    }
+
+    /*
+     * Calculates zoom factor based on mouse/touchpad scroll speed and direction.
+     * Returns factor > 1 for zooming in and factor < 1 for zooming out.
+     */
+    private getZoomFactor(deltaY: number): number {
+        if (Math.abs(deltaY) < 100) {
+            if (deltaY > 0) {
+                return 1 / this.SMALL_ZOOM_FACTOR;;
+            }
+
+            return this.SMALL_ZOOM_FACTOR;
+        } else {
+            if (deltaY > 0) {
+                return 1 / this.LARGE_ZOOM_FACTOR;;
+            }
+
+            return this.LARGE_ZOOM_FACTOR;
+        }
     }
 }

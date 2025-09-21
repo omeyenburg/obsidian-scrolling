@@ -94,7 +94,6 @@ body.scrolling-horizontal-filetree .tree-item-self.nav-folder-title {
 /* --- Image zoom --- */
 body.scrolling-image-zoom-enabled img:not(.cm-widgetBuffer) {
     transform-origin: top left;
-    vertical-align: bottom;
 }
 
 /* prevent overflow for inline images in source view */
