@@ -69,6 +69,11 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 
 - Customize when the scrollbar is shown or hidden.
 
+#### Reading mode keybinds
+
+- Use Vim-like keybinds to scroll in reading mode:
+  down (j), up (k), half-page down (d), half-page up (u), bottom (G), top (g)
+
 #### Mouse & touchpad scrolling (Desktop only)
 
 - Change the speed and smoothness of scrolling with mouse and touchpad.
