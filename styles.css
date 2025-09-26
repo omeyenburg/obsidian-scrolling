@@ -103,13 +103,13 @@ body.scrolling-image-zoom-enabled .cm-line:has(img:not(.cm-widgetBuffer)) {
 
 /* prevent overflow for images in tables in source view (overflow: hidden) */
 /* prevent overflow for images in tables in preview view (display: inline-block) */
-body.scrolling-image-zoom-enabled div.image-embed:has(img:not(.cm-widgetBuffer)),
-body.scrolling-image-zoom-enabled span.image-embed:has(img):not(.cm-widgetBuffer) {
+body.scrolling-image-zoom-enabled .cm-line div.image-embed,
+body.scrolling-image-zoom-enabled .cm-line span.image-embed {
     overflow: hidden;
     display: inline-block;
 }
 
-body.scrolling-image-zoom-enabled div.image-container:has(img):not(.cm-widgetBuffer) {
+body.scrolling-image-zoom-enabled div.image-container {
     display: block;
     overflow: hidden;
 }
