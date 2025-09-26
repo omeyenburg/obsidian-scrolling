@@ -122,10 +122,6 @@ To start developing:
    ```sh
    npm run dev
    ```
-3. Run tests:
-   ```sh
-   npm run test
-   ```
 
 ## Similar projects
 
