@@ -73,7 +73,8 @@ body.scrolling-horizontal-mathjax span.math {
     overflow: auto;
     max-width: 100%;
     display: inline-block;
-    vertical-align: middle;
+    vertical-align: top;
+    margin-bottom: -100%;
 }
 
 /* --- File tree --- */
