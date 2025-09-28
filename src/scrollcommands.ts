@@ -14,7 +14,7 @@ function scrollToBottom(el: Element) {
  * Adds two commands to scroll to the top or bottom of a document.
  * The user can add the commands as keybinds and as ribbon buttons.
  */
-export class Commands {
+export class ScrollCommands {
     private readonly plugin: ScrollingPlugin;
 
     private scrollTopRibbon: HTMLElement | null = null;

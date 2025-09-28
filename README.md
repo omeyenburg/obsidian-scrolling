@@ -69,6 +69,11 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 
 - Customize when the scrollbar is shown or hidden.
 
+#### Line length
+
+- Set the maximum line length as pixels, characters or percentage.
+- Toggle readable line length with a command or keybind.
+
 #### Reading mode keybinds
 
 - Use Vim-like keybinds to scroll in reading mode:

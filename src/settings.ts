@@ -1019,7 +1019,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.ribbonScrollButtonsEnabled)
                 .onChange(async (value) => {
                     this.plugin.settings.ribbonScrollButtonsEnabled = value;
-                    this.plugin.commands.updateRibbonButtons();
+                    this.plugin.scrollCommands.updateRibbonButtons();
                     await this.plugin.saveSettings();
                 }),
         );
