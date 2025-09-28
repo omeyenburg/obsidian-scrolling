@@ -101,6 +101,7 @@ export class ImageZoom {
         target.style.transform = "";
 
         target.parentElement.style.clipPath = "";
+        target.parentElement.style.height = "";
 
         target.dataset.zoomData = "";
         target.dataset.scale = "";
@@ -117,7 +118,8 @@ export class ImageZoom {
     }
 
     /**
-     * On wheel event. Desktop only.
+     * On wheel event.
+     * Desktop only, does nothing on mobile.
      * While hovering over an image, this will zoom if the zoom guesture is used or the user scrolles while pressing ctrl.
      * Returns true if the wheel event is handled successfully.
      */
@@ -292,6 +294,10 @@ export class ImageZoom {
         document.removeEventListener("mouseup", this.pointerUpHandler);
     };
 
+    /**
+     * Clamps the translation to the image viewport borders (when scrolling outwards).
+     * Expects that the image is not smaller than the image viewport (original image rect).
+     */
     private clampTranslation(target: HTMLElement, scale: number, translateX: number, translateY: number) {
         const viewportLeft = Number(target.dataset.viewportLeft);
         const viewportTop = Number(target.dataset.viewportTop);
