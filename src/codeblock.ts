@@ -3,24 +3,6 @@ import { Line } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "./main";
 
-/**
- * Normalizes the delta values of the event.
- * Swaps the X and Y axis if the shift key is held and the delta dominates on the Y axis.
- */
-function normalizeWheelDelta(event: WheelEvent) {
-    let scale = 1;
-
-    // Approximate line height as 16 pixels
-    if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) scale = 16;
-    else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) scale = window.innerHeight;
-
-    if (event.shiftKey && Math.abs(event.deltaX) < Math.abs(event.deltaY)) {
-        return { deltaX: event.deltaY * scale, deltaY: 0 };
-    }
-
-    return { deltaX: event.deltaX * scale, deltaY: event.deltaY * scale };
-}
-
 export class CodeBlock {
     private readonly plugin: ScrollingPlugin;
 
@@ -209,7 +191,7 @@ export class CodeBlock {
         )
             return false;
 
-        let { deltaX, deltaY } = normalizeWheelDelta(event);
+        let { deltaX, deltaY } = this.normalizeWheelDelta(event);
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
 
         if (isHorizontalScroll && !this.isScrollingVertically) {
@@ -307,6 +289,24 @@ export class CodeBlock {
             this.plugin.followScroll.skipCursor = true;
             editor.cm.dispatch({ selection: editor.cm.state.selection });
         }
+    }
+
+    /**
+     * Normalizes the delta values of the event.
+     * Swaps the X and Y axis if the shift key is held and the delta dominates on the Y axis.
+     */
+    private normalizeWheelDelta(event: WheelEvent) {
+        let scale = 1;
+
+        // Approximate line height as 16 pixels
+        if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) scale = 16;
+        else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) scale = window.innerHeight;
+
+        if (event.shiftKey && Math.abs(event.deltaX) < Math.abs(event.deltaY)) {
+            return { deltaX: event.deltaY * scale, deltaY: 0 };
+        }
+
+        return { deltaX: event.deltaX * scale, deltaY: event.deltaY * scale };
     }
 
     /**
@@ -496,6 +496,7 @@ export class CodeBlock {
             this.codeBlockLines = [line];
         } else {
             this.codeBlockLines = [];
+            return;
         }
 
         let maxScrollWidthWithExtension = line.scrollWidth;
