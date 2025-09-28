@@ -10,6 +10,7 @@ import { RestoreScroll } from "./restorescroll";
 import { Scrollbar } from "./scrollbar";
 import { PreviewShortcuts } from "./previewshortcuts";
 import { ImageZoom } from "./imagezoom";
+import { LineLength } from "./linelength";
 import { Commands } from "./commands";
 
 import { Events } from "./events";
@@ -28,6 +29,7 @@ export default class ScrollingPlugin extends Plugin {
     scrollbar!: Scrollbar;
     previewShortcuts!: PreviewShortcuts;
     imageZoom!: ImageZoom;
+    lineLength!: LineLength;
     commands!: Commands;
 
     events!: Events;
@@ -46,6 +48,7 @@ export default class ScrollingPlugin extends Plugin {
         this.scrollbar = new Scrollbar(this);
         this.previewShortcuts = new PreviewShortcuts(this);
         this.imageZoom = new ImageZoom(this);
+        this.lineLength = new LineLength(this);
         this.commands = new Commands(this);
 
         this.events = new Events(this);

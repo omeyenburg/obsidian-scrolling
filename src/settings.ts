@@ -50,6 +50,15 @@ export interface ScrollingPluginSettings {
     /** Width of scrollbars. Linux only. (0-30) */
     scrollbarWidth: number;
 
+    /** Unit to use for line length. Values: percentage, pixels, characters */
+    lineLengthUnit: string;
+    /** Line length when using percentage unit or adaptive mode. (20-100) */
+    lineLengthPercentage: number;
+    /** Line length when using char unit. (30-200) */
+    lineLengthCharacters: number;
+    /** Line length when using pixels unit. (50-3000) */
+    lineLengthPixels: number;
+
     /** Enable keybinds to scroll by single lines in reading mode. */
     readingLineScrollEnabled: boolean;
     /** Enable keybinds to scroll by half pages in reading mode. */
@@ -116,6 +125,11 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
 
+    lineLengthUnit: "pixels",
+    lineLengthPercentage: 50,
+    lineLengthCharacters: 50,
+    lineLengthPixels: 700,
+
     readingLineScrollEnabled: true,
     readingHalfPageScrollEnabled: true,
     readingTopBottomScrollEnabled: true,
@@ -160,7 +174,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayRestoreScrollSettings();
         this.displayImageZoomSettings();
         this.displayScrollbarSettings();
-        this.displayReadModeKeybinds();
+        this.displayLineLengthSettings();
+        this.displayReadModeKeybindsSettings();
         this.displayMouseScrollSettings();
         this.displayRibbonSettings();
 
@@ -199,7 +214,10 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        this.containerEl.scrollTop = this.containerEl.scrollHeight - previousScrollBottom;
+        // Initially/after reloading scrollHeight equals clientHeight.
+        if (previousScrollBottom > this.containerEl.clientHeight) {
+            this.containerEl.scrollTop = this.containerEl.scrollHeight - previousScrollBottom;
+        }
     }
 
     private setDesc(setting: Setting, desc: string): void {
@@ -370,8 +388,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayCursorScrollSettings() {
         if (Platform.isMobile) return;
         if (!this.plugin.settings.enableExperimentalSettings) {
-            this.plugin.settings.cursorScrollEnabled =
-                DEFAULT_SETTINGS.cursorScrollEnabled;
+            this.plugin.settings.cursorScrollEnabled = DEFAULT_SETTINGS.cursorScrollEnabled;
             return;
         }
 
@@ -667,7 +684,112 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
     }
 
-    private displayReadModeKeybinds() {
+    private displayLineLengthSettings() {
+        if (Platform.isMobile) return;
+
+        this.containerEl.createEl("br");
+        this.createHeading("Line length");
+
+        const readableLineLengthEnabled = this.plugin.lineLength.getObsidianReadableLineLength();
+
+        this.createSetting(
+            "Readable line length",
+            "Limit maximum line length. Less content fits on screen, but long blocks of text are more readable.",
+        ).addToggle((toggle) =>
+            toggle.setValue(readableLineLengthEnabled).onChange(async (value) => {
+                this.plugin.lineLength.setObsidianReadableLineLength(value);
+                this.display();
+                await this.plugin.saveSettings();
+            }),
+        );
+
+        if (!readableLineLengthEnabled) return;
+
+        this.createSetting(
+            "Length unit",
+            "Choose to set the line length as percentage, pixels or characters.",
+            () => (this.plugin.settings.lineLengthUnit = DEFAULT_SETTINGS.lineLengthUnit),
+        ).addDropdown((dropdown) =>
+            dropdown
+                .addOption("pixels", "Pixels (px)")
+                .addOption("characters", "Characters (ch)")
+                .addOption("percentage", "Percentage (%)")
+                .setValue(this.plugin.settings.lineLengthUnit)
+                .onChange(async (value) => {
+                    this.plugin.settings.lineLengthUnit = value;
+                    this.plugin.lineLength.updateLineLength();
+                    this.display();
+                    await this.plugin.saveSettings();
+                }),
+        );
+
+        switch (this.plugin.settings.lineLengthUnit) {
+            case "pixels":
+                this.createSetting(
+                    "Number of pixels",
+                    "Maximum line length as pixels (px).",
+                    () => {
+                        this.plugin.settings.lineLengthPixels = DEFAULT_SETTINGS.lineLengthPixels;
+                        this.plugin.lineLength.updateLineLength();
+                    },
+                ).addSlider((slider) =>
+                    slider
+                        .setInstant(true)
+                        .setLimits(400, 3000, 50)
+                        .setValue(this.plugin.settings.lineLengthPixels)
+                        .onChange(async (value) => {
+                            this.plugin.settings.lineLengthPixels = value;
+                            this.plugin.lineLength.updateLineLength();
+                            await this.plugin.saveSettings();
+                        }),
+                );
+                break;
+            case "characters":
+                this.createSetting(
+                    "Number of characters",
+                    "Maximum line length as character count (ch).",
+                    () => {
+                        this.plugin.settings.lineLengthCharacters =
+                            DEFAULT_SETTINGS.lineLengthCharacters;
+                        this.plugin.lineLength.updateLineLength();
+                    },
+                ).addSlider((slider) =>
+                    slider
+                        .setInstant(true)
+                        .setLimits(30, 200, 1)
+                        .setValue(this.plugin.settings.lineLengthCharacters)
+                        .onChange(async (value) => {
+                            this.plugin.settings.lineLengthCharacters = value;
+                            this.plugin.lineLength.updateLineLength();
+                            await this.plugin.saveSettings();
+                        }),
+                );
+                break;
+            case "percentage":
+                this.createSetting(
+                    "Percentage of editor",
+                    "Maximum line length as percentage of the editor width (%).",
+                    () => {
+                        this.plugin.settings.lineLengthPercentage =
+                            DEFAULT_SETTINGS.lineLengthPercentage;
+                        this.plugin.lineLength.updateLineLength();
+                    },
+                ).addSlider((slider) =>
+                    slider
+                        .setInstant(true)
+                        .setLimits(20, 100, 2)
+                        .setValue(this.plugin.settings.lineLengthPercentage)
+                        .onChange(async (value) => {
+                            this.plugin.settings.lineLengthPercentage = value;
+                            this.plugin.lineLength.updateLineLength();
+                            await this.plugin.saveSettings();
+                        }),
+                );
+                break;
+        }
+    }
+
+    private displayReadModeKeybindsSettings() {
         if (Platform.isMobile) return;
 
         this.containerEl.createEl("br");
