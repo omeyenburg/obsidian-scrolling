@@ -169,19 +169,16 @@ export class FollowCursor {
 
     /**
      * Returns number of frames for scroll animation.
+     * Returns reduced number of frames when scrolling further than client height.
      * Returns 1 step for instant scroll on edit.
      */
     private calculateSteps(goalDistance: number, scrollerHeight: number, isEdit: boolean): number {
         if (isEdit && this.plugin.settings.followCursorInstantEditScroll) return 1;
 
         const smoothness = this.plugin.settings.followCursorSmoothness;
-        let steps = Math.max(1, Math.ceil(0.02 * smoothness * Math.sqrt(goalDistance)));
+        let steps = Math.max(1, Math.ceil(0.16 * smoothness));
 
-        if (goalDistance > scrollerHeight * 0.5) {
-            if (goalDistance > scrollerHeight) {
-                return 1;
-            }
-
+        if (goalDistance > scrollerHeight) {
             return Math.ceil(Math.sqrt(steps));
         }
 
