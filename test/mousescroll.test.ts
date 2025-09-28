@@ -1,6 +1,5 @@
 import { MouseScroll } from "../src/mousescroll";
 
-// Mock the ScrollingPlugin
 const mockPlugin = {
     settings: {
         mouseEnabled: true,
@@ -10,11 +9,7 @@ const mockPlugin = {
     register: jest.fn(),
 };
 
-// Mock performance.now
-let now = 0;
-beforeAll(() => {
-    jest.spyOn(performance, "now").mockImplementation(() => now);
-});
+jest.useFakeTimers();
 
 describe("MouseScroll", () => {
     let mouseScroll: MouseScroll;

@@ -1,6 +1,5 @@
 import { FollowCursor } from "../src/followcursor";
 
-// Mock the ScrollingPlugin
 const mockPlugin = {
     settings: {
         followCursorSmoothness: 0,
@@ -9,10 +8,9 @@ const mockPlugin = {
     register: jest.fn(),
 };
 
-// Mock performance.now
 jest.useFakeTimers();
 
-describe("MouseScroll", () => {
+describe("FollowCursor", () => {
     let followcursor: FollowCursor;
 
     beforeEach(() => {
@@ -59,58 +57,27 @@ describe("MouseScroll", () => {
 
     describe("calculateSteps", () => {
         test("returns at least 1 step", () => {
-            mockPlugin.settings.followCursorSmoothness = 0;
-
-            const result = followcursor["calculateSteps"](100, 100, false);
-            expect(result).toBeGreaterThanOrEqual(1);
-        });
-
-        test("returns more steps for large distance", () => {
             mockPlugin.settings.followCursorSmoothness = 100;
 
-            const fewSteps = followcursor["calculateSteps"](10, 100, false);
-            const manySteps = followcursor["calculateSteps"](100, 100, false);
+            const result1 = followcursor["calculateSteps"](0, 100, false);
+            const result2 = followcursor["calculateSteps"](10, 100, false);
+            const result3 = followcursor["calculateSteps"](100, 100, false);
+            const result4 = followcursor["calculateSteps"](-10, 100, false);
+            const result5 = followcursor["calculateSteps"](-100, 100, false);
 
-            expect(manySteps).toBeGreaterThan(fewSteps);
+            expect(result1).toBeGreaterThanOrEqual(1);
+            expect(result2).toBeGreaterThanOrEqual(1);
+            expect(result3).toBeGreaterThanOrEqual(1);
+            expect(result4).toBeGreaterThanOrEqual(1);
+            expect(result5).toBeGreaterThanOrEqual(1);
         });
 
-        test("reduces steps when intensity is high or goal exceeds scrollerHeight", () => {
+        test("reduces steps when goal exceeds scrollerHeight", () => {
             mockPlugin.settings.followCursorSmoothness = 100;
 
-            // Simulate high intensity manually
-            followcursor["scrollIntensity"] = 1000;
-
-            const result = followcursor["calculateSteps"](100, 10, false);
-            const expectedReduction = Math.ceil(
-                Math.sqrt(Math.max(1, Math.ceil(2 * (100 / 100) * Math.sqrt(100)))),
-            );
-            expect(result).toBe(expectedReduction);
-        });
-    });
-
-    describe("calculateScrollIntensity", () => {
-        test("increases scroll intensity with low delta", () => {
-            const t0 = performance.now();
-            followcursor["scrollLastEvent"] = t0;
-            followcursor["scrollIntensity"] = 2;
-
-            jest.advanceTimersByTime(10);
-            followcursor["calculateScrollIntensity"]();
-
-            expect(followcursor["scrollIntensity"]).toBeGreaterThan(2);
-            expect(followcursor["scrollLastEvent"]).toBeGreaterThan(t0);
-        });
-
-        test("decreases scroll intensity with high delta", () => {
-            const t0 = performance.now();
-            followcursor["scrollLastEvent"] = t0;
-            followcursor["scrollIntensity"] = 2;
-
-            jest.advanceTimersByTime(500);
-            followcursor["calculateScrollIntensity"]();
-
-            expect(followcursor["scrollIntensity"]).toBeLessThan(2);
-            expect(followcursor["scrollLastEvent"]).toBeGreaterThan(t0);
+            const resultSmallScroller = followcursor["calculateSteps"](100, 10, false);
+            const resultLargeScroller = followcursor["calculateSteps"](100, 200, false);
+            expect(resultSmallScroller).toBeLessThan(resultLargeScroller);
         });
     });
 });

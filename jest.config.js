@@ -1,8 +1,8 @@
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'jsdom',
-    roots: ['<rootDir>/src', '<rootDir>/tests'],
-    testMatch: ['**/tests/**/*.test.ts'],
+    roots: ['<rootDir>/src', '<rootDir>/test'],
+    testMatch: ['**/test/**/*.test.ts'],
     moduleNameMapper: { '^obsidian$': '<rootDir>/mocks/obsidian.ts' },
     collectCoverageFrom: [
         'src/**/*.ts',
