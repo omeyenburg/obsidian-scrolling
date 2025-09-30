@@ -1,4 +1,4 @@
-import { MarkdownView, Platform } from "obsidian";
+import { MarkdownView, Platform, Editor } from "obsidian";
 
 import type { default as ScrollingPlugin } from "./main";
 
@@ -13,6 +13,9 @@ export class PreviewShortcuts {
 
     private goal: number | null = null;
     private scroller: Element | null = null;
+
+    private lastKeyPress = 0;
+    private animationFrame: number;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -40,12 +43,16 @@ export class PreviewShortcuts {
         this.scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
         if (!this.scroller) return;
 
+        const now = event.timeStamp;
+        const deltaTime = now - this.lastKeyPress;
+        this.lastKeyPress = now;
+
         switch (event.key) {
             case "k":
-                this.scrollLine(-1);
+                this.scrollLine(-1, deltaTime);
                 break;
             case "j":
-                this.scrollLine(1);
+                this.scrollLine(1, deltaTime);
                 break;
             case "u":
                 this.scrollHalfPage(-1);
@@ -68,14 +75,27 @@ export class PreviewShortcuts {
         this.scroller.scrollBy({ top: (this.scroller.clientHeight * direction) / 2 });
     }
 
-    private scrollLine(direction: -1 | 1) {
+    private scrollLine(direction: -1 | 1, deltaTime: number) {
         if (this.goal !== null) {
             this.scroller.scrollTo({ top: this.goal });
         }
 
-        const change = getLineHeight() * direction;
+        const deltaTimeNormalization = deltaTime < 200 ? deltaTime * 0.02 : 1;
+        const change = getLineHeight() * direction * deltaTimeNormalization;
         this.goal = this.scroller.scrollTop + change;
-        this.scroller.scrollBy({ top: change, behavior: "smooth" });
+
+        const steps = 5;
+        window.cancelAnimationFrame(this.animationFrame);
+        this.animateScrollLine(this.goal, change / steps, steps);
+    }
+
+    private animateScrollLine(goal: number, stepSize: number, step: number): void {
+        if (step <= 0) return;
+
+        this.scroller.scrollTo({ top: goal - stepSize * (step - 1) });
+        this.animationFrame = window.requestAnimationFrame(() =>
+            this.animateScrollLine(goal, stepSize, step - 1),
+        );
     }
 
     private scrollToTop() {
