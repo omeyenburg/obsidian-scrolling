@@ -157,7 +157,7 @@ export class CodeBlock {
     }
 
     /**
-     * On wheel event. *Desktop only*.
+     * On wheel event.
      * Scrolls multiple connected code lines simultanously.
      * Returns true if the wheel event is handled successfully.
      */
@@ -204,7 +204,7 @@ export class CodeBlock {
     }
 
     /**
-     * On touch move event. *Mobile only*.
+     * On touch move event.
      * Scrolls multiple connected code lines simultanously.
      * Assumes that code elements do not handle horizontal scroll natively (css).
      */
@@ -392,10 +392,7 @@ export class CodeBlock {
         if (!this.codeBlockLines.contains(line) || this.currentScrollWidth === null) {
             this.updateWidthAndBlock(line);
             this.lastHorizontalScrollTimeStamp = now;
-        } else if (
-            now - this.lastHorizontalScrollTimeStamp > this.CODE_BLOCK_WIDTH_TIMEOUT &&
-            !this.scrollAnimationFrame
-        ) {
+        } else if (now - this.lastHorizontalScrollTimeStamp > this.CODE_BLOCK_WIDTH_TIMEOUT) {
             this.updateWidthAndBlock(line);
             this.lastHorizontalScrollTimeStamp = now;
         } else {

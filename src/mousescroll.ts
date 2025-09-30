@@ -68,7 +68,8 @@ export class MouseScroll {
     }
 
     /**
-     * On wheel event. Desktop only.
+     * On wheel event.
+     * Desktop only, does nothing on mobile.
      */
     public wheelHandler(
         event: WheelEvent,

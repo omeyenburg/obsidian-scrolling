@@ -78,7 +78,8 @@ export class FollowScroll {
     }
 
     /**
-     * On wheel event. Desktop only.
+     * On wheel event.
+     * Desktop only, does nothing on mobile.
      * Moves the cursor to the cached relative position on screen.
      */
     private wheelHandlerDebounced(el: HTMLElement): void {
