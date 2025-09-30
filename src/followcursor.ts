@@ -17,6 +17,8 @@ export class FollowCursor {
     private animationFrame = 0;
     private scrollLastEvent = 0;
 
+    private cachedEditorOffset: number | null = null;
+
     private readonly MOUSE_UP_TIMEOUT = 100;
 
     constructor(plugin: ScrollingPlugin) {
@@ -63,6 +65,27 @@ export class FollowCursor {
     }
 
     /**
+     * Checks whether the cursor is inside a table.
+     * Uses the syntax tree provided by codemirror.
+     * Requires codemirror/language.
+     */
+    private cursorInTable(editor: Editor): boolean {
+        const { from } = editor.cm.state.selection.main;
+        const tree = syntaxTree(editor.cm.state as any);
+        let node = tree.resolve(from, -1);
+
+        while (node) {
+            if (node.name.startsWith("HyperMD-table")) {
+                return true;
+            }
+
+            node = node.parent;
+        }
+
+        return false;
+    }
+
+    /**
      * Calculates goal position, distance and scroll steps for scroll animation.
      * Initiates scroll animation if centering scroll is required.
      */
@@ -78,22 +101,13 @@ export class FollowCursor {
         const activeLineEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
         if (!activeLineEl) return;
 
-        let isTable = false;
-        const { from } = editor.cm.state.selection.main;
-        const tree = syntaxTree(editor.cm.state as any);
-        let node = tree.resolve(from, -1);
-        while (node) {
-            if (node.name.startsWith("HyperMD-table")) {
-                isTable = true;
-                break;
-            }
-            node = node.parent;
-        }
-
         let cursorRelativeTop: number;
+        const isTable = this.cursorInTable(editor);
         if (isTable) {
+            // Works well with tables
             cursorRelativeTop = activeLineEl.getBoundingClientRect().top;
         } else {
+            // Works well with wrapped lines and images
             const cursorCoord = editor.getCursor("head");
             const lineStartOffset = editor.cm.state.doc.line(cursorCoord.line + 1).from;
             const cursorOffset = lineStartOffset + cursorCoord.ch;
@@ -101,6 +115,12 @@ export class FollowCursor {
             const cursorCoords = editor.cm.coordsAtPos(cursorOffset);
             cursorRelativeTop = cursorCoords.top;
         }
+
+        // Vertical offset of editor viewport should not change.
+        if (!this.cachedEditorOffset) {
+            this.cachedEditorOffset = editor.cm.defaultLineHeight - editor.cm.scrollDOM.getBoundingClientRect().top;
+        }
+        cursorRelativeTop += this.cachedEditorOffset;
 
         const scrollInfo = editor.getScrollInfo() as ScrollInfo;
         const signedGoalDistance = this.calculateGoalDistance(cursorRelativeTop, scrollInfo);
@@ -110,6 +130,7 @@ export class FollowCursor {
 
         window.cancelAnimationFrame(this.animationFrame);
 
+        // In tables, many events are emmitted, so skip animations for better performance.
         if (deltaTime > 100 && !isTable) {
             const steps = this.calculateSteps(
                 Math.abs(signedGoalDistance),
