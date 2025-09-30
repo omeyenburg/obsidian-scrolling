@@ -639,31 +639,31 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private displayScrollbarSettings() {
+        if (Platform.isMacOS) return
+
         this.containerEl.createEl("br");
         this.createHeading("Scrollbar appearance");
 
-        if (!Platform.isMacOS) {
-            this.createSetting(
-                "Scrollbar visibility",
-                "When to show the scrollbar in notes and PDFs.",
-                () => {
-                    this.plugin.settings.scrollbarVisibility = DEFAULT_SETTINGS.scrollbarVisibility;
+        this.createSetting(
+            "Scrollbar visibility",
+            "When to show the scrollbar in notes and PDFs.",
+            () => {
+                this.plugin.settings.scrollbarVisibility = DEFAULT_SETTINGS.scrollbarVisibility;
+                this.plugin.scrollbar.updateStyle();
+            },
+        ).addDropdown((dropdown) =>
+            dropdown
+                .addOption("hide", "Always hide scrollbar")
+                .addOption("scroll", "Show scrollbar while scrolling")
+                .addOption("show", "Always show scrollbar")
+                .setValue(this.plugin.settings.scrollbarVisibility)
+                .onChange(async (value) => {
+                    this.plugin.settings.scrollbarVisibility = value;
                     this.plugin.scrollbar.updateStyle();
-                },
-            ).addDropdown((dropdown) =>
-                dropdown
-                    .addOption("hide", "Always hide scrollbar")
-                    .addOption("scroll", "Show scrollbar while scrolling")
-                    .addOption("show", "Always show scrollbar")
-                    .setValue(this.plugin.settings.scrollbarVisibility)
-                    .onChange(async (value) => {
-                        this.plugin.settings.scrollbarVisibility = value;
-                        this.plugin.scrollbar.updateStyle();
-                        this.display();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
+                    this.display();
+                    await this.plugin.saveSettings();
+                }),
+        );
 
         if (Platform.isLinux && Platform.isDesktop) {
             this.settingsEnabled = this.plugin.settings.scrollbarVisibility !== "hide";
