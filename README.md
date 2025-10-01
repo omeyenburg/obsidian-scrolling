@@ -14,38 +14,38 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 - This feature automatically scrolls the view to keep the text cursor near the center while editing or navigating.
   (Also known as 'typewriter mode' or similar to 'scrolloff' in Vim)
 
-    <img src="https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/followcursor.webp" alt="Centered cursor preview" width=640px>
+    <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/followcursor.webp" alt="Centered cursor preview" width=640px>
 
 #### Horizontal scrolling
 
 ##### Code blocks
 - Disable wrapping and enable horizontal scrolling in code blocks.
 
-    <img src="https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/codeblock.webp" alt="Code blocks preview" width=640px>
+    <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/codeblock.webp" alt="Code blocks preview" width=640px>
 
 ##### Inline MathJax
 - Make inline MathJax scrollable and prevent it from extending the viewport.
 
-    <img src="https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/mathjax.webp" alt="MathJax preview" width=640px>
+    <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/mathjax.webp" alt="MathJax preview" width=640px>
 
 ##### File tree
 - Allow horizontal scrolling in the file tree.
 
-    <img src="https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/filetree.webp" alt="Filetree preview" width=640px>
+    <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/filetree.webp" alt="Filetree preview" width=640px>
 
 #### Remember scroll position
 
 - By default, Obsidian will always open files and place you at the top.
 - This feature saves your scroll position when closing a file and restores it when reopening the file later.
 
-    <img src="https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/restorescroll.webp" alt="Restore scroll preview" width=640px>
+    <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/restorescroll.webp" alt="Restore scroll preview" width=640px>
 
 #### Scroll to zoom images
 
 - Zoom into an image based on your mouse pointer position.
 - Hover over an image and scroll while holding the ctrl key.
 
-    <img src="https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/imagezoom.webp" alt="Image zoom preview" width=640px>
+    <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/imagezoom.webp" alt="Image zoom preview" width=640px>
 
 #### Scrollbar customization
 
@@ -56,7 +56,7 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 - Set the maximum line length as pixels, characters or percentage.
 - Toggle readable line length with a command or keybind.
 
-    <img src="https://media.githubusercontent.com/media/omeyenburg/obsidian-scrolling/refs/heads/master/preview/linelength.webp" alt="Line length preview" width=640px>
+    <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/linelength.webp" alt="Line length preview" width=640px>
 
 #### Reading mode keybinds
 
