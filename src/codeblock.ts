@@ -185,11 +185,11 @@ export class CodeBlock {
         }
 
         if (!line.classList.contains("HyperMD-codeblock")) return false;
-        if (
-            line.classList.contains("HyperMD-codeblock-begin") ||
-            line.classList.contains("HyperMD-codeblock-end")
-        )
-            return false;
+        // if (
+        //     line.classList.contains("HyperMD-codeblock-begin") ||
+        //     line.classList.contains("HyperMD-codeblock-end")
+        // )
+        //     return false;
 
         let { deltaX, deltaY } = this.normalizeWheelDelta(event);
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
@@ -491,6 +491,8 @@ export class CodeBlock {
     private searchCodeLines(line: Element): number {
         if (this.insideCodeBlock(line.classList)) {
             this.codeBlockLines = [line];
+        } else if (line.classList.contains("HyperMD-codeblock")) {
+            this.codeBlockLines = [];
         } else {
             this.codeBlockLines = [];
             return;

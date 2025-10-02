@@ -126,18 +126,6 @@ export class ImageZoom {
         target.removeEventListener("dblclick", this.doubleClickHandler);
     };
 
-    private getViewport(target: HTMLElement): Viewport {
-        const parentRect = target.parentElement.getBoundingClientRect();
-        return {
-            left: Number(target.dataset.viewportLeft) + parentRect.left,
-            top: Number(target.dataset.viewportTop) + parentRect.top,
-            right: Number(target.dataset.viewportRight) + parentRect.left,
-            bottom: Number(target.dataset.viewportBottom) + parentRect.top,
-            width: Number(target.dataset.viewportWidth),
-            height: Number(target.dataset.viewportHeight),
-        };
-    }
-
     /**
      * On wheel event.
      * Desktop only, does nothing on mobile.
@@ -235,6 +223,22 @@ export class ImageZoom {
         target.addEventListener("mousedown", this.pointerDownHandler);
 
         return true;
+    }
+
+    /**
+     * Calculates current image viewport based on initial values in dataset
+     * and the offset of the parent element.
+     */
+    private getViewport(target: HTMLElement): Viewport {
+        const parentRect = target.parentElement.getBoundingClientRect();
+        return {
+            left: Number(target.dataset.viewportLeft) + parentRect.left,
+            top: Number(target.dataset.viewportTop) + parentRect.top,
+            right: Number(target.dataset.viewportRight) + parentRect.left,
+            bottom: Number(target.dataset.viewportBottom) + parentRect.top,
+            width: Number(target.dataset.viewportWidth),
+            height: Number(target.dataset.viewportHeight),
+        };
     }
 
     /*
