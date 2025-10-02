@@ -3,6 +3,15 @@ import { Platform, Editor, MarkdownView } from "obsidian";
 import type { default as ScrollingPlugin } from "./main";
 import { clamp } from "./utility";
 
+interface Viewport {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+}
+
 export class ImageZoom {
     private readonly plugin: ScrollingPlugin;
 
@@ -50,8 +59,8 @@ export class ImageZoom {
      * When editing the line with an image, cropping breaks.
      * Will reset zoom.
      */
-    public viewUpdateHandler(editor: Editor, isEdit: boolean): void {
-        if (!isEdit) return;
+    public viewUpdateHandler(editor: Editor, isEditOrGeometry: boolean): void {
+        if (!isEditOrGeometry) return;
         if (Platform.isMobile) return;
         this.resetFile(editor);
     }
@@ -115,6 +124,18 @@ export class ImageZoom {
         target.dataset.viewportHeight = "";
 
         target.removeEventListener("dblclick", this.doubleClickHandler);
+    };
+
+    private getViewport(target: HTMLElement): Viewport {
+        const parentRect = target.parentElement.getBoundingClientRect();
+        return {
+            left: Number(target.dataset.viewportLeft) + parentRect.left,
+            top: Number(target.dataset.viewportTop) + parentRect.top,
+            right: Number(target.dataset.viewportRight) + parentRect.left,
+            bottom: Number(target.dataset.viewportBottom) + parentRect.top,
+            width: Number(target.dataset.viewportWidth),
+            height: Number(target.dataset.viewportHeight),
+        };
     }
 
     /**
@@ -137,15 +158,14 @@ export class ImageZoom {
             if (!supportedView) return;
         }
 
-        const viewportTop = Number(target.dataset.viewportTop);
-        const viewportLeft = Number(target.dataset.viewportLeft);
+        const viewport = this.getViewport(target);
 
         const prevScale = Number.parseFloat(target.dataset.scale) || this.MIN_SCALE;
         const prevTranslateX = Number.parseFloat(target.dataset.translateX) || 0;
         const prevTranslateY = Number.parseFloat(target.dataset.translateY) || 0;
 
-        const mouseX = event.clientX - viewportLeft;
-        const mouseY = event.clientY - viewportTop;
+        const mouseX = event.clientX - viewport.left;
+        const mouseY = event.clientY - viewport.top;
 
         const zoomFactor = this.getZoomFactor(event.deltaY);
         const scale = clamp(prevScale * zoomFactor, this.MIN_SCALE, this.MAX_SCALE);
@@ -153,7 +173,12 @@ export class ImageZoom {
         const translateX = mouseX - (mouseX - prevTranslateX) * (scale / prevScale);
         const translateY = mouseY - (mouseY - prevTranslateY) * (scale / prevScale);
 
-        const {clampedTranslateX, clampedTranslateY} = this.clampTranslation(target, scale, translateX, translateY);
+        const { clampedTranslateX, clampedTranslateY } = this.clampTranslation(
+            viewport,
+            scale,
+            translateX,
+            translateY,
+        );
 
         target.style.transform = `translate(${clampedTranslateX}px, ${clampedTranslateY}px) scale(${scale})`;
         target.dataset.translateX = clampedTranslateX.toString();
@@ -197,10 +222,10 @@ export class ImageZoom {
         } else return false;
 
         target.dataset.zoomData = "true";
-        target.dataset.viewportLeft = imageRect.left.toString();
-        target.dataset.viewportTop = imageRect.top.toString();
-        target.dataset.viewportRight = imageRect.right.toString();
-        target.dataset.viewportBottom = imageRect.bottom.toString();
+        target.dataset.viewportLeft = (imageRect.left - parentRect.left).toString();
+        target.dataset.viewportTop = (imageRect.top - parentRect.top).toString();
+        target.dataset.viewportRight = (imageRect.right - parentRect.left).toString();
+        target.dataset.viewportBottom = (imageRect.bottom - parentRect.top).toString();
         target.dataset.viewportWidth = imageRect.width.toString();
         target.dataset.viewportHeight = imageRect.height.toString();
 
@@ -237,7 +262,7 @@ export class ImageZoom {
      */
     private doubleClickHandler = (event: MouseEvent) => {
         this.resetImage(event.target as HTMLElement);
-    }
+    };
 
     /**
      * Initialize image dragging with mouse pointer.
@@ -270,6 +295,8 @@ export class ImageZoom {
         if (!this.currentDragTarget) return;
         const target = this.currentDragTarget;
 
+        const viewport = this.getViewport(target);
+
         const deltaX = event.clientX - this.startDragX;
         const deltaY = event.clientY - this.startDragY;
 
@@ -278,7 +305,12 @@ export class ImageZoom {
 
         const scale = Number.parseFloat(target.dataset.scale) || 1;
 
-        const {clampedTranslateX, clampedTranslateY} = this.clampTranslation(target, scale, translateX, translateY);
+        const { clampedTranslateX, clampedTranslateY } = this.clampTranslation(
+            viewport,
+            scale,
+            translateX,
+            translateY,
+        );
 
         target.style.transform = `translate(${clampedTranslateX}px, ${clampedTranslateY}px) scale(${scale})`;
         target.dataset.translateX = clampedTranslateX.toString();
@@ -298,24 +330,22 @@ export class ImageZoom {
      * Clamps the translation to the image viewport borders (when scrolling outwards).
      * Expects that the image is not smaller than the image viewport (original image rect).
      */
-    private clampTranslation(target: HTMLElement, scale: number, translateX: number, translateY: number) {
-        const viewportLeft = Number(target.dataset.viewportLeft);
-        const viewportTop = Number(target.dataset.viewportTop);
-        const viewportRight = Number(target.dataset.viewportRight);
-        const viewportBottom = Number(target.dataset.viewportBottom);
-        const viewportWidth = Number(target.dataset.viewportWidth);
-        const viewportHeight = Number(target.dataset.viewportHeight);
-
-        const postLeft = viewportLeft + translateX;
-        const postTop = viewportTop + translateY;
-        const postRight = postLeft + viewportWidth * scale;
-        const postBottom = postTop + viewportHeight * scale;
+    private clampTranslation(
+        viewport: Viewport,
+        scale: number,
+        translateX: number,
+        translateY: number,
+    ) {
+        const postLeft = viewport.left + translateX;
+        const postTop = viewport.top + translateY;
+        const postRight = postLeft + viewport.width * scale;
+        const postBottom = postTop + viewport.height * scale;
 
         if (translateX > 0) translateX = 0;
         if (translateY > 0) translateY = 0;
-        if (postRight < viewportRight) translateX += viewportRight - postRight;
-        if (postBottom < viewportBottom) translateY += viewportBottom - postBottom;
+        if (postRight < viewport.right) translateX += viewport.right - postRight;
+        if (postBottom < viewport.bottom) translateY += viewport.bottom - postBottom;
 
-        return {clampedTranslateX: translateX, clampedTranslateY: translateY}
+        return { clampedTranslateX: translateX, clampedTranslateY: translateY };
     }
 }

@@ -215,12 +215,20 @@ export class Events {
             }
         }
 
+
         if (this.skipViewUpdate && !update.docChanged && !update.selectionSet) return;
         this.skipViewUpdate = true;
         window.requestAnimationFrame(() => (this.skipViewUpdate = false));
 
+        const editor = this.plugin.app.workspace.activeEditor?.editor;
+        if (!editor) return;
+
         // Only proceed if its a cursor or edit event
-        if (!update.selectionSet && !update.docChanged) return;
+        if (!update.selectionSet && !update.docChanged) {
+            // Handle geometry events
+            this.plugin.imageZoom.viewUpdateHandler(editor, update.geometryChanged);
+            return
+        }
 
         // Cancel if selection change is irrelevant.
         // e.g. user copies selected text or changes vim mode.
@@ -239,9 +247,6 @@ export class Events {
         }
 
         this.plugin.restoreScroll.storeStateDebounced();
-
-        const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor) return;
 
         this.plugin.imageZoom.viewUpdateHandler(editor, update.docChanged);
         this.plugin.codeBlock.viewUpdateHandler(editor, update.docChanged);
