@@ -27,8 +27,8 @@ export class CodeBlock {
 
     private readonly FRICTION_COFFICIENT = 0.8;
 
+    private cachedLine: Element | null = null;
     private cachedBlockRect: DOMRect | null = null;
-    private cachedSizerLeft: number | null = null;
     private cachedBlockWidthTimeStamp = 0;
     private cachedLineWidth = 0;
     private cachedLineCharCount = 0;
@@ -310,17 +310,22 @@ export class CodeBlock {
     }
 
     /**
-     * If timeout has passed, update cachedLineCharCount, cachedBlockRect, cachedSizerLeft & cachedLineWidth.
+     * If timeout has passed, update cachedLineCharCount, cachedBlockRect & cachedLineWidth.
      */
     private updateCachedValues(editor: Editor, lineEl: Element, line?: Line): void {
         if (line) this.cachedLineCharCount = line.length;
 
         const now = performance.now();
-        if (now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT) {
+        const timeoutPassed = now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT;
+        const lineChanged = this.cachedLine !== lineEl;
+
+        if (timeoutPassed) {
             this.cachedBlockWidthTimeStamp = now;
             this.cachedBlockRect = lineEl.getBoundingClientRect();
-            this.cachedSizerLeft = editor.cm.contentDOM.parentElement.getBoundingClientRect().left;
+        }
 
+        if (timeoutPassed || lineChanged) {
+            this.cachedLine = lineEl;
             this.cachedLineWidth = 0;
             for (let i = 0; i < lineEl.children.length; i++) {
                 this.cachedLineWidth += lineEl.children[i].getBoundingClientRect().width;
@@ -438,40 +443,15 @@ export class CodeBlock {
     }
 
     /**
-     * Updates cursor on screen without triggering a scroll in code mirror.
-     * Hides Vim's fat cursor, if it is scrolled to the left or right of the viewport.
+     * Hides Vim's fat cursor, updating every frame would be laggy.
      */
     private updateCursorPassive(): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || !this.codeBlockLines.length) return;
 
-        // Cursor must be updated, otherwise it would not move at all while scrolling
-        // Timeout fixes bug that causes duplicating text on mobile.
-        if (this.cachedCursor !== null && this.cachedCursor.isConnected && editor.hasFocus()) {
-            this.plugin.followScroll.skipCursor = true;
-            editor.cm.dispatch({
-                selection: editor.cm.state.selection,
-                effects: [], // Do not update viewport
-            });
-        }
-
-        // This is only necessary with block cursor in vim mode. .cm-cursor-primary will select that.
         const cursorEl = this.getCursorEl(editor);
         if (!cursorEl) return;
-        if (!(cursorEl instanceof HTMLElement)) return;
-
-        this.updateCachedValues(editor, this.codeBlockLines[0]);
-
-        const off = this.cachedBlockRect.left - this.cachedSizerLeft;
-        const cursorLeft = Number.parseFloat(cursorEl.style.left) + off;
-
-        const isVisible =
-            cursorLeft >= this.cachedBlockRect.left &&
-            cursorLeft + editor.cm.defaultCharacterWidth * 0.5 <= this.cachedBlockRect.right;
-
-        const display = isVisible ? "block" : "none";
-        if (cursorEl.style.display === display) return;
-        cursorEl.style.display = display;
+        cursorEl.detach();
     }
 
     /**

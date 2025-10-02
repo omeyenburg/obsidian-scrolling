@@ -232,6 +232,7 @@ export class Events {
 
         // Cancel if selection change is irrelevant.
         // e.g. user copies selected text or changes vim mode.
+        let vimModeSwitch = false;
         if (!update.docChanged) {
             const selection = update.state.selection.main;
             const previousSelection = update.startState.selection.main;
@@ -240,16 +241,24 @@ export class Events {
                 if (selection.anchor !== previousSelection.anchor) return; // copy
             } else if (selection.head === previousSelection.head - 1) {
                 if (previousSelection.from < previousSelection.to) return; // copy downwards in normal mode
-                if (selection.assoc === 0 && previousSelection.assoc === 1) return; // insert -> normal mode
+                if (selection.assoc === 0 && previousSelection.assoc === 1) {
+                    // insert -> normal mode
+                    vimModeSwitch = true;
+                }
             } else if (selection.head === previousSelection.head + 1) {
-                if (selection.assoc === 1 && previousSelection.assoc === 0) return; // normal -> insert mode
+                if (selection.assoc === 1 && previousSelection.assoc === 0) {
+                    // normal -> insert mode
+                    vimModeSwitch = true;
+                }
             }
         }
 
-        this.plugin.restoreScroll.storeStateDebounced();
-
-        this.plugin.imageZoom.viewUpdateHandler(editor, update.docChanged);
         this.plugin.codeBlock.viewUpdateHandler(editor, update.docChanged);
+
+        if (vimModeSwitch) return;
+
+        this.plugin.restoreScroll.storeStateDebounced();
+        this.plugin.imageZoom.viewUpdateHandler(editor, update.docChanged);
         this.plugin.followCursor.viewUpdateHandler(editor, update.docChanged);
         this.plugin.followScroll.viewUpdateHandler(editor);
     }
