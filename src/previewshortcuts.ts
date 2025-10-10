@@ -37,8 +37,13 @@ export class PreviewShortcuts {
         if (Platform.isMobile) return;
         if (event.ctrlKey || event.altKey || event.metaKey) return;
 
+        // Only scroll in preview mode
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || view.getMode() !== "preview") return;
+
+        // Only scroll if editor is in focus
+        const modal = document.body.getElementsByClassName("mod-dim");
+        if (modal.length != 0 || document.activeElement !== document.body) return;
 
         this.scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
         if (!this.scroller) return;

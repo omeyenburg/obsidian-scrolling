@@ -11,7 +11,7 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 #### Centered cursor
 
 - By default, Obsidian only scrolls when the cursor reaches the edge of the viewport.
-- This feature automatically scrolls the view to keep the text cursor near the center while editing or navigating.
+- This feature automatically scrolls the view to keep the text cursor near the center while editing or navigating.  
   (Also known as 'typewriter mode' or similar to 'scrolloff' in Vim)
 
     <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/followcursor.webp" alt="Centered cursor preview" width=640px>
@@ -60,7 +60,7 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 
 #### Reading mode keybinds
 
-- Use Vim-like keybinds to scroll in reading mode:
+- Use Vim-like keybinds to scroll in reading mode:  
   down (j), up (k), half-page down (d), half-page up (u), bottom (G), top (g)
 
 #### Mouse & touchpad scrolling (Desktop only)
@@ -73,7 +73,8 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 
 1. In Obsidian, open **Settings → Community Plugins**.
 2. Make sure Safe Mode is turned off to enable plugin installation.
-3. Click **Browse**, then search for **"Scrolling"** or open directly:<br>**obsidian://show-plugin?id=scrolling**
+3. Click **Browse**, then search for **"Scrolling"** or open directly:  
+    **obsidian://show-plugin?id=scrolling**
 4. Click **Install**, then **Enable** the plugin.
 5. You can configure this plugin under **Settings → Community Plugins → Scrolling**.
 
