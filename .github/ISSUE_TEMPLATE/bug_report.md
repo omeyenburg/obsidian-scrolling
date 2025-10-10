@@ -7,15 +7,13 @@ assignees: ''
 
 ---
 
-**Describe the bug**
-What happens?
+**Bug Description**
 
 **Expected behavior**
-What do you expected to happen?
+
+**Platform**
+
+**Obsidian version (or latest)**
 
 **Screenshots/Recording**
 Optional but helpful.
-
-**Other:**
- - Platform (e.g. Windows)
- - Obsidian version (e.g. latest)
