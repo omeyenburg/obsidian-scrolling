@@ -1,6 +1,6 @@
 {
   "name": "scrolling",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Keep the cursor centered, disable code wrapping, remember scroll position, enable image zooming and more.",
   "main": "main.js",
   "scripts": {
