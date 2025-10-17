@@ -14,6 +14,3 @@ assignees: ''
 **Platform**
 
 **Obsidian version (or latest)**
-
-**Screenshots/Recording**
-Optional but helpful.
