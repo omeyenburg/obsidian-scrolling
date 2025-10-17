@@ -114,9 +114,9 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
     restoreScrollMode: "scroll",
     restoreScrollLimit: -1,
-    restoreScrollDelay: 0,
+    restoreScrollDelay: 5,
     restoreScrollAllFiles: true,
-    restoreScrollFileLink: false,
+    restoreScrollFileLink: true,
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
 
@@ -483,7 +483,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         ).addSlider((slider) =>
             slider
                 .setValue(this.plugin.settings.restoreScrollDelay)
-                .setLimits(0, 300, 10)
+                .setLimits(0, 300, 5)
                 .onChange(async (value) => {
                     this.plugin.settings.restoreScrollDelay = value;
                     await this.plugin.saveSettings();
