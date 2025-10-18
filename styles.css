@@ -8,7 +8,7 @@
 /* --- Scrollbar --- */
 /* hide specific scrollbars in files */
 body.scrolling-visibility-hide *::-webkit-scrollbar {
-  display: none;
+    display: none;
 }
 
 /* hide scrollbar temporarily */
@@ -20,13 +20,13 @@ body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrol
 
 /* scrollbar width */
 body.scrolling-scrollbar-width *::-webkit-scrollbar {
-  width: var(--scrolling-scrollbar-width) !important;
-  height: var(--scrolling-scrollbar-width) !important;
+    width: var(--scrolling-scrollbar-width) !important;
+    height: var(--scrolling-scrollbar-width) !important;
 }
 
 /* --- Code blocks --- */
 /* source view */
-body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end) {
     overflow-x: hidden;
     white-space: nowrap;
     position: relative;
@@ -34,33 +34,42 @@ body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.H
     touch-action: pan-y pinch-zoom;
 }
 
-body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end)::after {
     content: '';
     display: inline-block;
     width: calc(var(--scrolling-extra-line-length) + var(--size-4-4));
-    height: 1px;
+    height: 0;
     cursor: text;
+}
+
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end):has(br):not(:has(span)) {
+    max-height: calc(1em * var(--line-height-normal));
+}
+
+.HyperMD-codeblock .cm-line>.cm-hmd-codeblock {
+    display: inline-block;
+    vertical-align: top;
 }
 
 body.scrolling-horizontal-code-blocks .markdown-source-view .cm-indent::before {
     cursor: text;
 }
 
-body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line::-webkit-scrollbar {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.cm-line::-webkit-scrollbar {
     display: none;
 }
 
-body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-bg.cm-line br {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.cm-line br {
     height: 0px;
     content: "";
 }
 
-body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-begin.HyperMD-codeblock-begin-bg.HyperMD-codeblock-bg.cm-line {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.HyperMD-codeblock-begin.cm-line {
     padding-bottom: 0.3rem;
 }
 
 /* preview view */
-body.scrolling-horizontal-code-blocks .markdown-preview-view pre > code {
+body.scrolling-horizontal-code-blocks .markdown-preview-view pre>code {
     white-space: pre;
     overflow-x: auto;
     display: block;
@@ -82,7 +91,7 @@ body.scrolling-horizontal-filetree .nav-files-container {
     overflow: auto;
 }
 
-body.scrolling-horizontal-filetree .nav-files-container > div {
+body.scrolling-horizontal-filetree .nav-files-container>div {
     min-width: max-content;
     min-height: max-content;
 }
