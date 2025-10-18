@@ -1,5 +1,7 @@
 import {
     View,
+    Workspace,
+    OpenViewState,
     EditorRange,
     FileView,
     MarkdownView,
@@ -9,6 +11,7 @@ import {
     debounce,
     normalizePath,
 } from "obsidian";
+import { around } from "monkey-around";
 
 import { default as ScrollingPlugin } from "./main";
 
@@ -70,18 +73,45 @@ export class RestoreScroll {
             true,
         );
 
-        const originalOpenLinkText = plugin.app.workspace.openLinkText;
-        plugin.app.workspace.openLinkText = async (...args) => {
-            this.recentLinkUse = true;
-            try {
-                return await originalOpenLinkText.apply(plugin.app.workspace, args);
-            } finally {
-                window.clearTimeout(this.recentLinkTimeout);
-                this.recentLinkTimeout = window.setTimeout(() => {
-                    this.recentLinkUse = false;
-                }, 10);
-            }
-        };
+        // TODO: Use monkey-around
+
+        // const originalOpenLinkText = plugin.app.workspace.openLinkText;
+        // plugin.app.workspace.openLinkText = async (...args) => {
+        //     this.recentLinkUse = true;
+        //     try {
+        //         return await originalOpenLinkText.apply(plugin.app.workspace, args);
+        //     } finally {
+        //         window.clearTimeout(this.recentLinkTimeout);
+        //         this.recentLinkTimeout = window.setTimeout(() => {
+        //             this.recentLinkUse = false;
+        //         }, 10);
+        //     }
+        // };
+
+        // Monkey-patch the OpenLinkText function
+        const uninstallPatchOpen = around(Workspace.prototype, {
+            openLinkText(oldOpenLinkText) {
+                return function (
+                    linktext: string,
+                    sourcePath: string,
+                    newLeaf?: boolean,
+                    openViewState?: OpenViewState,
+                ) {
+                    this.recentLinkUse = true;
+
+                    const args = [linktext, sourcePath, newLeaf, openViewState];
+                    const result = oldOpenLinkText.apply(this, args);
+
+                    window.clearTimeout(this.recentLinkTimeout);
+                    this.recentLinkTimeout = window.setTimeout(() => {
+                        this.recentLinkUse = false;
+                    }, 10);
+
+                    return result;
+                };
+            },
+        });
+        plugin.register(uninstallPatchOpen);
     }
 
     /**
