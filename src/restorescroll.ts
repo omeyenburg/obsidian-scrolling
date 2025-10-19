@@ -50,8 +50,7 @@ export class RestoreScroll {
     public readonly storeStateDebounced: Debouncer<[], void>;
     public readonly writeStateFileDebounced: Debouncer<[], void>;
 
-    private recentLinkUse = false;
-    private recentLinkTimeout: number;
+    private linkUsed = false;
 
     // Prime numbers :)
     private readonly STORE_INTERVAL = 97;
@@ -73,45 +72,30 @@ export class RestoreScroll {
             true,
         );
 
-        // TODO: Use monkey-around
-
-        // const originalOpenLinkText = plugin.app.workspace.openLinkText;
-        // plugin.app.workspace.openLinkText = async (...args) => {
-        //     this.recentLinkUse = true;
-        //     try {
-        //         return await originalOpenLinkText.apply(plugin.app.workspace, args);
-        //     } finally {
-        //         window.clearTimeout(this.recentLinkTimeout);
-        //         this.recentLinkTimeout = window.setTimeout(() => {
-        //             this.recentLinkUse = false;
-        //         }, 10);
-        //     }
-        // };
-
         // Monkey-patch the OpenLinkText function
-        const uninstallPatchOpen = around(Workspace.prototype, {
-            openLinkText(oldOpenLinkText) {
-                return function (
-                    linktext: string,
-                    sourcePath: string,
-                    newLeaf?: boolean,
-                    openViewState?: OpenViewState,
-                ) {
-                    this.recentLinkUse = true;
+        // to mark interaction as link use.
+        const self = this;
+        plugin.register(
+            around(Workspace.prototype, {
+                openLinkText(oldOpenLinkText) {
+                    return async function (
+                        linktext: string,
+                        sourcePath: string,
+                        newLeaf?: boolean,
+                        openViewState?: OpenViewState,
+                    ) {
+                        self.linkUsed = true;
 
-                    const args = [linktext, sourcePath, newLeaf, openViewState];
-                    const result = oldOpenLinkText.apply(this, args);
+                        const args = [linktext, sourcePath, newLeaf, openViewState];
+                        const result = await oldOpenLinkText.apply(this, args);
 
-                    window.clearTimeout(this.recentLinkTimeout);
-                    this.recentLinkTimeout = window.setTimeout(() => {
-                        this.recentLinkUse = false;
-                    }, 10);
+                        self.linkUsed = false;
 
-                    return result;
-                };
-            },
-        });
-        plugin.register(uninstallPatchOpen);
+                        return result;
+                    };
+                },
+            }),
+        );
     }
 
     /**
@@ -135,6 +119,7 @@ export class RestoreScroll {
     /**
      * Called in wrapper around setEphemeralState.
      * Only for *markdown source view*. Other view types are handled in viewStateHandler.
+     * (both are used for reliable file open detection).
      * Restores the scroll state if called on file load by editing the args of setEphemeralState call.
      */
     public ephemeralStateHandler(
@@ -150,13 +135,9 @@ export class RestoreScroll {
             this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
         if (
             headingLinkUsed ||
-            (this.recentLinkUse && !this.plugin.settings.restoreScrollFileLink) ||
+            (this.linkUsed && !this.plugin.settings.restoreScrollFileLink) ||
             this.plugin.settings.restoreScrollMode === "top"
         ) {
-            // Reset recent link use
-            this.recentLinkUse = false;
-            window.clearTimeout(this.recentLinkTimeout);
-
             // Skip following viewStateHandler invocation.
             this.skipViewStateHandler = true;
             window.setTimeout(() => (this.skipViewStateHandler = false), 0);
@@ -167,7 +148,7 @@ export class RestoreScroll {
         if (!(view instanceof MarkdownView) || !view.file) return;
         if (view.getMode() !== "source") return;
 
-        // Skip following viewStateHandler invocation.
+        // Skip following redundant viewStateHandler invocation.
         this.skipViewStateHandler = true;
         window.setTimeout(() => (this.skipViewStateHandler = false), 0);
 
@@ -194,7 +175,8 @@ export class RestoreScroll {
     /**
      * Called in wrapper for setViewState.
      * Restores the scroll state for valid files.
-     * Skipped if ephemeralStateHandler was called before.
+     * Skipped if ephemeralStateHandler was called before (both are used for reliable file open detection).
+     * Skipped if link was used.
      */
     public viewStateHandler(view: View): void {
         this.writeStateFileDebounced();
@@ -206,17 +188,10 @@ export class RestoreScroll {
         if (!view || !(view instanceof FileView) || !view.file) return;
 
         // Cancel any further calculations if link has been used.
-        const headingLinkUsed =
-            this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
-        if (
-            headingLinkUsed ||
-            (this.recentLinkUse && !this.plugin.settings.restoreScrollFileLink)
-        ) {
-            // Reset recent link use
-            this.recentLinkUse = false;
-            window.clearTimeout(this.recentLinkTimeout);
+        const workspace = this.plugin.app.workspace;
+        const headingLinkUsed = workspace.containerEl.querySelector("span.is-flashing");
+        if (headingLinkUsed || (this.linkUsed && !this.plugin.settings.restoreScrollFileLink))
             return;
-        }
 
         const ephemeralState = this.ephemeralStates[view.file.path];
         if (!ephemeralState) return;
