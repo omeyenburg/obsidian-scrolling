@@ -357,6 +357,10 @@ export class RestoreScroll {
                 scroll?: number;
             };
 
+            // This function is also invoked on file load when using the file tree.
+            // Simple to filter out by checking for undefined.
+            if (cursor === undefined || scroll === undefined) return;
+
             this.ephemeralStates[view.file.path] = {
                 timestamp,
                 cursor,
