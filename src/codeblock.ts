@@ -32,7 +32,7 @@ export class CodeBlock {
     private cachedBlockWidthTimeStamp = 0;
     private cachedLineWidth = 0;
     private cachedLineCharCount = 0;
-    private CACHED_BLOCK_WIDTH_TIMEOUT = 500;
+    private CACHED_BLOCK_WIDTH_TIMEOUT = 250;
 
     private lastHorizontalScrollTimeStamp = 0;
     private readonly CODE_BLOCK_WIDTH_TIMEOUT = 200;
@@ -277,7 +277,7 @@ export class CodeBlock {
             ),
         );
 
-        // Cursor is now in view
+        // Vim cursor is now in view, show it.
         if (cursorEl && cursorEl.style.display !== "block") {
             cursorEl.style.display = "block";
         }
@@ -313,8 +313,6 @@ export class CodeBlock {
      * If timeout has passed, update cachedLineCharCount, cachedBlockRect & cachedLineWidth.
      */
     private updateCachedValues(editor: Editor, lineEl: Element, line?: Line): void {
-        if (line) this.cachedLineCharCount = line.length;
-
         const now = performance.now();
         const timeoutPassed = now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT;
         const lineChanged = this.cachedLine !== lineEl;
@@ -331,10 +329,11 @@ export class CodeBlock {
                 this.cachedLineWidth += lineEl.children[i].getBoundingClientRect().width;
             }
         } else {
-            this.cachedLineWidth +=
-                editor.cm.defaultCharacterWidth *
-                (this.cachedLineCharCount - this.cachedLineCharCount);
+            const diff = line.length - this.cachedLineCharCount;
+            this.cachedLineWidth += editor.cm.defaultCharacterWidth * diff;
         }
+
+        this.cachedLineCharCount = line.length;
     }
 
     /**
