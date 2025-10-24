@@ -1,6 +1,7 @@
-import { Editor } from "obsidian";
+import { Editor, Platform } from "obsidian";
 import { syntaxTree } from "@codemirror/language";
 
+import { getVimCursor } from "./utility";
 import type { default as ScrollingPlugin } from "./main";
 
 interface ScrollInfo {
@@ -118,7 +119,8 @@ export class FollowCursor {
 
         // Vertical offset of editor viewport should not change.
         if (!this.cachedEditorOffset) {
-            this.cachedEditorOffset = editor.cm.defaultLineHeight - editor.cm.scrollDOM.getBoundingClientRect().top;
+            this.cachedEditorOffset =
+                editor.cm.defaultLineHeight - editor.cm.scrollDOM.getBoundingClientRect().top;
         }
         cursorRelativeTop += this.cachedEditorOffset;
 
@@ -137,16 +139,24 @@ export class FollowCursor {
                 scrollInfo.height,
                 isEdit,
             );
-            this.animate(editor, goal, signedGoalDistance / steps, steps);
-        } else {
-            editor.cm.requestMeasure({
-                key: "followcursor",
-                read: () => {},
-                write: () => {
-                    this.animate(editor, goal, signedGoalDistance, 1);
-                },
-            });
+
+            if (steps > 1 || !Platform.isMobile || getVimCursor(editor) === null) {
+                this.animate(editor, goal, signedGoalDistance / steps, steps);
+                return;
+            }
         }
+
+        // Performant fallback used for:
+        // - Many events (within 100ms)
+        // - Cursor inside a table, because Obsidian emits duplicate view updates
+        // - Single step on mobile in Vim normal mode (Issue #11)
+        editor.cm.requestMeasure({
+            key: "followcursor",
+            read: () => {},
+            write: () => {
+                this.animate(editor, goal, signedGoalDistance, 1);
+            },
+        });
     }
 
     /**

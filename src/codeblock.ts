@@ -1,6 +1,7 @@
 import { Editor, debounce } from "obsidian";
 import { Line } from "@codemirror/state";
 
+import { getVimCursor } from "./utility";
 import type { default as ScrollingPlugin } from "./main";
 
 export class CodeBlock {
@@ -344,19 +345,7 @@ export class CodeBlock {
             return this.cachedCursor;
         }
 
-        const cursorLayerList = editor.cm.scrollDOM.getElementsByClassName("cm-vimCursorLayer");
-        if (cursorLayerList.length < 1) {
-            this.cachedCursor = null;
-            return null;
-        }
-
-        const cursorList = cursorLayerList[0].getElementsByClassName("cm-cursor-primary");
-        if (cursorList.length < 1) {
-            this.cachedCursor = null;
-            return null;
-        }
-
-        this.cachedCursor = cursorList[0] as HTMLElement;
+        this.cachedCursor = getVimCursor(editor);
         return this.cachedCursor;
     }
 
