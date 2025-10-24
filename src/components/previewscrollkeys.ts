@@ -1,6 +1,6 @@
-import { MarkdownView, Platform, Editor } from "obsidian";
+import { MarkdownView, Platform } from "obsidian";
 
-import type { default as ScrollingPlugin } from "./main";
+import type { default as ScrollingPlugin } from "@core/main";
 
 function getLineHeight() {
     const cssFontSize = document.body.getCssPropertyValue("--font-text-size");
@@ -8,7 +8,7 @@ function getLineHeight() {
     return charHeight * 1.5;
 }
 
-export class PreviewShortcuts {
+export class PreviewScrollKeys {
     private plugin: ScrollingPlugin;
 
     private goal: number | null = null;

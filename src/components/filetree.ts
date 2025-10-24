@@ -1,4 +1,4 @@
-import type { default as ScrollingPlugin } from "./main";
+import type { default as ScrollingPlugin } from "@core/main";
 
 export class FileTree {
     private readonly plugin: ScrollingPlugin;

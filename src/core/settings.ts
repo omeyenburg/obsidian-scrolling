@@ -1,7 +1,7 @@
 import { Platform, PluginSettingTab, Setting, SliderComponent, setIcon } from "obsidian";
 
-import type { default as ScrollingPlugin } from "./main";
-import { RestoreScroll } from "./restorescroll";
+import type { default as ScrollingPlugin } from "@core/main";
+import { RestoreScroll } from "@components/restorescroll";
 
 export interface ScrollingPluginSettings {
     /** Scroll viewport when moving the cursor or editing. */
@@ -1019,7 +1019,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.ribbonScrollButtonsEnabled)
                 .onChange(async (value) => {
                     this.plugin.settings.ribbonScrollButtonsEnabled = value;
-                    this.plugin.scrollCommands.updateRibbonButtons();
+                    this.plugin.commands.updateRibbonButtons();
                     await this.plugin.saveSettings();
                 }),
         );

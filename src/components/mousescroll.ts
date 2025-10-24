@@ -1,7 +1,7 @@
 import { Platform } from "obsidian";
 
-import type { default as ScrollingPlugin } from "./main";
-import { clamp } from "./utility";
+import type { default as ScrollingPlugin } from "@core/main";
+import { clamp } from "@core/util";
 
 function easeOut(t: number): number {
     return 1 - (1 - t) ** 2;

@@ -3,7 +3,7 @@ import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
 
-import type { default as ScrollingPlugin } from "./main";
+import type { default as ScrollingPlugin } from "@core/main";
 
 function isScrolledToTop(el: HTMLElement): boolean {
     return el.scrollTop == 0;
@@ -186,11 +186,11 @@ export class Events {
     }
 
     private keyUpHandler(): void {
-        this.plugin.previewShortcuts.keyUpHandler();
+        this.plugin.previewScrollKeys.keyUpHandler();
     }
 
     private keyDownHandler(event: KeyboardEvent): void {
-        this.plugin.previewShortcuts.keyDownHandler(event);
+        this.plugin.previewScrollKeys.keyDownHandler(event);
         this.plugin.followCursor.keyDownHandler();
     }
 

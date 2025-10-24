@@ -1,6 +1,6 @@
 import { Platform, debounce } from "obsidian";
 
-import type { default as ScrollingPlugin } from "./main";
+import type { default as ScrollingPlugin } from "@core/main";
 
 export class LineLength {
     private readonly plugin: ScrollingPlugin;

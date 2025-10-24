@@ -1,8 +1,8 @@
 import { Editor, debounce } from "obsidian";
 import { Line } from "@codemirror/state";
 
-import { getVimCursor } from "./utility";
-import type { default as ScrollingPlugin } from "./main";
+import type { default as ScrollingPlugin } from "@core/main";
+import { getVimCursor } from "@core/util";
 
 export class CodeBlock {
     private readonly plugin: ScrollingPlugin;

@@ -1,6 +1,6 @@
 import { Platform } from "obsidian";
 
-import type { default as ScrollingPlugin } from "./main";
+import type { default as ScrollingPlugin } from "@core/main";
 
 function setVisibility(visibility: string): void {
     if (visibility === "hide") {

@@ -1,8 +1,8 @@
 import { Editor, Debouncer, debounce } from "obsidian";
 import { EditorSelection } from "@codemirror/state";
 
-import type { default as ScrollingPlugin } from "./main";
-import { clamp } from "./utility";
+import type { default as ScrollingPlugin } from "@core/main";
+import { clamp } from "@core/util";
 
 export class FollowScroll {
     private plugin: ScrollingPlugin;

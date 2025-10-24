@@ -13,7 +13,7 @@ import {
 } from "obsidian";
 import { around } from "monkey-around";
 
-import { default as ScrollingPlugin } from "./main";
+import { default as ScrollingPlugin } from "@core/main";
 
 interface EphemeralState {
     timestamp: number;

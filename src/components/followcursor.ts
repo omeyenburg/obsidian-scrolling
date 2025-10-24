@@ -1,8 +1,8 @@
 import { Editor, Platform } from "obsidian";
 import { syntaxTree } from "@codemirror/language";
 
-import { getVimCursor } from "./utility";
-import type { default as ScrollingPlugin } from "./main";
+import type { default as ScrollingPlugin } from "@core/main";
+import { getVimCursor } from "@core/util";
 
 interface ScrollInfo {
     top: number;

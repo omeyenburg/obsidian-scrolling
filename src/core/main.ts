@@ -1,20 +1,20 @@
 import { Plugin } from "obsidian";
 
-import { CodeBlock } from "./codeblock";
-import { FileTree } from "./filetree";
-import { MathJax } from "./mathjax";
-import { FollowCursor } from "./followcursor";
-import { FollowScroll } from "./followscroll";
-import { MouseScroll } from "./mousescroll";
-import { RestoreScroll } from "./restorescroll";
-import { Scrollbar } from "./scrollbar";
-import { PreviewShortcuts } from "./previewshortcuts";
-import { ImageZoom } from "./imagezoom";
-import { LineLength } from "./linelength";
-import { ScrollCommands } from "./scrollcommands";
+import { CodeBlock } from "@components/codeblock";
+import { FileTree } from "@components/filetree";
+import { MathJax } from "@components/mathjax";
+import { FollowCursor } from "@components/followcursor";
+import { FollowScroll } from "@components/followscroll";
+import { MouseScroll } from "@components/mousescroll";
+import { RestoreScroll } from "@components/restorescroll";
+import { Scrollbar } from "@components/scrollbar";
+import { PreviewScrollKeys } from "@components/previewscrollkeys";
+import { ImageZoom } from "@components/imagezoom";
+import { LineLength } from "@components/linelength";
+import { Commands } from "@components/commands";
 
-import { Events } from "./events";
-import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "./settings";
+import { Events } from "@core/events";
+import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "@core/settings";
 
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
@@ -27,10 +27,10 @@ export default class ScrollingPlugin extends Plugin {
     mouseScroll!: MouseScroll;
     restoreScroll!: RestoreScroll;
     scrollbar!: Scrollbar;
-    previewShortcuts!: PreviewShortcuts;
+    previewScrollKeys!: PreviewScrollKeys;
     imageZoom!: ImageZoom;
     lineLength!: LineLength;
-    scrollCommands!: ScrollCommands;
+    commands!: Commands;
 
     events!: Events;
 
@@ -46,10 +46,10 @@ export default class ScrollingPlugin extends Plugin {
         this.mouseScroll = new MouseScroll(this);
         this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
-        this.previewShortcuts = new PreviewShortcuts(this);
+        this.previewScrollKeys = new PreviewScrollKeys(this);
         this.imageZoom = new ImageZoom(this);
         this.lineLength = new LineLength(this);
-        this.scrollCommands = new ScrollCommands(this);
+        this.commands = new Commands(this);
 
         this.events = new Events(this);
 
