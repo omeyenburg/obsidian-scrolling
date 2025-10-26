@@ -402,7 +402,7 @@ export class CodeBlock {
         if (this.scrollAnimationFrame) {
             window.cancelAnimationFrame(this.scrollAnimationFrame);
         }
-        
+
         if (!this.currentScrollWidth) return;
 
         this.animateScroll();
@@ -440,7 +440,7 @@ export class CodeBlock {
     private updateCursorPassive(): void {
         // Fast path: only check editor if we have code block lines
         if (!this.codeBlockLines.length) return;
-        
+
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor) return;
 

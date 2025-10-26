@@ -95,7 +95,7 @@ export class FollowScroll {
         const scrollTop = cm.scrollDOM.scrollTop;
         const clientHeight = cm.scrollDOM.clientHeight;
         const scrollRect = cm.scrollDOM.getBoundingClientRect();
-        
+
         const targetTop = scrollTop + this.relativeLineOffset;
 
         // Make sure the target line is actually on screen

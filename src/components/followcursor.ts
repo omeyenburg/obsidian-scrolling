@@ -1,4 +1,4 @@
-import { Editor, Platform } from "obsidian";
+import { Editor, MarkdownView, Platform } from "obsidian";
 import { syntaxTree } from "@codemirror/language";
 
 import type { default as ScrollingPlugin } from "@core/main";
@@ -93,6 +93,10 @@ export class FollowCursor {
     private invokeScroll(editor: Editor, isEdit: boolean): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
+        // Disable in reading view, as this might break cached values.
+        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)
+        if (!view) return;
+
         const now = performance.now();
         const deltaTime = now - this.scrollLastEvent;
         this.scrollLastEvent = now;
@@ -104,13 +108,12 @@ export class FollowCursor {
 
         let cursorRelativeTop: number;
         const isTable = this.cursorInTable(editor);
-        
-        // Batch DOM reads together to avoid layout thrashing
+
         const scrollDOMRect = editor.cm.scrollDOM.getBoundingClientRect();
-        const activeLineRect = activeLineEl.getBoundingClientRect();
-        
+
         if (isTable) {
             // Works well with tables
+            const activeLineRect = activeLineEl.getBoundingClientRect();
             cursorRelativeTop = activeLineRect.top;
         } else {
             // Works well with wrapped lines and images
@@ -119,15 +122,14 @@ export class FollowCursor {
             const cursorOffset = lineStartOffset + cursorCoord.ch;
 
             const cursorCoords = editor.cm.coordsAtPos(cursorOffset);
-            cursorRelativeTop = cursorCoords.top;
+            cursorRelativeTop = cursorCoords?.top || 0;
         }
 
-        // Vertical offset of editor viewport should not change.
+        // Vertical offset of editor viewport should never change.
         if (!this.cachedEditorOffset) {
-            this.cachedEditorOffset =
-                editor.cm.defaultLineHeight - scrollDOMRect.top;
+            this.cachedEditorOffset = scrollDOMRect.top - editor.cm.defaultLineHeight;
         }
-        cursorRelativeTop += this.cachedEditorOffset;
+        cursorRelativeTop -= this.cachedEditorOffset;
 
         const scrollInfo = editor.getScrollInfo() as ScrollInfo;
         const signedGoalDistance = this.calculateGoalDistance(cursorRelativeTop, scrollInfo);
