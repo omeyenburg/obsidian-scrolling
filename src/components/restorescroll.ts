@@ -245,8 +245,12 @@ export class RestoreScroll {
     /**
      * May run before Obsidian quits.
      * Stores file cache on disk.
+     * Forces immediate write by calling the handler directly.
      */
     public quitHandler(): void {
+        // Force immediate state storage before quit
+        this.storeState();
+        // Then immediately write to disk without debouncing
         this.writeStateFile();
     }
 
@@ -293,8 +297,14 @@ export class RestoreScroll {
         await this.checkWriteStorePath();
         const filePath = this.plugin.settings.restoreScrollFilePath;
 
-        const data = JSON.stringify(this.ephemeralStates);
-        this.plugin.app.vault.adapter.write(filePath, data);
+        try {
+            const data = JSON.stringify(this.ephemeralStates);
+            await this.plugin.app.vault.adapter.write(filePath, data);
+        } catch (error) {
+            new Notice("Failed to write scroll positions file. Disabling disk storage.");
+            console.error("Failed to write scroll positions file:", error);
+            this.plugin.settings.restoreScrollFileEnabled = false;
+        }
     }
 
     /**
@@ -332,8 +342,13 @@ export class RestoreScroll {
 
         try {
             const data = await this.plugin.app.vault.adapter.read(filePath);
-            this.ephemeralStates = JSON.parse(data);
-        } catch {
+            if (data) {
+                this.ephemeralStates = JSON.parse(data);
+            } else {
+                this.ephemeralStates = {};
+            }
+        } catch (error) {
+            console.error("Failed to load scroll positions file:", error);
             this.ephemeralStates = {};
         }
     }

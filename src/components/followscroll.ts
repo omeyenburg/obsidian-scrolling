@@ -69,10 +69,11 @@ export class FollowScroll {
     public viewUpdateDebounced(editor: Editor): void {
         const block = editor.cm.lineBlockAt(editor.posToOffset(editor.getCursor()));
         const scrollDOM = editor.cm.scrollDOM;
+        const scrollDOMRect = scrollDOM.getBoundingClientRect();
         const relativeLineOffset =
             (block.top + block.bottom) / 2 -
             scrollDOM.scrollTop +
-            scrollDOM.getBoundingClientRect().top;
+            scrollDOMRect.top;
 
         this.relativeLineOffset = clamp(relativeLineOffset, 0, scrollDOM.clientHeight);
     }
@@ -90,8 +91,11 @@ export class FollowScroll {
         if (!editor || editor.cm.scrollDOM !== el) return;
         const cm = editor.cm;
 
+        // Batch DOM reads to avoid layout thrashing
         const scrollTop = cm.scrollDOM.scrollTop;
         const clientHeight = cm.scrollDOM.clientHeight;
+        const scrollRect = cm.scrollDOM.getBoundingClientRect();
+        
         const targetTop = scrollTop + this.relativeLineOffset;
 
         // Make sure the target line is actually on screen
@@ -99,7 +103,6 @@ export class FollowScroll {
             return;
         }
 
-        const scrollRect = cm.scrollDOM.getBoundingClientRect();
         const coords = {
             x: scrollRect.left + 10, // Small offset from left edge
             y: scrollRect.top + this.relativeLineOffset,

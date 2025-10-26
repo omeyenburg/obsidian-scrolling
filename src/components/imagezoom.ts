@@ -22,6 +22,7 @@ export class ImageZoom {
     private startTranslateX = 0;
     private startTranslateY = 0;
     private currentDragTarget: HTMLElement | null = null;
+    private eventListenersAttached = false;
 
     private readonly SMALL_ZOOM_FACTOR = 1.07;
     private readonly LARGE_ZOOM_FACTOR = 1.2;
@@ -81,8 +82,12 @@ export class ImageZoom {
      * Reset the zoom of all registered images.
      */
     private resetFile(editor?: Editor): void {
-        document.removeEventListener("mousemove", this.pointerMoveHandler);
-        document.removeEventListener("mouseup", this.pointerUpHandler);
+        // Only remove listeners if they were attached
+        if (this.eventListenersAttached) {
+            document.removeEventListener("mousemove", this.pointerMoveHandler);
+            document.removeEventListener("mouseup", this.pointerUpHandler);
+            this.eventListenersAttached = false;
+        }
 
         if (!editor) {
             if (!this.zoomedImages) return;
@@ -230,14 +235,19 @@ export class ImageZoom {
      * and the offset of the parent element.
      */
     private getViewport(target: HTMLElement): Viewport {
+        if (!target.parentElement) {
+            // Return a default viewport if parent is missing
+            return { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
+        }
+
         const parentRect = target.parentElement.getBoundingClientRect();
         return {
-            left: Number(target.dataset.viewportLeft) + parentRect.left,
-            top: Number(target.dataset.viewportTop) + parentRect.top,
-            right: Number(target.dataset.viewportRight) + parentRect.left,
-            bottom: Number(target.dataset.viewportBottom) + parentRect.top,
-            width: Number(target.dataset.viewportWidth),
-            height: Number(target.dataset.viewportHeight),
+            left: Number.parseFloat(target.dataset.viewportLeft || "0") + parentRect.left,
+            top: Number.parseFloat(target.dataset.viewportTop || "0") + parentRect.top,
+            right: Number.parseFloat(target.dataset.viewportRight || "0") + parentRect.left,
+            bottom: Number.parseFloat(target.dataset.viewportBottom || "0") + parentRect.top,
+            width: Number.parseFloat(target.dataset.viewportWidth || "0"),
+            height: Number.parseFloat(target.dataset.viewportHeight || "0"),
         };
     }
 
@@ -288,8 +298,11 @@ export class ImageZoom {
 
         event.preventDefault();
 
-        document.addEventListener("mousemove", this.pointerMoveHandler);
-        document.addEventListener("mouseup", this.pointerUpHandler);
+        if (!this.eventListenersAttached) {
+            document.addEventListener("mousemove", this.pointerMoveHandler);
+            document.addEventListener("mouseup", this.pointerUpHandler);
+            this.eventListenersAttached = true;
+        }
     };
 
     /**
@@ -326,8 +339,11 @@ export class ImageZoom {
      */
     private pointerUpHandler = () => {
         this.currentDragTarget = null;
-        document.removeEventListener("mousemove", this.pointerMoveHandler);
-        document.removeEventListener("mouseup", this.pointerUpHandler);
+        if (this.eventListenersAttached) {
+            document.removeEventListener("mousemove", this.pointerMoveHandler);
+            document.removeEventListener("mouseup", this.pointerUpHandler);
+            this.eventListenersAttached = false;
+        }
     };
 
     /**

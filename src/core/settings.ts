@@ -639,7 +639,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private displayScrollbarSettings() {
-        if (Platform.isMacOS) return
+        if (Platform.isMacOS) return;
 
         this.containerEl.createEl("br");
         this.createHeading("Scrollbar appearance");

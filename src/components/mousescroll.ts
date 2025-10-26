@@ -64,7 +64,10 @@ export class MouseScroll {
      */
     public leafChangeHandler() {
         this.touchpadVelocity = 0;
-        window.cancelAnimationFrame(this.mouseAnimationFrame);
+        // Only cancel animation frame if one is currently running
+        if (this.mouseAnimationFrame) {
+            window.cancelAnimationFrame(this.mouseAnimationFrame);
+        }
     }
 
     /**
@@ -131,7 +134,10 @@ export class MouseScroll {
      */
     private startMouseScroll(el: HTMLElement, deltaY: number): void {
         if (!el) return;
-        window.cancelAnimationFrame(this.mouseAnimationFrame);
+        // Only cancel animation frame if one is currently running
+        if (this.mouseAnimationFrame) {
+            window.cancelAnimationFrame(this.mouseAnimationFrame);
+        }
 
         const smoothness = this.plugin.settings.simulatedMouseSmoothness * 2;
         const speed = this.plugin.settings.simulatedMouseSpeed / 50;
@@ -180,7 +186,10 @@ export class MouseScroll {
      */
     private startTouchpadScroll(el: HTMLElement, deltaY: number): void {
         if (el !== this.currentEl) {
-            window.cancelAnimationFrame(this.touchpadAnimationFrame);
+            // Only cancel animation frame if one is currently running
+            if (this.touchpadAnimationFrame) {
+                window.cancelAnimationFrame(this.touchpadAnimationFrame);
+            }
             window.requestAnimationFrame(
                 this.decoupledTouchpadScroll.bind(
                     this,

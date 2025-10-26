@@ -104,9 +104,14 @@ export class FollowCursor {
 
         let cursorRelativeTop: number;
         const isTable = this.cursorInTable(editor);
+        
+        // Batch DOM reads together to avoid layout thrashing
+        const scrollDOMRect = editor.cm.scrollDOM.getBoundingClientRect();
+        const activeLineRect = activeLineEl.getBoundingClientRect();
+        
         if (isTable) {
             // Works well with tables
-            cursorRelativeTop = activeLineEl.getBoundingClientRect().top;
+            cursorRelativeTop = activeLineRect.top;
         } else {
             // Works well with wrapped lines and images
             const cursorCoord = editor.getCursor("head");
@@ -120,7 +125,7 @@ export class FollowCursor {
         // Vertical offset of editor viewport should not change.
         if (!this.cachedEditorOffset) {
             this.cachedEditorOffset =
-                editor.cm.defaultLineHeight - editor.cm.scrollDOM.getBoundingClientRect().top;
+                editor.cm.defaultLineHeight - scrollDOMRect.top;
         }
         cursorRelativeTop += this.cachedEditorOffset;
 
@@ -130,7 +135,10 @@ export class FollowCursor {
 
         const goal = scrollInfo.top + signedGoalDistance;
 
-        window.cancelAnimationFrame(this.animationFrame);
+        // Only cancel animation frame if one is currently running
+        if (this.animationFrame) {
+            window.cancelAnimationFrame(this.animationFrame);
+        }
 
         // In tables, many events are emmitted, so skip animations for better performance.
         if (deltaTime > 100 && !isTable) {

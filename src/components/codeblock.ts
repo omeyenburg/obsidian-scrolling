@@ -255,7 +255,7 @@ export class CodeBlock {
             return;
         }
 
-        if (!this.codeBlockLines.contains(lineEl) || isEdit) {
+        if (!this.codeBlockLines.includes(lineEl) || isEdit) {
             this.updateWidthAndBlock(lineEl);
         }
 
@@ -382,7 +382,7 @@ export class CodeBlock {
      * Also updates the current code block once.
      */
     private horizontalWheelScroll(deltaX: number, line: Element, now: number): void {
-        if (!this.codeBlockLines.contains(line) || this.currentScrollWidth === null) {
+        if (!this.codeBlockLines.includes(line) || this.currentScrollWidth === null) {
             this.updateWidthAndBlock(line);
             this.lastHorizontalScrollTimeStamp = now;
         } else if (now - this.lastHorizontalScrollTimeStamp > this.CODE_BLOCK_WIDTH_TIMEOUT) {
@@ -390,7 +390,7 @@ export class CodeBlock {
             this.lastHorizontalScrollTimeStamp = now;
         } else {
             // Remove dead lines
-            this.codeBlockLines.filter((e) => e.isConnected);
+            this.codeBlockLines = this.codeBlockLines.filter((e) => e.isConnected);
         }
 
         this.currentScrollVelocity = deltaX * this.SCROLL_FACTOR;
@@ -398,7 +398,11 @@ export class CodeBlock {
         // Restore previous position
         this.currentScrollLeft = this.codeBlockLines[0].scrollLeft;
 
-        window.cancelAnimationFrame(this.scrollAnimationFrame);
+        // Only cancel animation frame if one is currently running
+        if (this.scrollAnimationFrame) {
+            window.cancelAnimationFrame(this.scrollAnimationFrame);
+        }
+        
         if (!this.currentScrollWidth) return;
 
         this.animateScroll();
@@ -434,8 +438,11 @@ export class CodeBlock {
      * Hides Vim's fat cursor, updating every frame would be laggy.
      */
     private updateCursorPassive(): void {
+        // Fast path: only check editor if we have code block lines
+        if (!this.codeBlockLines.length) return;
+        
         const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor || !this.codeBlockLines.length) return;
+        if (!editor) return;
 
         const cursorEl = this.getCursorEl(editor);
         if (!cursorEl) return;

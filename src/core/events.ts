@@ -227,7 +227,7 @@ export class Events {
         if (!update.selectionSet && !update.docChanged) {
             // Handle geometry events
             this.plugin.imageZoom.viewUpdateHandler(editor, update.geometryChanged);
-            return
+            return;
         }
 
         // Cancel if selection change is irrelevant.
