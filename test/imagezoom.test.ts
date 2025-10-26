@@ -1,4 +1,4 @@
-import { ImageZoom } from "../src/imagezoom";
+import { ImageZoom } from "../src/components/imagezoom";
 
 const mockPlugin = {
     settings: {},

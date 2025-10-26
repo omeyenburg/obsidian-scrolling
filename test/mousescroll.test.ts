@@ -1,4 +1,4 @@
-import { MouseScroll } from "../src/mousescroll";
+import { MouseScroll } from "../src/components/mousescroll";
 
 const mockPlugin = {
     settings: {

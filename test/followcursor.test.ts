@@ -1,20 +1,32 @@
-import { FollowCursor } from "../src/followcursor";
+import { FollowCursor } from "../src/components/followcursor";
 
-const mockPlugin = {
+// More realistic mock that captures actual behavior
+const createMockPlugin = (settings: any = {}) => ({
     settings: {
-        followCursorSmoothness: 0,
-        followCursorRadius: 0,
+        followCursorEnabled: true,
+        followCursorRadius: 50,
+        followCursorSmoothness: 100,
+        followCursorEnableMouse: false,
+        followCursorEnableSelection: false,
+        followCursorInstantEditScroll: false,
+        ...settings,
     },
     register: jest.fn(),
-};
+});
 
 jest.useFakeTimers();
 
 describe("FollowCursor", () => {
     let followcursor: FollowCursor;
+    let mockPlugin: any;
 
     beforeEach(() => {
+        mockPlugin = createMockPlugin();
         followcursor = new FollowCursor(mockPlugin as any);
+    });
+
+    afterEach(() => {
+        jest.clearAllTimers();
     });
 
     describe("calculateGoalDistance", () => {
@@ -53,6 +65,16 @@ describe("FollowCursor", () => {
             const result = followcursor["calculateGoalDistance"](cursorY, scrollInfo);
             expect(result).toBe(0);
         });
+
+        test("handles different radius percentages correctly", () => {
+            mockPlugin.settings.followCursorRadius = 100; // full height
+            const scrollInfo = { top: 0, height: 100, left: 0 };
+            const cursorY = 0; // top
+
+            const result = followcursor["calculateGoalDistance"](cursorY, scrollInfo);
+            // Should return 0 because cursor is within the full height radius
+            expect(result).toBe(0);
+        });
     });
 
     describe("calculateSteps", () => {
@@ -78,6 +100,48 @@ describe("FollowCursor", () => {
             const resultSmallScroller = followcursor["calculateSteps"](100, 10, false);
             const resultLargeScroller = followcursor["calculateSteps"](100, 200, false);
             expect(resultSmallScroller).toBeLessThan(resultLargeScroller);
+        });
+
+        test("returns 1 step for instant edit scroll", () => {
+            mockPlugin.settings.followCursorInstantEditScroll = true;
+            mockPlugin.settings.followCursorSmoothness = 100;
+
+            const result = followcursor["calculateSteps"](50, 100, true);
+            expect(result).toBe(1);
+        });
+
+        test("uses smoothness setting for animation duration", () => {
+            mockPlugin.settings.followCursorSmoothness = 200;
+            const result = followcursor["calculateSteps"](50, 100, false);
+            expect(result).toBeGreaterThan(1);
+        });
+    });
+
+    describe("keyDownHandler and mouseUpHandler", () => {
+        test("keyDownHandler resets recentMouseUp flag", () => {
+            followcursor.mouseUpHandler();
+            expect(followcursor["recentMouseUp"]).toBe(true);
+            
+            followcursor.keyDownHandler();
+            expect(followcursor["recentMouseUp"]).toBe(false);
+        });
+
+        test("mouseUpHandler sets recentMouseUp flag", () => {
+            followcursor.mouseUpHandler();
+            expect(followcursor["recentMouseUp"]).toBe(true);
+            
+            // After timeout, flag should reset
+            jest.advanceTimersByTime(150);
+            expect(followcursor["recentMouseUp"]).toBe(false);
+        });
+
+        test("mouseUpHandler timeout auto-resets after delay", () => {
+            followcursor.mouseUpHandler();
+            expect(followcursor["recentMouseUp"]).toBe(true);
+            
+            // Advance timers by the MOUSE_UP_TIMEOUT
+            jest.advanceTimersByTime(100);
+            expect(followcursor["recentMouseUp"]).toBe(false);
         });
     });
 });

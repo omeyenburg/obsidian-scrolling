@@ -1,4 +1,4 @@
-import { clamp } from "../src/utility";
+import { clamp } from "../src/core/util";
 
 describe("clamp", () => {
     test("does not exceed maximum", () => {
