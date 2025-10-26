@@ -69,9 +69,9 @@ export interface ScrollingPluginSettings {
     /** Customization method for mouse/touchpad scroll. Values: disabled, native, simulated */
     scrollMode: string;
 
-    /** Scroll speed multiplier. Values below 1 require instant scroll. (0-3) */
+    /** Scroll speed multiplier. (0.1-3.0) */
     nativeScrollMultiplier: number;
-    /** Scroll speed multiplier when holding alt. (0-3) */
+    /** Scroll speed multiplier when holding alt. (0.1-3.0) */
     nativeAltMultiplier: number;
     /** Skip scroll animation. */
     nativeScrollInstant: boolean;
@@ -136,7 +136,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
     scrollMode: "disabled",
 
-    nativeScrollMultiplier: 1,
+    nativeScrollMultiplier: 1.0,
     nativeAltMultiplier: 1,
     nativeScrollInstant: false,
 
@@ -310,8 +310,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
             () => (this.plugin.settings.followCursorRadius = DEFAULT_SETTINGS.followCursorRadius),
         ).addSlider((slider) =>
             slider
-                .setValue(this.plugin.settings.followCursorRadius)
                 .setLimits(0, 100, 1)
+                .setValue(this.plugin.settings.followCursorRadius)
                 .onChange(async (value) => {
                     this.plugin.settings.followCursorRadius = value;
                     await this.plugin.saveSettings();
@@ -326,8 +326,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     DEFAULT_SETTINGS.followCursorSmoothness),
         ).addSlider((slider) =>
             slider
-                .setValue(this.plugin.settings.followCursorSmoothness)
                 .setLimits(0, 100, 1)
+                .setValue(this.plugin.settings.followCursorSmoothness)
                 .onChange(async (value) => {
                     this.plugin.settings.followCursorSmoothness = value;
                     await this.plugin.saveSettings();
@@ -482,8 +482,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
             () => (this.plugin.settings.restoreScrollDelay = DEFAULT_SETTINGS.restoreScrollDelay),
         ).addSlider((slider) =>
             slider
-                .setValue(this.plugin.settings.restoreScrollDelay)
                 .setLimits(0, 300, 5)
+                .setValue(this.plugin.settings.restoreScrollDelay)
                 .onChange(async (value) => {
                     this.plugin.settings.restoreScrollDelay = value;
                     await this.plugin.saveSettings();
@@ -673,8 +673,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 this.plugin.scrollbar.updateStyle();
             }).addSlider((slider) =>
                 slider
-                    .setValue(this.plugin.settings.scrollbarWidth)
                     .setLimits(0, 30, 1)
+                    .setValue(this.plugin.settings.scrollbarWidth)
                     .onChange(async (value) => {
                         this.plugin.settings.scrollbarWidth = value;
                         this.plugin.scrollbar.updateStyle();
@@ -838,9 +838,9 @@ export class ScrollingSettingTab extends PluginSettingTab {
             "Mode",
             "Native scroll provides simplicity and stability; Simulated scroll is configurable.",
             () => (this.plugin.settings.scrollMode = DEFAULT_SETTINGS.scrollMode),
-        ).addDropdown((dropdown) =>
+        ).addDropdown((dropdown) => {
             dropdown
-                .addOption("disabled", "Disable feature")
+                .addOption("disabled", "Disabled")
                 .addOption("native", "Native")
                 .addOption("simulated", "Simulated (Experimental)")
                 .setValue(this.plugin.settings.scrollMode)
@@ -848,35 +848,22 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     this.plugin.settings.scrollMode = value;
                     this.display();
                     await this.plugin.saveSettings();
-                }),
-        );
+                });
+        });
 
         if (this.plugin.settings.scrollMode === "native") {
             this.createSetting(
-                "Disable smooth scrolling",
-                "Scroll instantly without transition effect.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.nativeScrollInstant)
-                    .onChange(async (value) => {
-                        this.plugin.settings.nativeScrollInstant = value;
-                        this.display();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
                 "Scroll speed multiplier",
-                "Increase the scroll speed. Slowing speed down with values below 1 is only supported with 'Disable smooth scrolling'",
+                "Increase the scroll speed. Values below one disable smooth scrolling.",
                 () =>
                     (this.plugin.settings.nativeScrollMultiplier =
                         DEFAULT_SETTINGS.nativeScrollMultiplier),
             ).addSlider((slider) =>
                 slider
+                    .setLimits(0.1, 3, 0.1)
                     .setValue(this.plugin.settings.nativeScrollMultiplier)
-                    .setLimits(1 - 0.9 * +this.plugin.settings.nativeScrollInstant, 3, 0.1)
                     .onChange(async (value) => {
-                        this.plugin.settings.nativeScrollMultiplier = value;
+                        this.plugin.settings.nativeScrollMultiplier = Math.max(value, 0.1);
                         await this.plugin.saveSettings();
                     }),
             );
@@ -889,10 +876,23 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         DEFAULT_SETTINGS.nativeAltMultiplier),
             ).addSlider((slider) =>
                 slider
+                    .setLimits(0.1, 3, 0.1)
                     .setValue(this.plugin.settings.nativeAltMultiplier)
-                    .setLimits(1 - 0.9 * +this.plugin.settings.nativeScrollInstant, 3, 0.1)
                     .onChange(async (value) => {
-                        this.plugin.settings.nativeAltMultiplier = value;
+                        this.plugin.settings.nativeAltMultiplier = Math.max(value, 0.1);
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+            this.createSetting(
+                "Disable smooth scrolling",
+                "Scroll instantly without transition effect.",
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.nativeScrollInstant)
+                    .onChange(async (value) => {
+                        this.plugin.settings.nativeScrollInstant = value;
+                        this.display();
                         await this.plugin.saveSettings();
                     }),
             );
@@ -917,8 +917,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         DEFAULT_SETTINGS.simulatedMouseSpeed),
             ).addSlider((slider) =>
                 slider
-                    .setValue(this.plugin.settings.simulatedMouseSpeed)
                     .setLimits(1, 100, 1)
+                    .setValue(this.plugin.settings.simulatedMouseSpeed)
                     .onChange(async (value) => {
                         this.plugin.settings.simulatedMouseSpeed = value;
                         await this.plugin.saveSettings();
@@ -933,8 +933,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         DEFAULT_SETTINGS.simulatedMouseSmoothness),
             ).addSlider((slider) =>
                 slider
-                    .setValue(this.plugin.settings.simulatedMouseSmoothness)
                     .setLimits(0, 100, 1)
+                    .setValue(this.plugin.settings.simulatedMouseSmoothness)
                     .onChange(async (value) => {
                         this.plugin.settings.simulatedMouseSmoothness = value;
                         await this.plugin.saveSettings();
@@ -963,8 +963,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         DEFAULT_SETTINGS.simulatedTouchpadSpeed),
             ).addSlider((slider) =>
                 slider
-                    .setValue(this.plugin.settings.simulatedTouchpadSpeed)
                     .setLimits(1, 100, 1)
+                    .setValue(this.plugin.settings.simulatedTouchpadSpeed)
                     .onChange(async (value) => {
                         this.plugin.settings.simulatedTouchpadSpeed = value;
                         await this.plugin.saveSettings();
@@ -979,8 +979,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         DEFAULT_SETTINGS.simulatedTouchpadSmoothness),
             ).addSlider((slider) =>
                 slider
-                    .setValue(this.plugin.settings.simulatedTouchpadSmoothness)
                     .setLimits(0, 100, 1)
+                    .setValue(this.plugin.settings.simulatedTouchpadSmoothness)
                     .onChange(async (value) => {
                         this.plugin.settings.simulatedTouchpadSmoothness = value;
                         await this.plugin.saveSettings();
@@ -995,8 +995,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         DEFAULT_SETTINGS.simulatedTouchpadFrictionThreshold),
             ).addSlider((slider) =>
                 slider
-                    .setValue(this.plugin.settings.simulatedTouchpadFrictionThreshold)
                     .setLimits(1, 100, 1)
+                    .setValue(this.plugin.settings.simulatedTouchpadFrictionThreshold)
                     .onChange(async (value) => {
                         this.plugin.settings.simulatedTouchpadFrictionThreshold = value;
                         await this.plugin.saveSettings();

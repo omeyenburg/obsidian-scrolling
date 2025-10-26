@@ -64,6 +64,7 @@ export class MouseScroll {
      */
     public leafChangeHandler() {
         this.touchpadVelocity = 0;
+
         // Only cancel animation frame if one is currently running
         if (this.mouseAnimationFrame) {
             window.cancelAnimationFrame(this.mouseAnimationFrame);
@@ -95,7 +96,9 @@ export class MouseScroll {
             ? this.plugin.settings.nativeAltMultiplier
             : this.plugin.settings.nativeScrollMultiplier;
 
-        if (this.plugin.settings.nativeScrollInstant) {
+        // Also run this if increasePercent is below 1
+        // Cannot actually slow down, we need to scroll ourselves
+        if (this.plugin.settings.nativeScrollInstant || increasePercent < 1) {
             event.preventDefault();
             el.scrollBy({
                 top: event.deltaY * increasePercent,
