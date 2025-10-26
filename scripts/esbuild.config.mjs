@@ -41,11 +41,22 @@ const context = await esbuild.context({
     logLevel: "info",
     metafile: prod,
     minify: prod,
+    minifySyntax: prod,
+    minifyWhitespace: prod,
+    minifyIdentifiers: prod,
+    keepNames: false,
     outfile: "main.js",
     platform: "browser",
     sourcemap: prod ? false : "inline",
-    target: "es2021",
+    target: "es2020",
     treeShaking: true,
+    legalComments: prod ? "none" : "inline",
+    define: {
+        "process.env.NODE_ENV": prod ? '"production"' : '"development"',
+    },
+    ...(prod && {
+        mangleProps: undefined,
+    }),
 });
 
 if (prod) {
