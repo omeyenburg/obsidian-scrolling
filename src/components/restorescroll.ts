@@ -52,6 +52,8 @@ export class RestoreScroll {
 
     private linkUsed = false;
 
+    private restoredFiles: string[] = [];
+
     // Prime numbers :)
     private readonly STORE_INTERVAL = 97;
     private readonly FILE_WRITE_INTERVAL = 293;
@@ -148,6 +150,9 @@ export class RestoreScroll {
         if (!(view instanceof MarkdownView) || !view.file) return;
         if (view.getMode() !== "source") return;
 
+        // Check whether same file is already opened in other leaf.
+        if (this.checkAlreadyOpen(view)) return;
+
         // Skip following redundant viewStateHandler invocation.
         this.skipViewStateHandler = true;
         window.setTimeout(() => (this.skipViewStateHandler = false), 0);
@@ -196,6 +201,9 @@ export class RestoreScroll {
         const ephemeralState = this.ephemeralStates[view.file.path];
         if (!ephemeralState) return;
         const { cursor, scroll, scrollTop } = ephemeralState;
+
+        // Check whether same file is already opened in other leaf.
+        if (this.checkAlreadyOpen(view)) return;
 
         if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
             if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
@@ -252,6 +260,20 @@ export class RestoreScroll {
         this.storeState();
         // Then immediately write to disk without debouncing
         this.writeStateFile();
+    }
+
+    /**
+     * Checks whether the file of the specified FileView is already opened in a different tab or split.
+     */
+    private checkAlreadyOpen(view: FileView) {
+        let isAlreadyOpen = false;
+
+        this.plugin.app.workspace.iterateAllLeaves((leaf) => {
+            if (view === leaf.view || !(leaf.view instanceof FileView)) return;
+            if (leaf.view.file.path == view.file.path) isAlreadyOpen = true;
+        });
+
+        return isAlreadyOpen;
     }
 
     /**
