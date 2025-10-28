@@ -98,6 +98,7 @@ export class Events {
         });
 
         /* RestoreScroll */
+        this.plugin.registerEvent(vault.on("create", this.createFileHandler.bind(this)));
         this.plugin.registerEvent(vault.on("delete", this.deleteFileHandler.bind(this)));
         this.plugin.registerEvent(vault.on("rename", this.renameFileHandler.bind(this)));
         this.plugin.registerEvent(workspace.on("quit", this.quitHandler.bind(this)));
@@ -168,6 +169,10 @@ export class Events {
 
     private openFileHandler(): void {
         this.plugin.restoreScroll.openFileHandler();
+    }
+
+    private createFileHandler(file: TAbstractFile): void {
+        this.plugin.restoreScroll.createFileHandler(file);
     }
 
     private deleteFileHandler(file: TAbstractFile): void {

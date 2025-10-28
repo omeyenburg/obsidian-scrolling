@@ -37,6 +37,8 @@ export interface ScrollingPluginSettings {
     restoreScrollAllFiles: boolean;
     /** Even restore position if Markdown link to file was used. */
     restoreScrollFileLink: boolean;
+    /** Only restore position once per file per session. */
+    restoreScrollInitialOnly: boolean;
     /** Store position entries on disk. */
     restoreScrollFileEnabled: boolean;
     /** Path to cache file. */
@@ -117,6 +119,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollDelay: 5,
     restoreScrollAllFiles: true,
     restoreScrollFileLink: true,
+    restoreScrollInitialOnly: false,
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
 
@@ -455,7 +458,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.containerEl.createEl("br");
         this.createHeading(
             "Remember scroll/cursor position",
-            "Automatically save your position before closing a file and restore it upon opening the file again.",
+            "Automatically save your position before closing a file and restore it upon opening the file again.\nThe position will not be restored if the file is already opened in a different tab.",
         );
 
         this.createSetting(
@@ -524,7 +527,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         } else {
             this.createSetting(
                 "Restore position in other files (Experimental)",
-                "Enable restoring scroll position in Markdown preview, images, and PDFs.",
+                "Enable restoring position in Markdown preview, images, and PDFs.",
             ).addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.restoreScrollAllFiles)
@@ -537,10 +540,20 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Restore position on link use",
-            "Enable restoring scroll position when clicking links to files (not headings).\n",
+            "Enable restoring position when clicking links to files (not headings).",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.restoreScrollFileLink).onChange(async (value) => {
                 this.plugin.settings.restoreScrollFileLink = value;
+                await this.plugin.saveSettings();
+            }),
+        );
+
+        this.createSetting(
+            "Restore position only after launch",
+            "Only restore position once per file per session.",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.restoreScrollInitialOnly).onChange(async (value) => {
+                this.plugin.settings.restoreScrollInitialOnly = value;
                 await this.plugin.saveSettings();
             }),
         );

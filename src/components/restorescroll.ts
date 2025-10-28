@@ -52,7 +52,7 @@ export class RestoreScroll {
 
     private linkUsed = false;
 
-    private restoredFiles: string[] = [];
+    private restoredFiles = new Set<string>()
 
     // Prime numbers :)
     private readonly STORE_INTERVAL = 97;
@@ -150,7 +150,10 @@ export class RestoreScroll {
         if (!(view instanceof MarkdownView) || !view.file) return;
         if (view.getMode() !== "source") return;
 
-        // Check whether same file is already opened in other leaf.
+        // Check whether the same file was already restored in this session.
+        if (this.checkInitialLoadCondition(view)) return;
+
+        // Check whether the same file is already opened in other leaf.
         if (this.checkAlreadyOpen(view)) return;
 
         // Skip following redundant viewStateHandler invocation.
@@ -175,6 +178,10 @@ export class RestoreScroll {
             args[0].focus = false;
             args[0].scroll = scroll;
         }
+
+        // Mark file as restored.
+        // If restoreScrollInitialOnly is enabled, this file will not be restored anymore in this session.
+        this.restoredFiles.add(view.file.path);
     }
 
     /**
@@ -201,6 +208,9 @@ export class RestoreScroll {
         const ephemeralState = this.ephemeralStates[view.file.path];
         if (!ephemeralState) return;
         const { cursor, scroll, scrollTop } = ephemeralState;
+
+        // Check whether the same file was already restored in this session.
+        if (this.checkInitialLoadCondition(view)) return;
 
         // Check whether same file is already opened in other leaf.
         if (this.checkAlreadyOpen(view)) return;
@@ -231,6 +241,18 @@ export class RestoreScroll {
                 }
             });
         }
+
+        // Mark file as restored.
+        // If restoreScrollInitialOnly is enabled, this file will not be restored anymore in this session.
+        this.restoredFiles.add(view.file.path);
+    }
+
+    /**
+     * On file creation.
+     * Marks file as not to be restored.
+     */
+    public createFileHandler(file: TAbstractFile): void {
+        this.restoredFiles.add(file.path);
     }
 
     /**
@@ -244,10 +266,13 @@ export class RestoreScroll {
     /**
      * On file rename.
      * Updates file cache.
+     * Marks file as not to be restored.
      */
     public renameFileHandler(file: TAbstractFile, old: string): void {
         this.ephemeralStates[file.path] = this.ephemeralStates[old];
         delete this.ephemeralStates[old];
+
+        this.restoredFiles.add(file.path);
     }
 
     /**
@@ -274,6 +299,23 @@ export class RestoreScroll {
         });
 
         return isAlreadyOpen;
+    }
+
+    /**
+     * Checks whether the file of the specified FileView was already restored in this session.
+     * Skipped and returns false if the restoreScrollInitialOnly setting is not enabled.
+     */
+    private checkInitialLoadCondition(view: FileView) {
+        let isAlreadyRestored = false;
+
+        if (
+            this.plugin.settings.restoreScrollInitialOnly &&
+            this.restoredFiles.has(view.file.path)
+        ) {
+            isAlreadyRestored = true;
+        }
+
+        return isAlreadyRestored;
     }
 
     /**
