@@ -45,7 +45,10 @@ export class RestoreScroll {
     private ephemeralStates: Record<string, EphemeralState> = {};
 
     private skipViewStateHandler = false;
-    private expectEphemeralState = true; // On initial load open-file triggers too late
+
+    // isOpeningFile is used in ephemeralStateHandler.
+    // On initial load open-file triggers too late, so enable from beginning.
+    private isOpeningFile = true;
 
     public readonly storeStateDebounced: Debouncer<[], void>;
     public readonly writeStateFileDebounced: Debouncer<[], void>;
@@ -105,17 +108,21 @@ export class RestoreScroll {
      * Requests to save the file scroll state & store it in a file.
      */
     public scrollHandler(): void {
+        if (this.isOpeningFile) return;
+
         this.plugin.restoreScroll.storeStateDebounced();
         this.plugin.restoreScroll.writeStateFileDebounced();
     }
 
     /**
      * On file open.
-     * Allows handling of setEphemeralState calles.
+     * Temporarily sets isOpeningFile:
+     * - to allow identification of setEphemeralState invocations as file open events.
+     * - to skip storing the scroll state during file load.
      */
     public openFileHandler(): void {
-        this.expectEphemeralState = true;
-        window.setTimeout(() => (this.expectEphemeralState = false), 0);
+        this.isOpeningFile = true;
+        window.requestAnimationFrame(() => (this.isOpeningFile = false));
     }
 
     /**
@@ -129,8 +136,7 @@ export class RestoreScroll {
         args: [{ cursor?: EditorRange; scroll?: number; focus?: boolean }],
     ) {
         // Only proceed if there was a file open event.
-        if (!this.expectEphemeralState || !args[0]) return;
-        this.expectEphemeralState = false;
+        if (!this.isOpeningFile || !args[0]) return;
 
         // Cancel any further calculations if link has been used.
         const headingLinkUsed =
@@ -283,6 +289,7 @@ export class RestoreScroll {
     public quitHandler(): void {
         // Force immediate state storage before quit
         this.storeState();
+
         // Then immediately write to disk without debouncing
         this.writeStateFile();
     }
