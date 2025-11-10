@@ -104,14 +104,8 @@ See [Releases](https://github.com/omeyenburg/obsidian-scrolling/releases) for ve
 
 ## Contributing
 
-Contributions are welcome! Feel free to open an issue or submit a pull request.
-
-To start developing:
-1. Follow the [Manual installation](#manual-installation) steps.
-2. Run the plugin in development mode, which will automatically rebuild the plugin on file changes:
-   ```sh
-   npm run dev
-   ```
+Contributions are welcome! Feel free to open an issue or submit a pull request.  
+For more information, see [CONTRIBUTING](CONTRIBUTING.md).
 
 ## Similar projects
 
