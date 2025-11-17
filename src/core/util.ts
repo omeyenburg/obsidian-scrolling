@@ -79,3 +79,56 @@ export function getVimCursor(editor: Editor): HTMLElement | null {
 export function lerp(start: number, end: number, t: number): number {
     return start + (end - start) * t;
 }
+
+/**
+ * Validates that a numeric value is finite and not NaN.
+ * 
+ * This utility is essential for defensive programming, particularly when:
+ * - Processing user input from settings
+ * - Handling mathematical operations that might produce NaN or Infinity
+ * - Validating calculations involving division or logarithms
+ * 
+ * @param value - The value to validate
+ * @returns true if the value is a finite number, false if it's NaN or Infinity
+ * 
+ * @example
+ * isFiniteNumber(42);           // returns true
+ * isFiniteNumber(NaN);          // returns false
+ * isFiniteNumber(Infinity);     // returns false
+ * isFiniteNumber(-Infinity);    // returns false
+ * isFiniteNumber(0 / 0);        // returns false (NaN)
+ * isFiniteNumber(1 / 0);        // returns false (Infinity)
+ */
+export function isFiniteNumber(value: number): boolean {
+    return Number.isFinite(value);
+}
+
+/**
+ * Safely parses a number from a string with a fallback default value.
+ * 
+ * This utility provides robust number parsing for scenarios such as:
+ * - Reading values from HTML dataset attributes
+ * - Parsing user input
+ * - Deserializing stored configuration values
+ * 
+ * Unlike parseFloat(), this function:
+ * - Returns the default value if parsing fails (instead of NaN)
+ * - Validates that the result is a finite number
+ * - Handles null, undefined, and empty strings gracefully
+ * 
+ * @param value - The string to parse
+ * @param defaultValue - The value to return if parsing fails or result is invalid
+ * @returns The parsed number, or defaultValue if parsing fails or produces NaN/Infinity
+ * 
+ * @example
+ * safeParseFloat("42.5", 0);        // returns 42.5
+ * safeParseFloat("invalid", 10);    // returns 10
+ * safeParseFloat("", 0);            // returns 0
+ * safeParseFloat(null, 5);          // returns 5
+ * safeParseFloat("Infinity", 0);    // returns 0
+ */
+export function safeParseFloat(value: string | null | undefined, defaultValue: number): number {
+    if (!value) return defaultValue;
+    const parsed = Number.parseFloat(value);
+    return isFiniteNumber(parsed) ? parsed : defaultValue;
+}
