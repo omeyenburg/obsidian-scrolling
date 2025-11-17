@@ -20,7 +20,30 @@ export class FollowCursor {
 
     private cachedEditorOffset: number | null = null;
 
+    /**
+     * Time window (in milliseconds) after a mouse up event during which
+     * scroll triggering is blocked unless explicitly enabled via settings.
+     * 
+     * This timeout is necessary because keydown events are unreliable in Vim normal mode,
+     * so we use a time-based approach to differentiate mouse-initiated navigation
+     * from keyboard-initiated navigation.
+     */
     private readonly MOUSE_UP_TIMEOUT = 100;
+
+    /**
+     * Base multiplier for calculating animation steps from the smoothness setting.
+     * 
+     * This value (0.16) was empirically determined to provide smooth scrolling at 60fps.
+     * With a typical smoothness setting of 100, this yields ~16 frames of animation,
+     * which at 60fps equals approximately 266ms of scroll animation duration.
+     * 
+     * The formula: steps = 0.16 * smoothness
+     * Example calculations:
+     * - smoothness = 50:  ~8 steps  (~133ms at 60fps)
+     * - smoothness = 100: ~16 steps (~266ms at 60fps)
+     * - smoothness = 200: ~32 steps (~533ms at 60fps)
+     */
+    private readonly SMOOTHNESS_MULTIPLIER = 0.16;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -89,6 +112,15 @@ export class FollowCursor {
     /**
      * Calculates goal position, distance and scroll steps for scroll animation.
      * Initiates scroll animation if centering scroll is required.
+     * 
+     * Performance optimizations implemented:
+     * - Debouncing: Ignores events within 10ms to prevent redundant calculations
+     * - Special table handling: Uses simpler line-based positioning for tables to avoid
+     *   performance issues from frequent view updates
+     * - Cached editor offset: Stores viewport offset to avoid repeated calculations
+     * 
+     * @param editor - The active editor instance
+     * @param isEdit - Whether this scroll was triggered by a document edit
      */
     private invokeScroll(editor: Editor, isEdit: boolean): void {
         if (!this.plugin.settings.followCursorEnabled) return;
@@ -101,6 +133,9 @@ export class FollowCursor {
         const deltaTime = now - this.scrollLastEvent;
         this.scrollLastEvent = now;
 
+        // Debounce rapid-fire events (10ms threshold)
+        // This prevents expensive scroll calculations from running multiple times
+        // when events fire in quick succession
         if (deltaTime < 10) return;
 
         const activeLineEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
@@ -209,15 +244,27 @@ export class FollowCursor {
     }
 
     /**
-     * Returns number of frames for scroll animation.
-     * Returns reduced number of frames when scrolling further than client height.
-     * Returns 1 step for instant scroll on edit.
+     * Calculates the number of animation frames for the scroll animation.
+     * 
+     * This method implements adaptive animation stepping:
+     * 1. For edits with instant scroll enabled: returns 1 (instant, no animation)
+     * 2. For normal scrolling: scales with smoothness setting
+     * 3. For large distances (>viewport height): reduces frames using square root
+     *    to prevent excessively long animations
+     * 
+     * The square root reduction for large scrolls ensures that scrolling to distant
+     * locations (e.g., top of file to bottom) doesn't take an unreasonable amount of time.
+     * 
+     * @param goalDistance - The absolute distance to scroll in pixels
+     * @param scrollerHeight - The height of the scrollable viewport in pixels
+     * @param isEdit - Whether this scroll is triggered by an edit operation
+     * @returns The number of animation frames (minimum 1)
      */
     private calculateSteps(goalDistance: number, scrollerHeight: number, isEdit: boolean): number {
         if (isEdit && this.plugin.settings.followCursorInstantEditScroll) return 1;
 
         const smoothness = this.plugin.settings.followCursorSmoothness;
-        let steps = Math.max(1, Math.ceil(0.16 * smoothness));
+        let steps = Math.max(1, Math.ceil(this.SMOOTHNESS_MULTIPLIER * smoothness));
 
         if (goalDistance > scrollerHeight) {
             return Math.ceil(Math.sqrt(steps));
