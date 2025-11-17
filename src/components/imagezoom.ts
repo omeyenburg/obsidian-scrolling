@@ -1,7 +1,7 @@
 import { Platform, Editor, MarkdownView } from "obsidian";
 
 import type { default as ScrollingPlugin } from "@core/main";
-import { clamp } from "@core/util";
+import { clamp, safeParseFloat } from "@core/util";
 
 interface Viewport {
     left: number;
@@ -153,9 +153,9 @@ export class ImageZoom {
 
         const viewport = this.getViewport(target);
 
-        const prevScale = Number.parseFloat(target.dataset.scale) || this.MIN_SCALE;
-        const prevTranslateX = Number.parseFloat(target.dataset.translateX) || 0;
-        const prevTranslateY = Number.parseFloat(target.dataset.translateY) || 0;
+        const prevScale = safeParseFloat(target.dataset.scale, this.MIN_SCALE);
+        const prevTranslateX = safeParseFloat(target.dataset.translateX, 0);
+        const prevTranslateY = safeParseFloat(target.dataset.translateY, 0);
 
         const mouseX = event.clientX - viewport.left;
         const mouseY = event.clientY - viewport.top;
@@ -242,12 +242,12 @@ export class ImageZoom {
 
         const parentRect = target.parentElement.getBoundingClientRect();
         return {
-            left: Number.parseFloat(target.dataset.viewportLeft || "0") + parentRect.left,
-            top: Number.parseFloat(target.dataset.viewportTop || "0") + parentRect.top,
-            right: Number.parseFloat(target.dataset.viewportRight || "0") + parentRect.left,
-            bottom: Number.parseFloat(target.dataset.viewportBottom || "0") + parentRect.top,
-            width: Number.parseFloat(target.dataset.viewportWidth || "0"),
-            height: Number.parseFloat(target.dataset.viewportHeight || "0"),
+            left: safeParseFloat(target.dataset.viewportLeft, 0) + parentRect.left,
+            top: safeParseFloat(target.dataset.viewportTop, 0) + parentRect.top,
+            right: safeParseFloat(target.dataset.viewportRight, 0) + parentRect.left,
+            bottom: safeParseFloat(target.dataset.viewportBottom, 0) + parentRect.top,
+            width: safeParseFloat(target.dataset.viewportWidth, 0),
+            height: safeParseFloat(target.dataset.viewportHeight, 0),
         };
     }
 
@@ -288,13 +288,13 @@ export class ImageZoom {
         const target = event.target as HTMLElement;
         if (!target || target.localName !== "img") return;
 
-        if ((Number(target.dataset.scale) || this.MIN_SCALE) <= this.MIN_SCALE) return;
+        if (safeParseFloat(target.dataset.scale, this.MIN_SCALE) <= this.MIN_SCALE) return;
 
         this.currentDragTarget = target;
         this.startDragX = event.clientX;
         this.startDragY = event.clientY;
-        this.startTranslateX = Number.parseFloat(target.dataset.translateX) || 0;
-        this.startTranslateY = Number.parseFloat(target.dataset.translateY) || 0;
+        this.startTranslateX = safeParseFloat(target.dataset.translateX, 0);
+        this.startTranslateY = safeParseFloat(target.dataset.translateY, 0);
 
         event.preventDefault();
 
@@ -320,7 +320,7 @@ export class ImageZoom {
         let translateX = this.startTranslateX + deltaX;
         let translateY = this.startTranslateY + deltaY;
 
-        const scale = Number.parseFloat(target.dataset.scale) || 1;
+        const scale = safeParseFloat(target.dataset.scale, 1);
 
         const { clampedTranslateX, clampedTranslateY } = this.clampTranslation(
             viewport,
