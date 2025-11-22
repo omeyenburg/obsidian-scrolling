@@ -1,4 +1,4 @@
-import { View, Platform, TAbstractFile, WorkspaceLeaf } from "obsidian";
+import { View, Platform, TFile, TAbstractFile, WorkspaceLeaf } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
@@ -27,11 +27,6 @@ export class Events {
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
-        this.attachHandlers();
-        this.attachWrappers();
-    }
-
-    private attachHandlers(): void {
         const vault = this.plugin.app.vault;
         const workspace = this.plugin.app.workspace;
 
@@ -98,10 +93,8 @@ export class Events {
         });
 
         /* RestoreScroll */
-        this.plugin.registerEvent(vault.on("create", this.createFileHandler.bind(this)));
         this.plugin.registerEvent(vault.on("delete", this.deleteFileHandler.bind(this)));
         this.plugin.registerEvent(vault.on("rename", this.renameFileHandler.bind(this)));
-        this.plugin.registerEvent(workspace.on("quit", this.quitHandler.bind(this)));
         this.plugin.registerEvent(workspace.on("file-open", this.openFileHandler.bind(this)));
     }
 
@@ -119,36 +112,11 @@ export class Events {
         });
     }
 
-    private attachWrappers(): void {
-        const self = this;
-        this.plugin.register(
-            around(WorkspaceLeaf.prototype, {
-                setViewState(old) {
-                    return async function (...args) {
-                        const result = await old.apply(this, args);
-                        self.plugin.restoreScroll.viewStateHandler(this.view);
-                        return result;
-                    };
-                },
-            }),
-        );
-
-        this.plugin.register(
-            around(View.prototype, {
-                setEphemeralState(old) {
-                    return async function (...args) {
-                        self.plugin.restoreScroll.ephemeralStateHandler(this, args);
-                        const result = await old.apply(this, args);
-                        return result;
-                    };
-                },
-            }),
-        );
-    }
-
     private layoutReadyHandler(): void {
+        // TODO: how tf does this work if layout ready is not called?
         this.attachResizeHandler();
         this.plugin.followScroll.layoutReadyHandler();
+        this.plugin.restoreScroll.layoutReadyHandler();
     }
 
     private leafChangeHandler(): void {
@@ -159,7 +127,7 @@ export class Events {
 
     private scrollHandler(event: Event): void {
         this.plugin.scrollbar.scrollHandler(event);
-        this.plugin.restoreScroll.scrollHandler();
+        this.plugin.restoreScroll.scrollHandler(event);
         this.plugin.codeBlock.scrollHandler(event);
     }
 
@@ -167,12 +135,8 @@ export class Events {
         this.plugin.codeBlock.scrollEndHandler();
     }
 
-    private openFileHandler(): void {
-        this.plugin.restoreScroll.openFileHandler();
-    }
-
-    private createFileHandler(file: TAbstractFile): void {
-        this.plugin.restoreScroll.createFileHandler(file);
+    private openFileHandler(file: TFile): void {
+        this.plugin.restoreScroll.openFileHandler(file);
     }
 
     private deleteFileHandler(file: TAbstractFile): void {
@@ -181,13 +145,6 @@ export class Events {
 
     private renameFileHandler(file: TAbstractFile, old: string): void {
         this.plugin.restoreScroll.renameFileHandler(file, old);
-    }
-
-    /**
-     * May run before Obsidian quits.
-     */
-    private quitHandler(): void {
-        this.plugin.restoreScroll.quitHandler();
     }
 
     private keyUpHandler(): void {

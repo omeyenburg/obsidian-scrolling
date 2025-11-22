@@ -497,7 +497,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             this.plugin.settings.restoreScrollMode,
         );
 
-        const count = this.plugin.restoreScroll.countEphemeralStates();
+        const count = this.plugin.restoreScroll.getNumEphemeralStates();
         this.createSetting(
             "Saved positions limit",
             `Number of files to remember scroll positions for. Leave empty for unlimited.\nCurrently positions for ${count} file${count == 1 ? "" : "s"} are stored.`,
@@ -582,7 +582,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             });
 
             const onConfirm = async () => {
-                const newFile = await this.plugin.restoreScroll.renameStoreFile(
+                const newFile = await this.plugin.restoreScroll.renameStatesFile(
                     this.proposedRestoreScrollStoreFile,
                 );
 
