@@ -33,7 +33,13 @@ export class ImageZoom {
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
         this.updateStyles();
+
         plugin.register(this.unload.bind(this));
+
+        plugin.events.onResize(this.resizeHandler.bind(this));
+        plugin.events.onWheelCancelling(this.wheelHandler.bind(this), 10);
+        plugin.events.onGeometryChange(this.geometryChangeHandler.bind(this));
+        plugin.events.onCursorUpdate(this.cursorUpdateHandler.bind(this));
     }
 
     /*
@@ -56,13 +62,27 @@ export class ImageZoom {
     }
 
     /**
-     * On view update.
+     * On geometry change.
      * When editing the line with an image, cropping breaks.
      * Will reset zoom.
      */
-    public viewUpdateHandler(editor: Editor, isEditOrGeometry: boolean): void {
-        if (!isEditOrGeometry) return;
+    private geometryChangeHandler(editor: Editor): void {
         if (Platform.isMobile) return;
+        this.resetFile(editor);
+    }
+
+    /**
+     * On cursor update.
+     * When editing the line with an image, cropping breaks.
+     * Will reset zoom.
+     */
+    private cursorUpdateHandler(
+        editor: Editor,
+        docChanged: boolean,
+        vimModeChanged: boolean,
+    ): void {
+        if (Platform.isMobile) return;
+        if (!docChanged || vimModeChanged) return;
         this.resetFile(editor);
     }
 
@@ -71,7 +91,7 @@ export class ImageZoom {
      * After resize cropping breaks.
      * Will reset zoom.
      */
-    public resizeHandler(): void {
+    private resizeHandler(): void {
         if (Platform.isMobile) return;
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return;
@@ -137,7 +157,7 @@ export class ImageZoom {
      * While hovering over an image, this will zoom if the zoom guesture is used or the user scrolles while pressing ctrl.
      * Returns true if the wheel event is handled successfully.
      */
-    public wheelHandler(event: WheelEvent): boolean {
+    private wheelHandler(event: WheelEvent): boolean {
         if (!this.plugin.settings.imageZoomEnabled) return false;
 
         const target = event.target as HTMLElement;

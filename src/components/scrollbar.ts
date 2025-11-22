@@ -43,11 +43,14 @@ export class Scrollbar {
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
+
         this.updateStyle();
         plugin.register(cleanup);
+
+        plugin.events.onScroll(this.scrollHandler.bind(this));
     }
 
-    public scrollHandler(event: Event): void {
+    private scrollHandler(event: Event): void {
         this.showScrollbarTemporary(event);
     }
 

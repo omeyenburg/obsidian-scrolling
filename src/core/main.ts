@@ -18,6 +18,7 @@ import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "
 
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
+    events!: Events;
 
     codeBlock!: CodeBlock;
     fileTree!: FileTree;
@@ -32,11 +33,11 @@ export default class ScrollingPlugin extends Plugin {
     lineLength!: LineLength;
     commands!: Commands;
 
-    events!: Events;
-
     async onload() {
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this));
+
+        this.events = new Events(this);
 
         this.codeBlock = new CodeBlock(this);
         this.fileTree = new FileTree(this);
@@ -51,10 +52,9 @@ export default class ScrollingPlugin extends Plugin {
         this.lineLength = new LineLength(this);
         this.commands = new Commands(this);
 
-        this.events = new Events(this);
+        this.events.postInit();
 
         await this.restoreScroll.loadStatesFile();
-
         console.log("ScrollingPlugin loaded");
     }
 

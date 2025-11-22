@@ -24,7 +24,7 @@ export class LineLength {
         () => {
             if (Platform.isMobile) return;
 
-            const enabled = this.getObsidianReadableLineLength()
+            const enabled = this.getObsidianReadableLineLength();
             if (!enabled) return;
 
             let lineLength: string;

@@ -1,5 +1,6 @@
 import {
     Debouncer,
+    Editor,
     EditorRange,
     FileView,
     MarkdownView,
@@ -51,8 +52,8 @@ export class RestoreScroll {
     // If atleast one file is opening, no file states will be saved.
     private numOpeningFiles = 0;
 
-    public readonly storeStateDebounced: Debouncer<[Element?], void>;
-    public readonly writeStatesFileDebounced: Debouncer<[], void>;
+    private readonly storeStateDebounced: Debouncer<[HTMLElement?, Event?], void>;
+    private readonly writeStatesFileDebounced: Debouncer<[], void>;
 
     private linkUsed = false;
 
@@ -109,6 +110,14 @@ export class RestoreScroll {
                 },
             }),
         );
+
+        plugin.events.onScroll(this.scrollHandler.bind(this));
+        plugin.events.onMouseUp(this.mouseUpHandler.bind(this));
+        plugin.events.onFileOpen(this.fileOpenHandler.bind(this));
+        plugin.events.onFileDelete(this.fileDeleteHandler.bind(this));
+        plugin.events.onFileRename(this.fileRenameHandler.bind(this));
+        plugin.events.onLayoutReady(this.layoutReadyHandler.bind(this));
+        plugin.events.onLayoutReady(this.cursorUpdateHandler.bind(this));
     }
 
     /**
@@ -199,11 +208,26 @@ export class RestoreScroll {
      * On scroll event.
      * Requests to save the file scroll state & store it in a file.
      */
-    public scrollHandler(event: Event): void {
+    private scrollHandler(event: Event): void {
         if (!this.workspaceInitialized || this.numOpeningFiles > 0) return;
 
-        this.plugin.restoreScroll.storeStateDebounced(event.target as Element);
+        this.plugin.restoreScroll.storeStateDebounced(event.target as HTMLElement);
         this.plugin.restoreScroll.writeStatesFileDebounced();
+    }
+
+    /**
+     * On mouse up event.
+     */
+    private mouseUpHandler(event: MouseEvent) {
+        this.storeStateDebounced(event.target as HTMLElement);
+    }
+
+    /**
+     * On cursor update.
+     */
+    private cursorUpdateHandler(_editor: Editor, _docChanged: boolean, vimModeChanged: boolean) {
+        if (vimModeChanged) return;
+        this.storeStateDebounced();
     }
 
     /**
@@ -214,7 +238,7 @@ export class RestoreScroll {
      * Does not restore if heading link is used or links are disabled and any link is used.
      * Might break if the same file is opened twice in different tabs simultaneously .
      */
-    public openFileHandler(file: TFile): void {
+    private fileOpenHandler(file: TFile): void {
         // Do not restore on initial load. Responsiblity of layoutReadyHandler.
         if (!this.workspaceInitialized) return;
         if (this.plugin.settings.restoreScrollInitialOnly) return;
@@ -275,7 +299,7 @@ export class RestoreScroll {
      * On Obsidian layout ready or plugin reload.
      * Restores visible leaves across all splits.
      */
-    public layoutReadyHandler() {
+    private layoutReadyHandler() {
         // Skip if plugin is reloaded.
         if (this.workspaceInitialized) return;
 
@@ -293,7 +317,7 @@ export class RestoreScroll {
      * On file deletion.
      * Updates file cache.
      */
-    public deleteFileHandler(file: TAbstractFile): void {
+    private fileDeleteHandler(file: TAbstractFile): void {
         delete this.ephemeralStates[file.path];
     }
 
@@ -303,7 +327,7 @@ export class RestoreScroll {
      * Marks file as not to be restored.
      * Do not confuse with renameStatesFile.
      */
-    public renameFileHandler(file: TAbstractFile, old: string): void {
+    private fileRenameHandler(file: TAbstractFile, old: string): void {
         this.ephemeralStates[file.path] = this.ephemeralStates[old];
         delete this.ephemeralStates[old];
     }
@@ -513,7 +537,7 @@ export class RestoreScroll {
      * Checks and saves current scroll & cursor position in state cache.
      * Discards old states if number of stored states is limited.
      */
-    private storeFileState(el?: Element): void {
+    private storeFileState(el?: Element, _event?: Event): void {
         const mode = this.plugin.settings.restoreScrollMode;
         if (mode === "top" || mode === "bottom") return;
 

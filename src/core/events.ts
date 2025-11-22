@@ -1,7 +1,6 @@
-import { View, Platform, TFile, TAbstractFile, WorkspaceLeaf } from "obsidian";
+import { Platform, WorkspaceLeaf, Editor, TFile, TAbstractFile } from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
-import { around } from "monkey-around";
 
 import type { default as ScrollingPlugin } from "@core/main";
 
@@ -27,17 +26,14 @@ export class Events {
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
-        const vault = this.plugin.app.vault;
         const workspace = this.plugin.app.workspace;
 
-        workspace.onLayoutReady(this.layoutReadyHandler.bind(this));
-
-        /* MouseScroll & CodeBlock */
-        this.plugin.registerDomEvent(workspace.containerEl, "wheel", this.wheelHandler.bind(this), {
+        plugin.registerDomEvent(workspace.containerEl, "wheel", this.wheelHandler.bind(this), {
             capture: true,
             passive: false,
         });
-        this.plugin.registerDomEvent(
+
+        plugin.registerDomEvent(
             workspace.containerEl,
             "touchstart",
             this.touchStartHandler.bind(this),
@@ -46,7 +42,8 @@ export class Events {
                 passive: true,
             },
         );
-        this.plugin.registerDomEvent(
+
+        plugin.registerDomEvent(
             workspace.containerEl,
             "touchmove",
             this.touchMoveHandler.bind(this),
@@ -56,109 +53,119 @@ export class Events {
             },
         );
 
-        /* PreviewShortcuts */
-        this.plugin.registerDomEvent(document, "keyup", this.keyUpHandler.bind(this), {
-            passive: true,
-        });
+        this.onLayoutReady(() => {
+            // Wait for containerEl before attaching resize observer.
+            const observer = new ResizeObserver(() => {
+                this.resizeHandlers.forEach(callback => callback());
+            });
 
-        /* FollowCursor & PreviewShortcuts */
-        this.plugin.registerDomEvent(document, "keydown", this.keyDownHandler.bind(this), {
-            passive: true,
-        });
+            const containerEl = plugin.app.workspace.containerEl;
+            const workspaceTabContainer =
+                containerEl.getElementsByClassName("workspace-tab-container")[0];
+            observer.observe(workspaceTabContainer);
 
-        /* FollowCursor */
+            plugin.register(() => {
+                observer.disconnect();
+            });
+        });
+    }
+
+    public postInit(): void {
+        // Wait for other components to initialize before attaching view update handler.
         this.plugin.registerEditorExtension(
             EditorView.updateListener.of(this.viewUpdateHandler.bind(this)),
         );
+    }
 
-        /* FollowCursor & RestoreScroll */
+    private cursorUpdateHandlers: Set<
+        (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => any
+    > = new Set();
+    public onCursorUpdate(
+        callback: (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => any,
+    ): void {
+        this.cursorUpdateHandlers.add(callback);
+    }
+    public onFileDelete(callback: (file: TAbstractFile) => any): void {
+        this.plugin.registerEvent(this.plugin.app.vault.on("delete", callback));
+    }
+    public onFileOpen(callback: (file: TFile | null) => any): void {
+        this.plugin.registerEvent(this.plugin.app.workspace.on("file-open", callback));
+    }
+    public onFileRename(callback: (file: TAbstractFile, oldPath: string) => any): void {
+        this.plugin.registerEvent(this.plugin.app.vault.on("rename", callback));
+    }
+    private geometryChangeHandlers: Set<(editor: Editor) => any> = new Set();
+    public onGeometryChange(callback: (editor: Editor) => any): void {
+        this.geometryChangeHandlers.add(callback);
+    }
+    public onKeyDown(callback: (ev: KeyboardEvent) => any): void {
+        this.plugin.registerDomEvent(document, "keydown", callback, { passive: true });
+    }
+    public onKeyUp(callback: (ev: KeyboardEvent) => any): void {
+        this.plugin.registerDomEvent(document, "keyup", callback, { passive: true });
+    }
+
+    /**
+     * Runs once on layout ready after Obsidian startup or plugin reload.
+     */
+    public onLayoutReady(callback: () => any): void {
+        this.plugin.app.workspace.onLayoutReady(callback);
+    }
+    public onLeafChange(callback: (leaf: WorkspaceLeaf | null) => any): void {
+        this.plugin.registerEvent(this.plugin.app.workspace.on("active-leaf-change", callback));
+    }
+    public onMouseUp(callback: (ev: MouseEvent) => any): void {
         if (Platform.isDesktop) {
-            this.plugin.registerDomEvent(document, "mouseup", this.mouseUpHandler.bind(this), {
-                passive: true,
-            });
+            this.plugin.registerDomEvent(document, "mouseup", callback, { passive: true });
         }
-
-        /* CodeBlock, MouseScroll, Scrollbar & RestoreScroll */
-        this.plugin.registerEvent(
-            workspace.on("active-leaf-change", this.leafChangeHandler.bind(this)),
-        );
-
-        this.plugin.registerDomEvent(document, "scroll", this.scrollHandler.bind(this), {
+    }
+    private resizeHandlers: Set<() => any> = new Set();
+    public onResize(callback: () => any): void {
+        this.resizeHandlers.add(callback);
+    }
+    public onScroll(callback: (ev: Event) => any): void {
+        this.plugin.registerDomEvent(document, "scroll", callback, {
             capture: true,
             passive: true,
         });
-        this.plugin.registerDomEvent(document, "scrollend", this.scrollEndHandler.bind(this), {
+    }
+    public onScrollEnd(callback: (ev: Event) => any): void {
+        this.plugin.registerDomEvent(document, "scrollend", callback, {
             capture: true,
             passive: true,
         });
-
-        /* RestoreScroll */
-        this.plugin.registerEvent(vault.on("delete", this.deleteFileHandler.bind(this)));
-        this.plugin.registerEvent(vault.on("rename", this.renameFileHandler.bind(this)));
-        this.plugin.registerEvent(workspace.on("file-open", this.openFileHandler.bind(this)));
+    }
+    private touchHandlers: Set<(event: TouchEvent, deltaX: number, deltaY: number) => any> =
+        new Set();
+    public onTouchMove(callback: (event: TouchEvent, deltaX: number, deltaY: number) => any): void {
+        this.touchHandlers.add(callback);
     }
 
-    private attachResizeHandler() {
-        const observer = new ResizeObserver(() => {
-            this.plugin.imageZoom.resizeHandler();
-        });
-
-        const containerEl = this.plugin.app.workspace.containerEl;
-        const workspaceTabContainer =
-            containerEl.getElementsByClassName("workspace-tab-container")[0];
-        observer.observe(workspaceTabContainer);
-        this.plugin.register(() => {
-            observer.disconnect();
-        });
+    private wheelCancellingHandlers: { callback: (event: Event) => boolean; priority: number }[] = [];
+    /**
+     * Register a callback to run on a wheel event.
+     * The callback must return a boolean, indicating whether the event should not be processed any further.
+     * Callbacks with higher priorities will run first.
+     */
+    public onWheelCancelling(callback: (event: Event) => boolean, priority: number): void {
+        // Append new callback and sort in descending order by priority.
+        this.wheelCancellingHandlers.push({ callback, priority });
+        this.wheelCancellingHandlers.sort((a, b) => b.priority - a.priority);
     }
 
-    private layoutReadyHandler(): void {
-        // TODO: how tf does this work if layout ready is not called?
-        this.attachResizeHandler();
-        this.plugin.followScroll.layoutReadyHandler();
-        this.plugin.restoreScroll.layoutReadyHandler();
-    }
+    private wheelExtendedHandlers: Set<
+        (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => any
+    > = new Set();
 
-    private leafChangeHandler(): void {
-        this.plugin.mouseScroll.leafChangeHandler();
-        this.plugin.followScroll.leafChangeHandler();
-        this.plugin.codeBlock.leafChangeHandler();
-    }
-
-    private scrollHandler(event: Event): void {
-        this.plugin.scrollbar.scrollHandler(event);
-        this.plugin.restoreScroll.scrollHandler(event);
-        this.plugin.codeBlock.scrollHandler(event);
-    }
-
-    private scrollEndHandler(): void {
-        this.plugin.codeBlock.scrollEndHandler();
-    }
-
-    private openFileHandler(file: TFile): void {
-        this.plugin.restoreScroll.openFileHandler(file);
-    }
-
-    private deleteFileHandler(file: TAbstractFile): void {
-        this.plugin.restoreScroll.deleteFileHandler(file);
-    }
-
-    private renameFileHandler(file: TAbstractFile, old: string): void {
-        this.plugin.restoreScroll.renameFileHandler(file, old);
-    }
-
-    private keyUpHandler(): void {
-        this.plugin.previewScrollKeys.keyUpHandler();
-    }
-
-    private keyDownHandler(event: KeyboardEvent): void {
-        this.plugin.previewScrollKeys.keyDownHandler(event);
-        this.plugin.followCursor.keyDownHandler();
-    }
-
-    private mouseUpHandler(): void {
-        this.plugin.followCursor.mouseUpHandler();
-        this.plugin.restoreScroll.storeStateDebounced();
+    /**
+     * Register a callback to run on a wheel event along the y-axis.
+     * The callback will not run on horizontal movement.
+     * The callback might be blocked by a cancelling wheel handler.
+     */
+    public onWheelExtended(
+        callback: (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => any,
+    ): void {
+        this.wheelExtendedHandlers.add(callback);
     }
 
     private viewUpdateHandler(update: ViewUpdate): void {
@@ -177,7 +184,6 @@ export class Events {
             }
         }
 
-
         if (this.skipViewUpdate && !update.docChanged && !update.selectionSet) return;
         this.skipViewUpdate = true;
         window.requestAnimationFrame(() => (this.skipViewUpdate = false));
@@ -188,7 +194,9 @@ export class Events {
         // Only proceed if its a cursor or edit event
         if (!update.selectionSet && !update.docChanged) {
             // Handle geometry events
-            this.plugin.imageZoom.viewUpdateHandler(editor, update.geometryChanged);
+            for (const callback of this.geometryChangeHandlers) {
+                callback(editor);
+            }
             return;
         }
 
@@ -215,31 +223,16 @@ export class Events {
             }
         }
 
-        this.plugin.codeBlock.viewUpdateHandler(editor, update.docChanged);
-
-        if (vimModeSwitch) return;
-
-        this.plugin.restoreScroll.storeStateDebounced();
-        this.plugin.imageZoom.viewUpdateHandler(editor, update.docChanged);
-        this.plugin.followCursor.viewUpdateHandler(editor, update.docChanged);
-        this.plugin.followScroll.viewUpdateHandler(editor);
+        for (const callback of this.cursorUpdateHandlers) {
+            callback(editor, update.docChanged, vimModeSwitch);
+        }
     }
 
-    private isWithinScrollContext(el: HTMLElement): boolean {
-        return el === this.lastWheelScrollElement || this.lastWheelScrollElement.contains(el);
-    }
-
-    /**
-     * Mobile only.
-     */
     private touchStartHandler(event: TouchEvent): void {
         this.lastTouchX = event.touches[0].clientX;
         this.lastTouchY = event.touches[0].clientY;
     }
 
-    /**
-     * Mobile only.
-     */
     private touchMoveHandler(event: TouchEvent): void {
         const touchX = event.touches[0].clientX;
         const touchY = event.touches[0].clientY;
@@ -250,27 +243,24 @@ export class Events {
         this.lastTouchX = touchX;
         this.lastTouchY = touchY;
 
-        this.plugin.codeBlock.touchHandler(event, deltaX, deltaY);
+        for (const callback of this.touchHandlers) {
+            callback(event, deltaX, deltaY);
+        }
     }
 
     /**
      * Desktop only.
      */
     private wheelHandler(event: WheelEvent): void {
-        let eventHandled = this.plugin.imageZoom.wheelHandler(event);
-        if (eventHandled) return;
+        if (Platform.isMobile) return;
 
-        eventHandled = this.plugin.codeBlock.wheelHandler(event);
-        if (eventHandled) return;
+        // Run cancelling callbacks.
+        // As soon as one callback returns true abort handling event.
+        for (const { callback } of this.wheelCancellingHandlers) {
+            if (callback(event)) return;
+        }
 
         if (!event.deltaY) return;
-        if (
-            !(
-                (Platform.isDesktop && this.plugin.settings.scrollMode !== "disabled") ||
-                this.plugin.settings.cursorScrollEnabled
-            )
-        )
-            return;
 
         let el: HTMLElement | null = event.target as HTMLElement;
 
@@ -281,24 +271,18 @@ export class Events {
         const isStart = this.plugin.mouseScroll.analyzeDelay(deltaTime);
 
         // Attempt to use cached scroller
-        if (!isStart && this.lastWheelScrollElement) {
-            if (this.isWithinScrollContext(el)) {
-                if (
-                    (event.deltaY < 0 && !isScrolledToTop(this.lastWheelScrollElement)) ||
-                    (event.deltaY > 0 && !isScrolledToBottom(this.lastWheelScrollElement))
-                ) {
-                    this.plugin.mouseScroll.wheelHandler(
-                        event,
-                        this.lastWheelScrollElement,
-                        now,
-                        deltaTime,
-                        isStart,
-                    );
-
-                    this.plugin.followScroll.wheelHandler(this.lastWheelScrollElement);
-                    return;
-                }
+        if (
+            !isStart &&
+            this.lastWheelScrollElement &&
+            (el === this.lastWheelScrollElement || this.lastWheelScrollElement.contains(el)) &&
+            ((event.deltaY < 0 && !isScrolledToTop(this.lastWheelScrollElement)) ||
+                (event.deltaY > 0 && !isScrolledToBottom(this.lastWheelScrollElement)))
+        ) {
+            for (const callback of this.wheelExtendedHandlers) {
+                callback(event, this.lastWheelScrollElement, deltaTime, isStart);
             }
+
+            return;
         }
 
         // Traverse DOM to find actual scrollable element
@@ -320,8 +304,10 @@ export class Events {
                     }
                 }
 
-                this.plugin.mouseScroll.wheelHandler(event, el, now, deltaTime, isStart);
-                this.plugin.followScroll.wheelHandler(el);
+                for (const callback of this.wheelExtendedHandlers) {
+                    callback(event, this.lastWheelScrollElement, deltaTime, isStart);
+                }
+
                 this.lastWheelScrollElement = el;
                 return;
             }

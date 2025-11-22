@@ -68,6 +68,13 @@ export class CodeBlock {
             window.cancelAnimationFrame(this.scrollAnimationFrame);
             document.body.removeClass("scrolling-horizontal-code-blocks");
         });
+
+        plugin.events.onScroll(this.scrollHandler.bind(this));
+        plugin.events.onScrollEnd(this.scrollEndHandler.bind(this));
+        plugin.events.onTouchMove(this.touchMoveHandler.bind(this));
+        plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
+        plugin.events.onWheelCancelling(this.wheelHandler.bind(this), 9);
+        plugin.events.onCursorUpdate(this.cursorUpdateHandler.bind(this));
     }
 
     /**
@@ -86,7 +93,7 @@ export class CodeBlock {
      * On scroll.
      * Checks if vertical scroll occurred.
      */
-    public scrollHandler(event: Event): void {
+    private scrollHandler(event: Event): void {
         if (this.isScrollingVertically || this.scrollHandlerAnimationFrame !== null) return;
 
         this.scrollHandlerAnimationFrame = window.setTimeout(() => {
@@ -128,7 +135,7 @@ export class CodeBlock {
      * On scroll end. Per axis.
      * Marks end of vertical scroll.
      */
-    public scrollEndHandler(): void {
+    private scrollEndHandler(): void {
         this.isScrollingVertically = false;
         window.clearTimeout(this.scrollHandlerAnimationFrame);
         this.scrollHandlerAnimationFrame = null;
@@ -138,7 +145,7 @@ export class CodeBlock {
      * On leaf change.
      * Resets cached values.
      */
-    public leafChangeHandler(): void {
+    private leafChangeHandler(): void {
         this.cachedCursor = null;
         this.currentScrollWidth = null;
 
@@ -162,7 +169,7 @@ export class CodeBlock {
      * Scrolls multiple connected code lines simultanously.
      * Returns true if the wheel event is handled successfully.
      */
-    public wheelHandler(event: WheelEvent): boolean {
+    private wheelHandler(event: WheelEvent): boolean {
         // Fast exit for non-code blocks
         if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return false;
 
@@ -209,7 +216,7 @@ export class CodeBlock {
      * Scrolls multiple connected code lines simultanously.
      * Assumes that code elements do not handle horizontal scroll natively (css).
      */
-    public touchHandler(event: TouchEvent, deltaX: number, deltaY: number): void {
+    private touchMoveHandler(event: TouchEvent, deltaX: number, deltaY: number): void {
         // Fast exit for non-code blocks
         if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
 
@@ -240,11 +247,15 @@ export class CodeBlock {
     }
 
     /**
-     * On view update (document edit, text cursor movement).
+     * On cursor update.
      * Updates code blocks and code block length.
      * Scrolls to keep cursor in view.
      */
-    public viewUpdateHandler(editor: Editor, isEdit: boolean): void {
+    private cursorUpdateHandler(
+        editor: Editor,
+        docChanged: boolean,
+        _vimModeChanged: boolean,
+    ): void {
         if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
 
         const cursorEl = this.getCursorEl(editor);
@@ -255,7 +266,7 @@ export class CodeBlock {
             return;
         }
 
-        if (!this.codeBlockLines.includes(lineEl) || isEdit) {
+        if (!this.codeBlockLines.includes(lineEl) || docChanged) {
             this.updateWidthAndBlock(lineEl);
         }
 
@@ -315,7 +326,8 @@ export class CodeBlock {
      */
     private updateCachedValues(editor: Editor, lineEl: Element, line?: Line): void {
         const now = performance.now();
-        const timeoutPassed = now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT;
+        const timeoutPassed =
+            now - this.cachedBlockWidthTimeStamp > this.CACHED_BLOCK_WIDTH_TIMEOUT;
         const lineChanged = this.cachedLine !== lineEl;
 
         if (timeoutPassed) {

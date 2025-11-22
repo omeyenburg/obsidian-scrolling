@@ -28,13 +28,17 @@ export class FollowCursor {
         plugin.register(() => {
             window.cancelAnimationFrame(this.animationFrame);
         });
+
+        plugin.events.onKeyDown(this.keyDownHandler.bind(this));
+        plugin.events.onMouseUp(this.mouseUpHandler.bind(this));
+        plugin.events.onCursorUpdate(this.cursorUpdateHandler.bind(this));
     }
 
     /**
      * On key down event.
      * Resets mouse up indicator early.
      */
-    public keyDownHandler(): void {
+    private keyDownHandler(): void {
         this.recentMouseUp = false;
     }
 
@@ -42,7 +46,7 @@ export class FollowCursor {
      * On mouse up event.
      * Blocks scroll trigger unless mouse invocation is enabled through settings.
      */
-    public mouseUpHandler(): void {
+    private mouseUpHandler(): void {
         this.recentMouseUp = true;
 
         // recentMouseUp will be reset either when a key is pressed or 100 ms pass.
@@ -52,17 +56,23 @@ export class FollowCursor {
     }
 
     /**
-     * On view update (document edit, text cursor movement)
+     * On cursor update.
      * Invokes scroll animation.
      */
-    public viewUpdateHandler(editor: Editor, isEdit: boolean): void {
+    private cursorUpdateHandler(
+        editor: Editor,
+        docChanged: boolean,
+        vimModeChanged: boolean,
+    ): void {
+        if (vimModeChanged) return;
+
         // Cancel if mouse up, unless this setting allows it.
         if (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse) return;
 
         // Cancel if selecting, unless this setting allows it.
         if (!this.plugin.settings.followCursorEnableSelection && editor.somethingSelected()) return;
 
-        this.invokeScroll(editor, isEdit);
+        this.invokeScroll(editor, docChanged);
     }
 
     /**
@@ -90,11 +100,11 @@ export class FollowCursor {
      * Calculates goal position, distance and scroll steps for scroll animation.
      * Initiates scroll animation if centering scroll is required.
      */
-    private invokeScroll(editor: Editor, isEdit: boolean): void {
+    private invokeScroll(editor: Editor, docChanged: boolean): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
         // Disable in reading view, as this might break cached values.
-        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)
+        const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return;
 
         const now = performance.now();
@@ -147,7 +157,7 @@ export class FollowCursor {
             const steps = this.calculateSteps(
                 Math.abs(signedGoalDistance),
                 scrollInfo.height,
-                isEdit,
+                docChanged,
             );
 
             if (steps > 1 || !Platform.isMobile || getVimCursor(editor) === null) {
@@ -213,8 +223,12 @@ export class FollowCursor {
      * Returns reduced number of frames when scrolling further than client height.
      * Returns 1 step for instant scroll on edit.
      */
-    private calculateSteps(goalDistance: number, scrollerHeight: number, isEdit: boolean): number {
-        if (isEdit && this.plugin.settings.followCursorInstantEditScroll) return 1;
+    private calculateSteps(
+        goalDistance: number,
+        scrollerHeight: number,
+        docChanged: boolean,
+    ): number {
+        if (docChanged && this.plugin.settings.followCursorInstantEditScroll) return 1;
 
         const smoothness = this.plugin.settings.followCursorSmoothness;
         let steps = Math.max(1, Math.ceil(0.16 * smoothness));

@@ -12,9 +12,6 @@ export class FollowScroll {
     private readonly resetSkip: Debouncer<[void], void>;
     private readonly CURSOR_SKIP_DELAY = 500;
 
-    public readonly wheelHandler: Debouncer<[HTMLElement], void>;
-    public readonly viewUpdateHandler: Debouncer<[Editor], void>;
-
     // Balanced between performance and visual response
     private readonly WHEEL_INTERVAL = 70;
     private readonly CURSOR_INTERVAL = 150;
@@ -30,35 +27,32 @@ export class FollowScroll {
             true,
         );
 
-        this.wheelHandler = debounce(
-            this.wheelHandlerDebounced.bind(this),
-            this.WHEEL_INTERVAL,
-            false,
+        plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
+        plugin.events.onLayoutReady(this.layoutReadyHandler.bind(this));
+        plugin.events.onCursorUpdate(
+            debounce(this.cursorUpdateHandler.bind(this), this.CURSOR_INTERVAL, false),
         );
-
-        this.viewUpdateHandler = debounce(
-            this.viewUpdateDebounced.bind(this),
-            this.CURSOR_INTERVAL,
-            false,
+        plugin.events.onWheelExtended(
+            debounce(this.wheelHandler.bind(this), this.WHEEL_INTERVAL, false),
         );
     }
 
     /**
-     * Once on layout ready.
+     * Runs once on layout ready after Obsidian startup or plugin reload.
      * Updates the relative position on screen of the line of the cursor.
      */
-    public layoutReadyHandler(): void {
+    private layoutReadyHandler(): void {
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor) return;
 
-        this.viewUpdateHandler(editor);
+        this.cursorUpdateHandler(editor, false, false);
     }
 
     /**
      * On leaf change.
      * Resets relative position on screen of the line of the cursor.
      */
-    public leafChangeHandler(): void {
+    private leafChangeHandler(): void {
         this.relativeLineOffset = null;
     }
 
@@ -66,14 +60,18 @@ export class FollowScroll {
      * On view update (document edit, text cursor movement).
      * Updates the relative position on screen of the line of the cursor.
      */
-    public viewUpdateDebounced(editor: Editor): void {
+    private cursorUpdateHandler(
+        editor: Editor,
+        _docChanged: boolean,
+        vimModeChanged: boolean,
+    ): void {
+        if (vimModeChanged) return;
+
         const block = editor.cm.lineBlockAt(editor.posToOffset(editor.getCursor()));
         const scrollDOM = editor.cm.scrollDOM;
         const scrollDOMRect = scrollDOM.getBoundingClientRect();
         const relativeLineOffset =
-            (block.top + block.bottom) / 2 -
-            scrollDOM.scrollTop +
-            scrollDOMRect.top;
+            (block.top + block.bottom) / 2 - scrollDOM.scrollTop + scrollDOMRect.top;
 
         this.relativeLineOffset = clamp(relativeLineOffset, 0, scrollDOM.clientHeight);
     }
@@ -83,13 +81,23 @@ export class FollowScroll {
      * Desktop only, does nothing on mobile.
      * Moves the cursor to the cached relative position on screen.
      */
-    private wheelHandlerDebounced(el: HTMLElement): void {
+    private wheelHandler(
+        _event: Event,
+        el: HTMLElement,
+        _deltaTime: boolean,
+        _isStart: number,
+    ): void {
         if (!this.plugin.settings.cursorScrollEnabled) return;
         if (this.relativeLineOffset == null) return;
 
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || editor.cm.scrollDOM !== el) return;
         const cm = editor.cm;
+
+        // Skip when selection is set
+        const from = editor.getCursor("from");
+        const to = editor.getCursor("to");
+        if (from.line != to.line || from.ch != to.ch) return;
 
         // Batch DOM reads to avoid layout thrashing
         const scrollTop = cm.scrollDOM.scrollTop;

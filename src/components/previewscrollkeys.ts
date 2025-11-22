@@ -19,13 +19,16 @@ export class PreviewScrollKeys {
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
+
+        plugin.events.onKeyUp(this.keyUpHandler.bind(this));
+        plugin.events.onKeyDown(this.keyDownHandler.bind(this));
     }
 
     /**
      * On key up event.
      * Resets goal for line scroll animation.
      */
-    public keyUpHandler() {
+    private keyUpHandler() {
         this.goal = null;
     }
 
@@ -33,7 +36,7 @@ export class PreviewScrollKeys {
      * On key down event.
      * Handles specific vim motion keys and scrolls.
      */
-    public keyDownHandler(event: KeyboardEvent) {
+    private keyDownHandler(event: KeyboardEvent) {
         if (Platform.isMobile) return;
         if (event.ctrlKey || event.altKey || event.metaKey) return;
 

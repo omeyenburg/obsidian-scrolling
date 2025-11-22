@@ -57,12 +57,14 @@ export class MouseScroll {
             window.cancelAnimationFrame(this.mouseAnimationFrame);
             window.cancelAnimationFrame(this.touchpadAnimationFrame);
         });
+
+        plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
     }
 
     /**
      * Reset velocity on file change.
      */
-    public leafChangeHandler() {
+    private leafChangeHandler() {
         this.touchpadVelocity = 0;
 
         // Only cancel animation frame if one is currently running
@@ -75,19 +77,13 @@ export class MouseScroll {
      * On wheel event.
      * Desktop only, does nothing on mobile.
      */
-    public wheelHandler(
-        event: WheelEvent,
-        el: HTMLElement,
-        now: number,
-        deltaTime: number,
-        isStart: boolean,
-    ) {
+    public wheelHandler(event: WheelEvent, el: HTMLElement, deltaTime: number, isStart: boolean) {
         if (Platform.isMobile) return;
 
         if (this.plugin.settings.scrollMode === "native") {
             this.applyNativeScroll(event, el);
         } else if (this.plugin.settings.scrollMode === "simulated") {
-            this.applySimulatedScroll(event, el, now, deltaTime, isStart);
+            this.applySimulatedScroll(event, el, deltaTime, isStart);
         }
     }
 
@@ -112,7 +108,6 @@ export class MouseScroll {
     private applySimulatedScroll(
         event: WheelEvent,
         el: HTMLElement,
-        now: number,
         deltaTime: number,
         isStart: boolean,
     ) {
@@ -121,7 +116,7 @@ export class MouseScroll {
 
         if (
             this.plugin.settings.simulatedTouchpadEnabled &&
-            this.isTouchpad(event, now, deltaTime, isStart)
+            this.isTouchpad(event, deltaTime, isStart)
         ) {
             this.startTouchpadScroll(el, deltaY);
         } else {
@@ -276,7 +271,6 @@ export class MouseScroll {
      */
     private isTouchpad(
         event: WheelEvent & { wheelDeltaY?: number },
-        now: number,
         deltaTime: number,
         isStart: boolean,
     ): boolean {
@@ -284,6 +278,8 @@ export class MouseScroll {
             this.touchpadLastUse = 0;
             return false;
         }
+
+        const now = performance.now();
 
         // Movement on both axes
         if (event.deltaX !== 0 && event.deltaY !== 0) {
