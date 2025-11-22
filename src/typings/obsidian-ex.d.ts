@@ -3543,6 +3543,10 @@ declare module "obsidian" {
 
     interface WorkspaceLeaf {
         id?: string;
+        working: boolean;
+        width: number;
+        parentSplit: WorkspaceLeaf;
+        children: [WorkspaceLeaf];
 
         tabHeaderEl: HTMLElement;
         tabHeaderInnerIconEl: HTMLElement;
