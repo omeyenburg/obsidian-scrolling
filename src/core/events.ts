@@ -4,10 +4,20 @@ import { Transaction } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "@core/main";
 
+/**
+ * Checks whether a given element is scrolled to the top.
+ * @param el The element to check.
+ * @returns True if the element's scrollTop is 0.
+ */
 function isScrolledToTop(el: HTMLElement): boolean {
     return el.scrollTop == 0;
 }
 
+/**
+ * Checks whether a given element is scrolled to the bottom.
+ * @param el The element to check.
+ * @returns True if the element's scroll position is at or past the bottom.
+ */
 function isScrolledToBottom(el: HTMLElement): boolean {
     return Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
 }
@@ -22,6 +32,19 @@ export class Events {
     private lastWheelScrollElement: HTMLElement | null;
 
     private skipViewUpdate = false;
+
+    private cursorUpdateHandlers: Set<
+        (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => any
+    > = new Set();
+    private geometryChangeHandlers: Set<(editor: Editor) => any> = new Set();
+    private resizeHandlers: Set<() => any> = new Set();
+    private touchHandlers: Set<(event: TouchEvent, deltaX: number, deltaY: number) => any> =
+        new Set();
+    private wheelCancellingHandlers: { callback: (event: Event) => boolean; priority: number }[] =
+        [];
+    private wheelExtendedHandlers: Set<
+        (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => any
+    > = new Set();
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -56,7 +79,7 @@ export class Events {
         this.onLayoutReady(() => {
             // Wait for containerEl before attaching resize observer.
             const observer = new ResizeObserver(() => {
-                this.resizeHandlers.forEach(callback => callback());
+                this.resizeHandlers.forEach((callback) => callback());
             });
 
             const containerEl = plugin.app.workspace.containerEl;
@@ -70,82 +93,142 @@ export class Events {
         });
     }
 
+    /**
+     * Called after all components have been initialized.
+     */
     public postInit(): void {
-        // Wait for other components to initialize before attaching view update handler.
         this.plugin.registerEditorExtension(
             EditorView.updateListener.of(this.viewUpdateHandler.bind(this)),
         );
     }
 
-    private cursorUpdateHandlers: Set<
-        (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => any
-    > = new Set();
+    /**
+     * Registers a callback for cursor updates in the editor.
+     * @param callback Called with the editor, whether the document changed, and whether Vim mode switched.
+     */
     public onCursorUpdate(
         callback: (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => any,
     ): void {
         this.cursorUpdateHandlers.add(callback);
     }
+
+    /**
+     * Registers a callback that is triggered when a file is deleted from the vault.
+     * @param callback Receives the deleted file.
+     */
     public onFileDelete(callback: (file: TAbstractFile) => any): void {
         this.plugin.registerEvent(this.plugin.app.vault.on("delete", callback));
     }
+
+    /**
+     * Registers a callback that is triggered when a file is opened in the workspace.
+     * @param callback Receives the opened file, or null if no file is active.
+     */
     public onFileOpen(callback: (file: TFile | null) => any): void {
         this.plugin.registerEvent(this.plugin.app.workspace.on("file-open", callback));
     }
+
+    /**
+     * Registers a callback that is triggered when a file is renamed in the vault.
+     * @param callback Receives the renamed file and its previous path.
+     */
     public onFileRename(callback: (file: TAbstractFile, oldPath: string) => any): void {
         this.plugin.registerEvent(this.plugin.app.vault.on("rename", callback));
     }
-    private geometryChangeHandlers: Set<(editor: Editor) => any> = new Set();
+
+    /**
+     * Registers a callback for geometry changes in the editor, e.g., resizing or layout updates.
+     * @param callback Receives the editor where the geometry change occurred.
+     */
     public onGeometryChange(callback: (editor: Editor) => any): void {
         this.geometryChangeHandlers.add(callback);
     }
+
+    /**
+     * Registers a callback for keydown events.
+     * @param callback Receives the KeyboardEvent.
+     */
     public onKeyDown(callback: (ev: KeyboardEvent) => any): void {
         this.plugin.registerDomEvent(document, "keydown", callback, { passive: true });
     }
+
+    /**
+     * Registers a callback for keyup events.
+     * @param callback Receives the KeyboardEvent.
+     */
     public onKeyUp(callback: (ev: KeyboardEvent) => any): void {
         this.plugin.registerDomEvent(document, "keyup", callback, { passive: true });
     }
 
     /**
-     * Runs once on layout ready after Obsidian startup or plugin reload.
+     * Registers a callback to run once when the workspace layout is ready.
+     * @param callback Function to run after layout initialization.
      */
     public onLayoutReady(callback: () => any): void {
         this.plugin.app.workspace.onLayoutReady(callback);
     }
+
+    /**
+     * Registers a callback when the active workspace leaf changes.
+     * @param callback Receives the new active leaf or null.
+     */
     public onLeafChange(callback: (leaf: WorkspaceLeaf | null) => any): void {
         this.plugin.registerEvent(this.plugin.app.workspace.on("active-leaf-change", callback));
     }
+
+    /**
+     * Registers a callback for mouseup events.
+     * Desktop only; does nothing on mobile.
+     * @param callback Receives the MouseEvent.
+     */
     public onMouseUp(callback: (ev: MouseEvent) => any): void {
         if (Platform.isDesktop) {
             this.plugin.registerDomEvent(document, "mouseup", callback, { passive: true });
         }
     }
-    private resizeHandlers: Set<() => any> = new Set();
+
+    /**
+     * Registers a callback for resize events on the workspace.
+     * @param callback Called whenever a resize is detected.
+     */
     public onResize(callback: () => any): void {
         this.resizeHandlers.add(callback);
     }
+
+    /**
+     * Registers a callback for scroll events anywhere in the document.
+     * @param callback Receives the scroll Event.
+     */
     public onScroll(callback: (ev: Event) => any): void {
         this.plugin.registerDomEvent(document, "scroll", callback, {
             capture: true,
             passive: true,
         });
     }
+
+    /**
+     * Registers a callback for scroll-end events anywhere in the document.
+     * @param callback Receives the scrollend Event.
+     */
     public onScrollEnd(callback: (ev: Event) => any): void {
         this.plugin.registerDomEvent(document, "scrollend", callback, {
             capture: true,
             passive: true,
         });
     }
-    private touchHandlers: Set<(event: TouchEvent, deltaX: number, deltaY: number) => any> =
-        new Set();
+
+    /**
+     * Registers a callback for touch move events.
+     * @param callback Receives the TouchEvent and the deltaX/deltaY since the last touch event.
+     */
     public onTouchMove(callback: (event: TouchEvent, deltaX: number, deltaY: number) => any): void {
         this.touchHandlers.add(callback);
     }
 
-    private wheelCancellingHandlers: { callback: (event: Event) => boolean; priority: number }[] = [];
     /**
-     * Register a callback to run on a wheel event.
-     * The callback must return a boolean, indicating whether the event should not be processed any further.
-     * Callbacks with higher priorities will run first.
+     * Registers a callback for wheel events that can cancel further processing.
+     * @param callback Should return true if the event should not be handled further.
+     * @param priority Higher-priority callbacks run first.
      */
     public onWheelCancelling(callback: (event: Event) => boolean, priority: number): void {
         // Append new callback and sort in descending order by priority.
@@ -153,12 +236,8 @@ export class Events {
         this.wheelCancellingHandlers.sort((a, b) => b.priority - a.priority);
     }
 
-    private wheelExtendedHandlers: Set<
-        (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => any
-    > = new Set();
-
     /**
-     * Register a callback to run on a wheel event along the y-axis.
+     * Registers a callback to run on a wheel event along the y-axis.
      * The callback will not run on horizontal movement.
      * The callback might be blocked by a cancelling wheel handler.
      */
@@ -168,6 +247,38 @@ export class Events {
         this.wheelExtendedHandlers.add(callback);
     }
 
+    /**
+     * Handles touchstart events to record the initial touch position.
+     * @param event The TouchEvent from the DOM.
+     */
+    private touchStartHandler(event: TouchEvent): void {
+        this.lastTouchX = event.touches[0].clientX;
+        this.lastTouchY = event.touches[0].clientY;
+    }
+
+    /**
+     * Handles touchmove events to calculate deltas and invoke registered touch callbacks.
+     * @param event The TouchEvent from the DOM.
+     */
+    private touchMoveHandler(event: TouchEvent): void {
+        const touchX = event.touches[0].clientX;
+        const touchY = event.touches[0].clientY;
+
+        const deltaX = this.lastTouchX - touchX;
+        const deltaY = this.lastTouchY - touchY;
+
+        this.lastTouchX = touchX;
+        this.lastTouchY = touchY;
+
+        for (const callback of this.touchHandlers) {
+            callback(event, deltaX, deltaY);
+        }
+    }
+
+    /**
+     * Handles updates from CodeMirror views, triggering cursor or geometry change callbacks.
+     * @param update The ViewUpdate provided by CodeMirror.
+     */
     private viewUpdateHandler(update: ViewUpdate): void {
         if (this.plugin.followScroll.skipCursor) {
             this.plugin.followScroll.skipCursor = false;
@@ -228,28 +339,10 @@ export class Events {
         }
     }
 
-    private touchStartHandler(event: TouchEvent): void {
-        this.lastTouchX = event.touches[0].clientX;
-        this.lastTouchY = event.touches[0].clientY;
-    }
-
-    private touchMoveHandler(event: TouchEvent): void {
-        const touchX = event.touches[0].clientX;
-        const touchY = event.touches[0].clientY;
-
-        const deltaX = this.lastTouchX - touchX;
-        const deltaY = this.lastTouchY - touchY;
-
-        this.lastTouchX = touchX;
-        this.lastTouchY = touchY;
-
-        for (const callback of this.touchHandlers) {
-            callback(event, deltaX, deltaY);
-        }
-    }
-
     /**
-     * Desktop only.
+     * Handles wheel events on desktop, invoking cancelling and extended wheel callbacks.
+     * Traverses DOM to find the actual scrollable element and respects scroll bounds.
+     * @param event The WheelEvent from the DOM.
      */
     private wheelHandler(event: WheelEvent): void {
         if (Platform.isMobile) return;
