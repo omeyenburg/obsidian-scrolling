@@ -18,8 +18,6 @@ export class FollowCursor {
     private animationFrame = 0;
     private scrollLastEvent = 0;
 
-    private cachedEditorOffset: number | null = null;
-
     private readonly MOUSE_UP_TIMEOUT = 100;
 
     constructor(plugin: ScrollingPlugin) {
@@ -135,11 +133,8 @@ export class FollowCursor {
             cursorRelativeTop = cursorCoords?.top || 0;
         }
 
-        // Vertical offset of editor viewport should never change.
-        if (!this.cachedEditorOffset) {
-            this.cachedEditorOffset = scrollDOMRect.top - editor.cm.defaultLineHeight;
-        }
-        cursorRelativeTop -= this.cachedEditorOffset;
+        // Vertical offset of editor viewport, accounting for vertical splits.
+        cursorRelativeTop -= scrollDOMRect.top - editor.cm.defaultLineHeight;
 
         const scrollInfo = editor.getScrollInfo() as ScrollInfo;
         const signedGoalDistance = this.calculateGoalDistance(cursorRelativeTop, scrollInfo);
