@@ -35,10 +35,8 @@ function getScroller(view: FileView): HTMLElement | null {
     switch (view.getViewType()) {
         case "markdown":
             return view.containerEl.querySelector(".markdown-preview-view");
-        case "pdf":
-            return view.containerEl.querySelector(".pdf-viewer-container");
-        case "image":
-            return view.containerEl.querySelector(".image-container")?.parentElement;
+        case "bases":
+            return view.containerEl.querySelector(".bases-view");
         default:
             return null;
     }
@@ -75,7 +73,11 @@ export class RestoreScroll {
         // True when plugin is reloaded.
         this.workspaceInitialized = this.plugin.app.workspace.layoutReady;
 
-        this.storeStateDebounced = debounce(this.storeState.bind(this), this.STORE_INTERVAL, false);
+        this.storeStateDebounced = debounce(
+            this.storeFileState.bind(this),
+            this.STORE_INTERVAL,
+            false,
+        );
 
         this.writeStatesFileDebounced = debounce(
             this.writeStatesFile.bind(this),
@@ -323,12 +325,10 @@ export class RestoreScroll {
     /**
      * Restores the file state without extra checks.
      * Whether the state should be restored must be decided in advance.
-     *
      */
     private restoreFileState(view: FileView): void {
         // Mode top means feature is disabled.
         if (this.plugin.settings.restoreScrollMode === "top") return;
-
 
         let cursor: EditorRange, scroll: number, scrollTop: number;
         if (this.plugin.settings.restoreScrollMode === "bottom") {
@@ -343,31 +343,39 @@ export class RestoreScroll {
             ({ cursor, scroll, scrollTop } = ephemeralState);
         }
 
+        // Check for bases
+        if (view.getViewType() === "bases" && !this.plugin.settings.restoreScrollBases) return;
+
         if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
             if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
                 view.editor.setCursor(cursor.from);
                 view.setEphemeralState({ cursor, scroll, focus: true });
                 view.editor.scrollIntoView(cursor, true);
-                if (this.plugin.settings.restoreScrollDelay === 0) return;
                 window.setTimeout(() => {
                     view.setEphemeralState({ cursor, focus: true });
                     view.editor.scrollIntoView(cursor, true);
                 }, this.plugin.settings.restoreScrollDelay);
             } else {
                 view.setEphemeralState({ scroll });
-                // if (this.plugin.settings.restoreScrollDelay === 0) return;
-                // window.setTimeout(() => {
-                //     view.setEphemeralState({ scroll });
-                // }, this.plugin.settings.restoreScrollDelay);
+                window.setTimeout(() => {
+                    view.setEphemeralState({ scroll });
+                }, this.plugin.settings.restoreScrollDelay);
             }
-        } else if (scrollTop && this.plugin.settings.restoreScrollAllFiles) {
-            // TODO: which other files do we want to restore???
-            window.requestAnimationFrame(() => {
-                const scroller = getScroller(view);
-                if (scroller) {
-                    scroller.scrollTop = scrollTop;
+        } else if (scrollTop) {
+            const scroller = getScroller(view);
+            if (!scroller) return;
+
+            // Bases content loads in late.
+            let numFrames = 0;
+            const MAX_ATTEMPTS = 100;
+            const iter = () => {
+                scroller.scrollTop = scrollTop;
+
+                if (scroller.scrollTop !== scrollTop && numFrames++ < MAX_ATTEMPTS) {
+                    window.requestAnimationFrame(iter);
                 }
-            });
+            };
+            iter();
         }
     }
 
@@ -505,7 +513,7 @@ export class RestoreScroll {
      * Checks and saves current scroll & cursor position in state cache.
      * Discards old states if number of stored states is limited.
      */
-    private storeState(el?: Element): void {
+    private storeFileState(el?: Element): void {
         const mode = this.plugin.settings.restoreScrollMode;
         if (mode === "top" || mode === "bottom") return;
 
@@ -534,6 +542,7 @@ export class RestoreScroll {
         const fileId = this.getFileId(view);
 
         const timestamp = Date.now();
+
         if (view instanceof MarkdownView && view.getMode() == "source") {
             const scrollTop = view.editor.getScrollInfo().top;
             const { cursor, scroll } = view.getEphemeralState() as {
@@ -551,11 +560,9 @@ export class RestoreScroll {
                 scroll,
                 scrollTop,
             };
-        } else if (this.plugin.settings.restoreScrollAllFiles) {
+        } else {
             const scrollTop = getScroller(view)?.scrollTop;
-            if (scrollTop) {
-                this.ephemeralStates[fileId] = { timestamp, scrollTop };
-            }
+            if (scrollTop) this.ephemeralStates[fileId] = { timestamp, scrollTop };
         }
 
         this.discardOldStates();
