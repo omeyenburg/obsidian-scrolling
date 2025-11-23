@@ -83,11 +83,6 @@ body.scrolling-horizontal-mathjax span.math {
     max-width: 100%;
     display: inline-block;
     vertical-align: top;
-    margin-bottom: calc(-1 * var(--scrollbar-width)) !important;
-}
-
-body.scrolling-horizontal-mathjax.scrolling-scrollbar-width span.math {
-    margin-bottom: calc(-1 * var(--scrolling-scrollbar-width)) !important;
 }
 
 /* --- File tree --- */
