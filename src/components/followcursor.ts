@@ -18,6 +18,11 @@ export class FollowCursor {
     private animationFrame = 0;
     private scrollLastEvent = 0;
 
+    private cachedScrollDOM: HTMLElement | null = null;
+    private cachedScrollDOMRect: DOMRect | null = null;
+    private cacheTimestamp = 0;
+    private readonly CACHE_DURATION = 100;
+
     private readonly MOUSE_UP_TIMEOUT = 100;
 
     constructor(plugin: ScrollingPlugin) {
@@ -30,6 +35,22 @@ export class FollowCursor {
         plugin.events.onKeyDown(this.keyDownHandler.bind(this));
         plugin.events.onMouseUp(this.mouseUpHandler.bind(this));
         plugin.events.onCursorUpdate(this.cursorUpdateHandler.bind(this));
+        plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
+        plugin.events.onResize(this.resizeHandler.bind(this));
+    }
+
+    private leafChangeHandler(): void {
+        this.invalidateCache();
+    }
+
+    private resizeHandler(): void {
+        this.invalidateCache();
+    }
+
+    private invalidateCache(): void {
+        this.cachedScrollDOM = null;
+        this.cachedScrollDOMRect = null;
+        this.cacheTimestamp = 0;
     }
 
     /**
@@ -111,13 +132,70 @@ export class FollowCursor {
 
         if (deltaTime < 10) return;
 
-        const activeLineEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
-        if (!activeLineEl) return;
+        // Use requestMeasure to batch all DOM reads and writes
+        editor.cm.requestMeasure({
+            key: "followcursor",
+            read: (_view) => {
+                return this.measureCursorPosition(editor);
+            },
+            write: (measure, _view) => {
+                if (!measure) return;
 
-        let cursorRelativeTop: number;
+                const { signedGoalDistance, goal, isTable } = measure;
+
+                if (signedGoalDistance === 0) return;
+
+                // Only cancel animation frame if one is currently running
+                if (this.animationFrame) {
+                    window.cancelAnimationFrame(this.animationFrame);
+                }
+
+                // In tables, many events are emmitted, so skip animations for better performance.
+                if (deltaTime > 100 && !isTable) {
+                    const scrollInfo = editor.getScrollInfo() as ScrollInfo;
+                    const steps = this.calculateSteps(
+                        Math.abs(signedGoalDistance),
+                        scrollInfo.height,
+                        docChanged,
+                    );
+
+                    if (steps > 1 || !Platform.isMobile || getVimCursor(editor) === null) {
+                        this.animate(editor, goal, signedGoalDistance / steps, steps);
+                        return;
+                    }
+                }
+
+                // Performant fallback used for:
+                // - Many events (within 100ms)
+                // - Cursor inside a table, because Obsidian emits duplicate view updates
+                // - Single step on mobile in Vim normal mode (Issue #11)
+                this.animate(editor, goal, signedGoalDistance, 1);
+            },
+        });
+    }
+
+    /**
+     * Measures cursor position and calculates scroll goal.
+     * Batches all DOM reads for better performance.
+     */
+    private measureCursorPosition(
+        editor: Editor,
+    ): {
+        signedGoalDistance: number;
+        goal: number;
+        isTable: boolean;
+    } | null {
+        // Query active line only once
+        const activeLineEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
+        if (!activeLineEl) return null;
+
         const isTable = this.cursorInTable(editor);
 
-        const scrollDOMRect = editor.cm.scrollDOM.getBoundingClientRect();
+        // Use cached scrollDOM rect if valid
+        const scrollDOMRect = this.getCachedScrollDOMRect(editor.cm.scrollDOM);
+        if (!scrollDOMRect) return null;
+
+        let cursorRelativeTop: number;
 
         if (isTable) {
             // Works well with tables
@@ -138,40 +216,32 @@ export class FollowCursor {
 
         const scrollInfo = editor.getScrollInfo() as ScrollInfo;
         const signedGoalDistance = this.calculateGoalDistance(cursorRelativeTop, scrollInfo);
-        if (signedGoalDistance === 0) return;
-
         const goal = scrollInfo.top + signedGoalDistance;
 
-        // Only cancel animation frame if one is currently running
-        if (this.animationFrame) {
-            window.cancelAnimationFrame(this.animationFrame);
+        return { signedGoalDistance, goal, isTable };
+    }
+
+    /**
+     * Returns cached scrollDOM rect or creates new one if cache is stale.
+     */
+    private getCachedScrollDOMRect(scrollDOM: HTMLElement): DOMRect | null {
+        const now = performance.now();
+
+        // Check if cache is valid
+        if (
+            this.cachedScrollDOM === scrollDOM &&
+            this.cachedScrollDOMRect &&
+            now - this.cacheTimestamp < this.CACHE_DURATION
+        ) {
+            return this.cachedScrollDOMRect;
         }
 
-        // In tables, many events are emmitted, so skip animations for better performance.
-        if (deltaTime > 100 && !isTable) {
-            const steps = this.calculateSteps(
-                Math.abs(signedGoalDistance),
-                scrollInfo.height,
-                docChanged,
-            );
+        // Update cache
+        this.cachedScrollDOM = scrollDOM;
+        this.cachedScrollDOMRect = scrollDOM.getBoundingClientRect();
+        this.cacheTimestamp = now;
 
-            if (steps > 1 || !Platform.isMobile || getVimCursor(editor) === null) {
-                this.animate(editor, goal, signedGoalDistance / steps, steps);
-                return;
-            }
-        }
-
-        // Performant fallback used for:
-        // - Many events (within 100ms)
-        // - Cursor inside a table, because Obsidian emits duplicate view updates
-        // - Single step on mobile in Vim normal mode (Issue #11)
-        editor.cm.requestMeasure({
-            key: "followcursor",
-            read: () => {},
-            write: () => {
-                this.animate(editor, goal, signedGoalDistance, 1);
-            },
-        });
+        return this.cachedScrollDOMRect;
     }
 
     /**
