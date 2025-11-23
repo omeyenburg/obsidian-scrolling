@@ -11,24 +11,29 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 #### Centered cursor
 
 - By default, Obsidian only scrolls when the cursor reaches the edge of the viewport.
-- This feature automatically scrolls the view to keep the text cursor near the center while editing or navigating.  
-  (Also known as 'typewriter mode' or similar to 'scrolloff' in Vim)
+- This feature automatically scrolls the view to keep the text cursor near the center while editing or navigating.
+- Also known as 'typewriter mode' or similar to 'scrolloff' in Vim.
+- Works with Markdown tables and Vim mode.
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/followcursor.webp" alt="Centered cursor preview" style="max-width: 640px; width: 100%; height: auto;">
 
 #### Horizontal scrolling
 
 ##### Code blocks
+
 - Disable wrapping and enable horizontal scrolling in code blocks.
+- Works in source mode and preview mode.
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/codeblock.webp" alt="Code blocks preview" style="max-width: 640px; width: 100%; height: auto;">
 
 ##### Inline MathJax
+
 - Make inline MathJax scrollable and prevent it from extending the viewport.
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/mathjax.webp" alt="MathJax preview" style="max-width: 640px; width: 100%; height: auto;">
 
 ##### File tree
+
 - Allow horizontal scrolling in the file tree.
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/filetree.webp" alt="Filetree preview" style="max-width: 640px; width: 100%; height: auto;">
@@ -37,6 +42,7 @@ Each feature is fully optional and can be toggled or configured in the plugin se
 
 - By default, Obsidian will always open files and place you at the top.
 - This feature saves your scroll position when closing a file and restores it when reopening the file later.
+- Also works for PDF files and bases.
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/restorescroll.webp" alt="Restore scroll preview" style="max-width: 640px; width: 100%; height: auto;">
 
