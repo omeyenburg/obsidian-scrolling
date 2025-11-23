@@ -14,6 +14,14 @@ const createMockPlugin = (settings: any = {}) => ({
     followScroll: {
         skipCursor: false,
     },
+    events: {
+        onScroll: jest.fn(),
+        onScrollEnd: jest.fn(),
+        onTouchMove: jest.fn(),
+        onLeafChange: jest.fn(),
+        onWheelCancelling: jest.fn(),
+        onCursorUpdate: jest.fn(),
+    },
 });
 
 describe("CodeBlock", () => {
@@ -162,7 +170,7 @@ describe("CodeBlock", () => {
             const next1 = document.createElement("div");
             const next2 = document.createElement("div");
 
-            [prev1, prev2, current, next1, next2].forEach(el => {
+            [prev1, prev2, current, next1, next2].forEach((el) => {
                 el.classList.add("HyperMD-codeblock");
                 el.innerHTML = "some code content";
                 parent.appendChild(el);
@@ -179,15 +187,17 @@ describe("CodeBlock", () => {
         test("adds CSS class when enabled", () => {
             mockPlugin.settings.horizontalScrollingCodeBlockEnabled = true;
             codeBlock.updateStyle();
-            
+
             expect(document.body.classList.contains("scrolling-horizontal-code-blocks")).toBe(true);
         });
 
         test("removes CSS class when disabled", () => {
             mockPlugin.settings.horizontalScrollingCodeBlockEnabled = false;
             codeBlock.updateStyle();
-            
-            expect(document.body.classList.contains("scrolling-horizontal-code-blocks")).toBe(false);
+
+            expect(document.body.classList.contains("scrolling-horizontal-code-blocks")).toBe(
+                false,
+            );
         });
     });
 });

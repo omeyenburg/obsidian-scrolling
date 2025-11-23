@@ -10,6 +10,12 @@ const mockPlugin = {
             },
         },
     },
+    events: {
+        onResize: jest.fn(),
+        onWheelCancelling: jest.fn(),
+        onGeometryChange: jest.fn(),
+        onCursorUpdate: jest.fn(),
+    },
 };
 
 describe("ImageZoom", () => {

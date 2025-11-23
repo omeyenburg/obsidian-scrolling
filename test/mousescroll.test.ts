@@ -7,15 +7,20 @@ const mockPlugin = {
     },
     registerDomEvent: jest.fn(),
     register: jest.fn(),
+    events: {
+        onLeafChange: jest.fn(),
+    },
 };
-
-jest.useFakeTimers();
 
 describe("MouseScroll", () => {
     let mouseScroll: MouseScroll;
 
     beforeEach(() => {
         mouseScroll = new MouseScroll(mockPlugin as any);
+
+        // performance.now() is initially 0.
+        // Can be advanced with jest.advanceTimersByTime().
+        jest.useFakeTimers();
     });
 
     describe("isTouchpad", () => {
@@ -25,11 +30,10 @@ describe("MouseScroll", () => {
                 deltaY: 0,
             });
 
-            const now = 0;
             const deltaTime = 0;
             const isStart = false;
 
-            expect(() => mouseScroll["isTouchpad"](e, now, deltaTime, isStart)).not.toThrow();
+            expect(() => mouseScroll["isTouchpad"](e, deltaTime, isStart)).not.toThrow();
         });
 
         test("should return false for delta mode line", () => {
@@ -38,11 +42,10 @@ describe("MouseScroll", () => {
                 deltaY: 10,
             });
 
-            const now = 0;
             const deltaTime = 8;
             const isStart = false;
 
-            const result = mouseScroll["isTouchpad"](e, now, deltaTime, isStart);
+            const result = mouseScroll["isTouchpad"](e, deltaTime, isStart);
             expect(result).toBe(false);
         });
 
@@ -52,11 +55,10 @@ describe("MouseScroll", () => {
                 deltaY: 1,
             });
 
-            const now = 0;
             const deltaTime = 8;
             const isStart = false;
 
-            const result = mouseScroll["isTouchpad"](e, now, deltaTime, isStart);
+            const result = mouseScroll["isTouchpad"](e, deltaTime, isStart);
             expect(result).toBe(false);
         });
 
@@ -67,11 +69,10 @@ describe("MouseScroll", () => {
                 deltaY: 8,
             });
 
-            const now = 0;
             const deltaTime = 8;
             const isStart = false;
 
-            const result = mouseScroll["isTouchpad"](e, now, deltaTime, isStart);
+            const result = mouseScroll["isTouchpad"](e, deltaTime, isStart);
             expect(result).toBe(true);
         });
 
@@ -81,11 +82,10 @@ describe("MouseScroll", () => {
                 deltaY: 5.2,
             });
 
-            const now = 0;
             const deltaTime = 8;
             const isStart = false;
 
-            const result = mouseScroll["isTouchpad"](e, now, deltaTime, isStart);
+            const result = mouseScroll["isTouchpad"](e, deltaTime, isStart);
             expect(result).toBe(true);
         });
 
@@ -100,14 +100,14 @@ describe("MouseScroll", () => {
                 deltaY: 200,
             });
 
-            let now = 0;
             let deltaTime = 8;
             const isStart = false;
 
-            const result1 = mouseScroll["isTouchpad"](e1, now, deltaTime, isStart);
-            now = 8;
+            const result1 = mouseScroll["isTouchpad"](e1, deltaTime, isStart);
+
+            jest.advanceTimersByTime(8);
             deltaTime += 8;
-            const result2 = mouseScroll["isTouchpad"](e2, now, deltaTime, isStart);
+            const result2 = mouseScroll["isTouchpad"](e2, deltaTime, isStart);
 
             expect(result1).toBe(true); // sets touchpadLastUse
             expect(result2).toBe(true); // grace period active
@@ -125,14 +125,14 @@ describe("MouseScroll", () => {
                 deltaY: 200,
             });
 
-            let now = 0;
             let deltaTime = 200;
             const isStart = false;
 
-            const result1 = mouseScroll["isTouchpad"](e1, now, deltaTime, isStart);
-            now += MouseScroll["TOUCHPAD_GRACE_PERIOD"];
-            deltaTime += MouseScroll["TOUCHPAD_GRACE_PERIOD"];
-            const result2 = mouseScroll["isTouchpad"](e2, now, deltaTime, isStart);
+            const result1 = mouseScroll["isTouchpad"](e1, deltaTime, isStart);
+
+            jest.advanceTimersByTime(mouseScroll["TOUCHPAD_GRACE_PERIOD"]);
+            deltaTime += mouseScroll["TOUCHPAD_GRACE_PERIOD"];
+            const result2 = mouseScroll["isTouchpad"](e2, deltaTime, isStart);
 
             expect(result1).toBe(true); // sets touchpadLastUse
             expect(result2).toBe(false); // grace period active
@@ -196,7 +196,7 @@ describe("MouseScroll", () => {
             const result = mouseScroll["getIsStart"](deltaTime);
             expect(result).toBe(true);
         });
-    })
+    });
 
     describe("analyzeDelay", () => {
         test("appends to delays and updates avgDelay", () => {

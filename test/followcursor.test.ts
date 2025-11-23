@@ -12,6 +12,13 @@ const createMockPlugin = (settings: any = {}) => ({
         ...settings,
     },
     register: jest.fn(),
+    events: {
+        onKeyDown: jest.fn(),
+        onMouseUp: jest.fn(),
+        onCursorUpdate: jest.fn(),
+        onLeafChange: jest.fn(),
+        onResize: jest.fn(),
+    },
 });
 
 jest.useFakeTimers();
@@ -119,26 +126,26 @@ describe("FollowCursor", () => {
 
     describe("keyDownHandler and mouseUpHandler", () => {
         test("keyDownHandler resets recentMouseUp flag", () => {
-            followcursor.mouseUpHandler();
+            followcursor["mouseUpHandler"]();
             expect(followcursor["recentMouseUp"]).toBe(true);
-            
-            followcursor.keyDownHandler();
+
+            followcursor["keyDownHandler"]();
             expect(followcursor["recentMouseUp"]).toBe(false);
         });
 
         test("mouseUpHandler sets recentMouseUp flag", () => {
-            followcursor.mouseUpHandler();
+            followcursor["mouseUpHandler"]();
             expect(followcursor["recentMouseUp"]).toBe(true);
-            
+
             // After timeout, flag should reset
             jest.advanceTimersByTime(150);
             expect(followcursor["recentMouseUp"]).toBe(false);
         });
 
         test("mouseUpHandler timeout auto-resets after delay", () => {
-            followcursor.mouseUpHandler();
+            followcursor["mouseUpHandler"]();
             expect(followcursor["recentMouseUp"]).toBe(true);
-            
+
             // Advance timers by the MOUSE_UP_TIMEOUT
             jest.advanceTimersByTime(100);
             expect(followcursor["recentMouseUp"]).toBe(false);

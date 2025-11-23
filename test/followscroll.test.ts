@@ -12,6 +12,12 @@ const createMockPlugin = (settings: any = {}) => ({
             },
         },
     },
+    events: {
+        onLeafChange: jest.fn(),
+        onLayoutReady: jest.fn(),
+        onCursorUpdate: jest.fn(),
+        onWheelExtended: jest.fn(),
+    },
 });
 
 jest.useFakeTimers();
@@ -33,9 +39,9 @@ describe("FollowScroll", () => {
     describe("leafChangeHandler", () => {
         test("resets relativeLineOffset on leaf change", () => {
             (followScroll as any).relativeLineOffset = 100;
-            
-            followScroll.leafChangeHandler();
-            
+
+            followScroll["leafChangeHandler"]();
+
             expect((followScroll as any).relativeLineOffset).toBeNull();
         });
     });
@@ -45,14 +51,14 @@ describe("FollowScroll", () => {
             const mockEditor = createMockEditor();
             mockPlugin.app.workspace.activeEditor.editor = mockEditor;
 
-            followScroll.viewUpdateHandler(mockEditor as any);
-            
+            followScroll["cursorUpdateHandler"](mockEditor as any, false, false);
+
             // Should not have updated immediately due to debounce
             jest.advanceTimersByTime(100);
-            
+
             // Should have started processing
             jest.advanceTimersByTime(200);
-            
+
             expect(mockEditor.cm.requestMeasure).not.toHaveBeenCalled();
         });
 
@@ -62,7 +68,7 @@ describe("FollowScroll", () => {
             const mockEditor = createMockEditor();
             mockPlugin.app.workspace.activeEditor.editor = mockEditor;
 
-            followScrollDisabled.viewUpdateHandler(mockEditor as any);
+            followScroll["cursorUpdateHandler"](mockEditor as any, false, false);
             jest.runAllTimers();
 
             // Since cursorScroll is disabled, the method returns early and doesn't update
@@ -77,14 +83,14 @@ describe("FollowScroll", () => {
             const mockEditor = createMockEditor();
             mockPlugin.app.workspace.activeEditor.editor = mockEditor;
 
-            followScroll.wheelHandler(mockElement);
-            
+            followScroll["wheelHandler"]({} as Event, mockElement, false, 0);
+
             // Should not execute immediately due to debounce
             expect((followScroll as any).relativeLineOffset).toBeNull();
-            
+
             // Should execute after debounce delay
             jest.advanceTimersByTime(70);
-            
+
             // Still should be null because no editor interaction
             expect((followScroll as any).relativeLineOffset).toBeNull();
         });
@@ -92,12 +98,12 @@ describe("FollowScroll", () => {
         test("skips when cursor scroll is disabled", () => {
             mockPlugin.settings.cursorScrollEnabled = false;
             const followScrollDisabled = new FollowScroll(mockPlugin as any);
-            
+
             const mockElement = document.createElement("div");
-            followScrollDisabled.wheelHandler(mockElement);
-            
+            followScrollDisabled["wheelHandler"]({} as Event, mockElement, false, 0);
+
             jest.advanceTimersByTime(100);
-            
+
             expect((followScrollDisabled as any).relativeLineOffset).toBeNull();
         });
     });
@@ -105,10 +111,10 @@ describe("FollowScroll", () => {
     describe("skipCursor", () => {
         test("can be set and reset", () => {
             expect(followScroll.skipCursor).toBe(false);
-            
+
             followScroll.skipCursor = true;
             expect(followScroll.skipCursor).toBe(true);
-            
+
             followScroll.skipCursor = false;
             expect(followScroll.skipCursor).toBe(false);
         });
@@ -116,15 +122,15 @@ describe("FollowScroll", () => {
         test("auto-resets after delay", () => {
             followScroll.skipCursor = true;
             expect(followScroll.skipCursor).toBe(true);
-            
+
             jest.advanceTimersByTime(100);
-            // Should not reset yet  
+            // Should not reset yet
             expect(followScroll.skipCursor).toBe(true);
-            
+
             // Manually trigger the resetSkip which is a debounced function
             // With immediate=true, it executes immediately and then waits
             (followScroll as any).resetSkip();
-            
+
             // Advance past the debounce delay
             jest.advanceTimersByTime(600);
             expect(followScroll.skipCursor).toBe(false);
@@ -146,7 +152,7 @@ function createMockEditor() {
         y: 0,
         toJSON: jest.fn(),
     }));
-    
+
     return {
         cm: {
             scrollDOM: scrollDOM,
