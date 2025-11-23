@@ -225,8 +225,9 @@ export class FollowCursor {
     ): number {
         if (docChanged && this.plugin.settings.followCursorInstantEditScroll) return 1;
 
+        const SMOOTHNESS_MULTIPLIER = 0.16;
         const smoothness = this.plugin.settings.followCursorSmoothness;
-        let steps = Math.max(1, Math.ceil(0.16 * smoothness));
+        let steps = Math.max(1, Math.ceil(SMOOTHNESS_MULTIPLIER * smoothness));
 
         if (goalDistance > scrollerHeight) {
             return Math.ceil(Math.sqrt(steps));

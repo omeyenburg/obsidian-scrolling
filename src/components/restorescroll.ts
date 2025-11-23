@@ -6,6 +6,7 @@ import {
     MarkdownView,
     Notice,
     OpenViewState,
+    Platform,
     TAbstractFile,
     TFile,
     Workspace,
@@ -26,21 +27,6 @@ interface EphemeralState {
 
 class FileLeaf extends WorkspaceLeaf {
     view: FileView;
-}
-
-/**
- * Returns the scroller Element for pdf and image files and for markdown preview.
- * Markdown source must be checked and handled separately.
- */
-function getScroller(view: FileView): HTMLElement | null {
-    switch (view.getViewType()) {
-        case "markdown":
-            return view.containerEl.querySelector(".markdown-preview-view");
-        case "bases":
-            return view.containerEl.querySelector(".bases-view");
-        default:
-            return null;
-    }
 }
 
 export class RestoreScroll {
@@ -367,9 +353,6 @@ export class RestoreScroll {
             ({ cursor, scroll, scrollTop } = ephemeralState);
         }
 
-        // Check for bases
-        if (view.getViewType() === "bases" && !this.plugin.settings.restoreScrollBases) return;
-
         if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
             if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
                 view.editor.setCursor(cursor.from);
@@ -386,7 +369,7 @@ export class RestoreScroll {
                 }, this.plugin.settings.restoreScrollDelay);
             }
         } else if (scrollTop) {
-            const scroller = getScroller(view);
+            const scroller = this.getScroller(view);
             if (!scroller) return;
 
             // Bases content loads in late.
@@ -400,6 +383,26 @@ export class RestoreScroll {
                 }
             };
             iter();
+        }
+    }
+
+    /**
+     * Returns the scroller Element for pdf files, bases and markdown previews.
+     * Markdown source must be checked and handled separately.
+     * Pdf is only enabled on mobile.
+     */
+    private getScroller(view: FileView): HTMLElement | null {
+        switch (view.getViewType()) {
+            case "markdown":
+                return view.containerEl.querySelector(".markdown-preview-view");
+            case "pdf":
+                if (!Platform.isMobile || !this.plugin.settings.restoreScrollPdf) return null;
+                return view.containerEl.querySelector(".pdf-viewer-container");
+            case "bases":
+                if (!this.plugin.settings.restoreScrollBases) return null;
+                return view.containerEl.querySelector(".bases-view");
+            default:
+                return null;
         }
     }
 
@@ -585,7 +588,7 @@ export class RestoreScroll {
                 scrollTop,
             };
         } else {
-            const scrollTop = getScroller(view)?.scrollTop;
+            const scrollTop = this.getScroller(view)?.scrollTop;
             if (scrollTop) this.ephemeralStates[fileId] = { timestamp, scrollTop };
         }
 

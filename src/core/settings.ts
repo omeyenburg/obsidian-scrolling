@@ -33,6 +33,8 @@ export interface ScrollingPluginSettings {
     restoreScrollLimit: number;
     /** Delay before restoring the position in ms. (0-300) */
     restoreScrollDelay: number;
+    /** Enable scroll position in pdf files. */
+    restoreScrollPdf: boolean;
     /** Enable scroll position in bases. */
     restoreScrollBases: boolean;
     /** Even restore position if Markdown link to file was used. */
@@ -117,6 +119,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollMode: "scroll",
     restoreScrollLimit: -1,
     restoreScrollDelay: 5,
+    restoreScrollPdf: false,
     restoreScrollBases: false,
     restoreScrollFileLink: true,
     restoreScrollInitialOnly: false,
@@ -522,13 +525,21 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 });
         });
 
-        this.createSetting(
-            "Enable in Bases",
-            "Enable restoring position in Bases.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.restoreScrollBases)
-                .onChange(async (value) => {
+        if (Platform.isMobile) {
+            this.createSetting(
+                "Enable in PDFs",
+                "Enable restoring position in PDF files.",
+            ).addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.restoreScrollPdf).onChange(async (value) => {
+                    this.plugin.settings.restoreScrollPdf = value;
+                    await this.plugin.saveSettings();
+                }),
+            );
+        }
+
+        this.createSetting("Enable in Bases", "Enable restoring position in Bases.").addToggle(
+            (toggle) =>
+                toggle.setValue(this.plugin.settings.restoreScrollBases).onChange(async (value) => {
                     this.plugin.settings.restoreScrollBases = value;
                     await this.plugin.saveSettings();
                 }),
@@ -548,10 +559,12 @@ export class ScrollingSettingTab extends PluginSettingTab {
             "Enable only on launch",
             "Only restore position once per file per session.",
         ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.restoreScrollInitialOnly).onChange(async (value) => {
-                this.plugin.settings.restoreScrollInitialOnly = value;
-                await this.plugin.saveSettings();
-            }),
+            toggle
+                .setValue(this.plugin.settings.restoreScrollInitialOnly)
+                .onChange(async (value) => {
+                    this.plugin.settings.restoreScrollInitialOnly = value;
+                    await this.plugin.saveSettings();
+                }),
         );
 
         this.createSetting(

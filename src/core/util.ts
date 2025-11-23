@@ -4,7 +4,7 @@ export function clamp(val: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, val));
 }
 
-export function getVimCursor(editor: Editor): HTMLElement {
+export function getVimCursor(editor: Editor): HTMLElement | null {
     const cursorLayerList = editor.cm.scrollDOM.getElementsByClassName("cm-vimCursorLayer");
     if (cursorLayerList.length < 1) {
         return null;
