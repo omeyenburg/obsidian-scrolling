@@ -90,6 +90,8 @@ export class FollowScroll {
         if (!this.plugin.settings.cursorScrollEnabled) return;
         if (this.relativeLineOffset == null) return;
 
+        // NOTE: This is not split-friendly.
+        //       We would need to store positions for all splits.
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || editor.cm.scrollDOM !== el) return;
         const cm = editor.cm;

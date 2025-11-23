@@ -1,4 +1,4 @@
-import { Editor, debounce } from "obsidian";
+import { Editor, MarkdownView, WorkspaceLeaf, debounce } from "obsidian";
 import { Line } from "@codemirror/state";
 
 import type { default as ScrollingPlugin } from "@core/main";
@@ -22,7 +22,7 @@ export class CodeBlock {
     private currentScrollWidth: number | null = null;
     private scrollAnimationFrame = 0;
 
-    private readonly verticalWheelScrollDebouncer: (line: Element) => void;
+    private readonly verticalWheelScrollDebouncer: (editor: Editor, line: Element) => void;
 
     private cachedCursor: HTMLElement | null = null;
 
@@ -96,12 +96,12 @@ export class CodeBlock {
     private scrollHandler(event: Event): void {
         if (this.isScrollingVertically || this.scrollHandlerAnimationFrame !== null) return;
 
+        const leaf = this.getEventLeaf(event);
+        if (!leaf || !(leaf.view instanceof MarkdownView) || !leaf.view.editor) return;
+
         this.scrollHandlerAnimationFrame = window.setTimeout(() => {
             this.scrollHandlerAnimationFrame = null;
-            const editor = this.plugin.app.workspace.activeEditor?.editor;
-            if (!editor) return;
-
-            editor.cm.requestMeasure({
+            (leaf.view as MarkdownView).editor.cm.requestMeasure({
                 key: "code-scroll-handler",
                 read: (_view) => {
                     const target = event.target as Element;
@@ -154,6 +154,7 @@ export class CodeBlock {
         this.lastScrollTop = null;
         this.isScrollingVertically = false;
 
+        // We may expect the new leaf to have an editor.
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
 
@@ -161,7 +162,7 @@ export class CodeBlock {
         if (!lineEl) return;
 
         this.updateWidthAndBlock(lineEl);
-        this.updateCursorPassive();
+        this.updateCursorPassive(editor);
     }
 
     /**
@@ -193,22 +194,33 @@ export class CodeBlock {
         }
 
         if (!line.classList.contains("HyperMD-codeblock")) return false;
-        // if (
-        //     line.classList.contains("HyperMD-codeblock-begin") ||
-        //     line.classList.contains("HyperMD-codeblock-end")
-        // )
-        //     return false;
+
+        // Find correct leaf to grab editor.
+        const leaf = this.getEventLeaf(event);
+        if (!leaf || !(leaf.view instanceof MarkdownView)) return false;
 
         let { deltaX, deltaY } = this.normalizeWheelDelta(event);
         const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
-
         if (isHorizontalScroll && !this.isScrollingVertically) {
-            this.horizontalWheelScroll(deltaX, line, event.timeStamp);
+            this.horizontalWheelScroll(leaf.view.editor, deltaX, line, event.timeStamp);
             return true;
         }
 
-        this.verticalWheelScrollDebouncer(line);
+        if (!leaf.view.editor) return false;
+        this.verticalWheelScrollDebouncer(leaf.view.editor, line);
+
         return false;
+    }
+
+    private getEventLeaf(event: Event) {
+        let eventLeaf: WorkspaceLeaf;
+        this.plugin.app.workspace.iterateRootLeaves((leaf) => {
+            if (leaf.view.containerEl.contains(event.target as Node)) {
+                eventLeaf = leaf;
+            }
+        });
+
+        return eventLeaf;
     }
 
     /**
@@ -234,15 +246,19 @@ export class CodeBlock {
         )
             return;
 
-        const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
+        // Find correct leaf to grab editor.
+        const leaf = this.getEventLeaf(event);
+        if (!leaf || !(leaf.view instanceof MarkdownView)) return;
 
+        const isHorizontalScroll = Math.abs(deltaX) >= Math.abs(deltaY);
         if (isHorizontalScroll && !this.isScrollingVertically) {
-            this.horizontalWheelScroll(deltaX, line, event.timeStamp);
+            this.horizontalWheelScroll(leaf.view.editor, deltaX, line, event.timeStamp);
 
             // Stop Obsidian from expanding the side panels
             event.stopPropagation();
-        } else {
-            this.verticalWheelScrollDebouncer(line);
+            return;
+        } else if (leaf.view.editor) {
+            this.verticalWheelScrollDebouncer(leaf.view.editor, line);
         }
     }
 
@@ -365,8 +381,7 @@ export class CodeBlock {
      * Updates newly loaded code block lines when scrolling vertically.
      * (Code mirror adds and removes lines on the fly)
      */
-    private verticalWheelScroll(line: Element): void {
-        const editor = this.plugin.app.workspace.activeEditor?.editor;
+    private verticalWheelScroll(editor: Editor, line: Element): void {
         if (!editor) return;
 
         editor.cm.requestMeasure({
@@ -393,7 +408,12 @@ export class CodeBlock {
      * Initiates horizontal scroll animation.
      * Also updates the current code block once.
      */
-    private horizontalWheelScroll(deltaX: number, line: Element, now: number): void {
+    private horizontalWheelScroll(
+        editor: Editor | null,
+        deltaX: number,
+        line: Element,
+        now: number,
+    ): void {
         if (!this.codeBlockLines.includes(line) || this.currentScrollWidth === null) {
             this.updateWidthAndBlock(line);
             this.lastHorizontalScrollTimeStamp = now;
@@ -417,14 +437,14 @@ export class CodeBlock {
 
         if (!this.currentScrollWidth) return;
 
-        this.animateScroll();
+        this.animateScroll(editor);
     }
 
     /**
      * Scrolls horizontally over multiple animation frames.
      * Updates cursor, as it moves in/out of the viewport.
      */
-    private animateScroll(): void {
+    private animateScroll(editor: Editor | null): void {
         this.currentScrollLeft += this.currentScrollVelocity;
 
         if (this.currentScrollLeft < 0) {
@@ -435,7 +455,9 @@ export class CodeBlock {
             this.currentScrollVelocity = 0;
         } else if (Math.abs(this.currentScrollVelocity) > 0.2) {
             this.currentScrollVelocity *= this.FRICTION_COFFICIENT;
-            this.scrollAnimationFrame = window.requestAnimationFrame(() => this.animateScroll());
+            this.scrollAnimationFrame = window.requestAnimationFrame(() =>
+                this.animateScroll(editor),
+            );
         } else {
             this.scrollAnimationFrame = 0;
         }
@@ -443,18 +465,18 @@ export class CodeBlock {
         this.updateHorizontalScroll();
 
         // Cursor must be updated, otherwise it would not move at all while scrolling.
-        this.updateCursorPassive();
+        this.updateCursorPassive(editor);
     }
 
     /**
      * Hides Vim's fat cursor, updating every frame would be laggy.
      */
-    private updateCursorPassive(): void {
+    private updateCursorPassive(editor: Editor | null): void {
         // Fast path: only check editor if we have code block lines
         if (!this.codeBlockLines.length) return;
 
-        const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor) return;
+        // A different leaf with an inactive editor might be scrolled.
+        if (editor && editor !== this.plugin.app.workspace.activeEditor?.editor) return;
 
         const cursorEl = this.getCursorEl(editor);
         if (!cursorEl) return;

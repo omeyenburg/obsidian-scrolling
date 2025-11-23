@@ -299,6 +299,7 @@ export class Events {
         this.skipViewUpdate = true;
         window.requestAnimationFrame(() => (this.skipViewUpdate = false));
 
+        // Cursor updated in the active editor.
         const editor = this.plugin.app.workspace.activeEditor?.editor;
         if (!editor) return;
 
