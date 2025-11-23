@@ -82,7 +82,7 @@ export class CodeBlock {
      * Called on plugin load and change of settings.
      */
     public updateStyle(): void {
-        if (this.plugin.settings.horizontalScrollingCodeBlockEnabled) {
+        if (this.plugin.settings.codeBlockScrollEnabled) {
             document.body.addClass("scrolling-horizontal-code-blocks");
         } else {
             document.body.removeClass("scrolling-horizontal-code-blocks");
@@ -156,7 +156,7 @@ export class CodeBlock {
 
         // We may expect the new leaf to have an editor.
         const editor = this.plugin.app.workspace.activeEditor?.editor;
-        if (!editor || !this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
+        if (!editor || !this.plugin.settings.codeBlockScrollEnabled) return;
 
         const lineEl = editor.cm.contentDOM.querySelector(".cm-line.cm-active");
         if (!lineEl) return;
@@ -172,7 +172,7 @@ export class CodeBlock {
      */
     private wheelHandler(event: WheelEvent): boolean {
         // Fast exit for non-code blocks
-        if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return false;
+        if (!this.plugin.settings.codeBlockScrollEnabled) return false;
 
         let line = event.target as Element;
 
@@ -230,7 +230,7 @@ export class CodeBlock {
      */
     private touchMoveHandler(event: TouchEvent, deltaX: number, deltaY: number): void {
         // Fast exit for non-code blocks
-        if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
+        if (!this.plugin.settings.codeBlockScrollEnabled) return;
 
         let line = event.target as Element;
         if (line.classList.contains("cm-indent")) {
@@ -272,7 +272,7 @@ export class CodeBlock {
         docChanged: boolean,
         _vimModeChanged: boolean,
     ): void {
-        if (!this.plugin.settings.horizontalScrollingCodeBlockEnabled) return;
+        if (!this.plugin.settings.codeBlockScrollEnabled) return;
 
         const cursorEl = this.getCursorEl(editor);
 

@@ -17,15 +17,8 @@ export interface ScrollingPluginSettings {
     /** Trigger scroll on mouse selection. (hidden) */
     followCursorEnableSelection: boolean;
 
-    /** Move cursor while scrolling manually. Desktop only. */
-    cursorScrollEnabled: boolean;
-
     /** Disable code wrapping & enable horizontal code scrolling. */
-    horizontalScrollingCodeBlockEnabled: boolean;
-    /** Cut off long mathjax lines & make them scrollable. */
-    horizontalScrollingMathjaxEnabled: boolean;
-    /** Horizontal scrolling in file tree. Desktop only. */
-    horizontalScrollingFileTreeEnabled: boolean;
+    codeBlockScrollEnabled: boolean;
 
     /** Which position to restore. Values: scroll, cursor, top, bottom */
     restoreScrollMode: string;
@@ -49,6 +42,12 @@ export interface ScrollingPluginSettings {
     /** Zoom when hovering over images. Desktop only. (Zoom guesture & vertical scroll while holding ctrl) */
     imageZoomEnabled: boolean;
 
+    /** Cut off long mathjax lines & make them scrollable. */
+    mathjaxScrollEnabled: boolean;
+
+    /** Horizontal scrolling in file tree. Desktop only. */
+    horizontalFileTreeEnabled: boolean;
+
     /** When to show the scrollbar. Hidden on MacOS. Values: hide, scroll, show */
     scrollbarVisibility: string;
     /** Width of scrollbars. Linux only. (0-30) */
@@ -70,16 +69,17 @@ export interface ScrollingPluginSettings {
     /** Enable keybinds to scroll to top/bottom in reading mode. */
     readingTopBottomScrollEnabled: boolean;
 
+    /** Show ribbon buttons to scroll to top/bottom. (Mobile only) */
+    ribbonScrollButtonsEnabled: boolean;
+
     /** Customization method for mouse/touchpad scroll. Values: disabled, native, simulated */
     scrollMode: string;
-
     /** Scroll speed multiplier. (0.1-3.0) */
     nativeScrollMultiplier: number;
     /** Scroll speed multiplier when holding alt. (0.1-3.0) */
     nativeAltMultiplier: number;
     /** Skip scroll animation. */
     nativeScrollInstant: boolean;
-
     /** Invert direction of vertical scroll. (hidden) */
     simulatedMouseInvert: boolean;
     /** Scroll speed multiplier. In percent. (1-100) */
@@ -95,8 +95,8 @@ export interface ScrollingPluginSettings {
     /** Threshold between precise and smooth scrolling. In percent. (1-100) */
     simulatedTouchpadFrictionThreshold: number;
 
-    /** Show ribbon buttons to scroll to top/bottom. (Mobile only) */
-    ribbonScrollButtonsEnabled: boolean;
+    /** Move cursor while scrolling manually. (Desktop only) */
+    cursorScrollEnabled: boolean;
 
     /** Show experimental settings. (hidden) */
     enableExperimentalSettings: boolean;
@@ -110,11 +110,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     followCursorEnableMouse: false,
     followCursorEnableSelection: false,
 
-    cursorScrollEnabled: false,
-
-    horizontalScrollingCodeBlockEnabled: false,
-    horizontalScrollingMathjaxEnabled: false,
-    horizontalScrollingFileTreeEnabled: false,
+    codeBlockScrollEnabled: false,
 
     restoreScrollMode: "scroll",
     restoreScrollLimit: -1,
@@ -128,6 +124,10 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
     imageZoomEnabled: true,
 
+    mathjaxScrollEnabled: false,
+
+    horizontalFileTreeEnabled: false,
+
     scrollbarVisibility: "show",
     scrollbarWidth: 12,
 
@@ -140,12 +140,12 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     readingHalfPageScrollEnabled: true,
     readingTopBottomScrollEnabled: true,
 
-    scrollMode: "disabled",
+    ribbonScrollButtonsEnabled: true,
 
+    scrollMode: "disabled",
     nativeScrollMultiplier: 1.0,
     nativeAltMultiplier: 1,
     nativeScrollInstant: false,
-
     simulatedMouseInvert: false,
     simulatedMouseSpeed: 50,
     simulatedMouseSmoothness: 75,
@@ -154,7 +154,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     simulatedTouchpadFrictionThreshold: 20,
     simulatedTouchpadSpeed: 50,
 
-    ribbonScrollButtonsEnabled: true,
+    cursorScrollEnabled: false,
 
     enableExperimentalSettings: false,
 };
@@ -175,15 +175,17 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.containerEl.empty();
 
         this.displayFollowCursorSettings();
-        this.displayCursorScrollSettings();
-        this.displayHorizontalScrollingSettings();
+        this.displayCodeBlockSettings();
         this.displayRestoreScrollSettings();
         this.displayImageZoomSettings();
+        this.displayMathJaxSettings();
+        this.displayFileTreeSettings();
         this.displayScrollbarSettings();
         this.displayLineLengthSettings();
         this.displayReadModeKeybindsSettings();
-        this.displayMouseScrollSettings();
         this.displayRibbonSettings();
+        this.displayMouseScrollSettings();
+        this.displayCursorScrollSettings();
 
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
@@ -294,6 +296,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
         return setting;
     }
 
+    private displaySplitter(): void {
+        this.containerEl.createEl("br");
+        this.containerEl.createEl("br");
+    }
+
     private displayFollowCursorSettings() {
         this.createHeading("Centered cursor");
 
@@ -391,76 +398,26 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
     }
 
-    private displayCursorScrollSettings() {
-        if (Platform.isMobile) return;
-        if (!this.plugin.settings.enableExperimentalSettings) {
-            this.plugin.settings.cursorScrollEnabled = DEFAULT_SETTINGS.cursorScrollEnabled;
-            return;
-        }
-
-        this.containerEl.createEl("br");
-        this.createHeading("Text cursor follows scroll (Experimental)");
+    private displayCodeBlockSettings() {
+        this.displaySplitter();
+        this.createHeading("Code wrapping");
 
         this.createSetting(
             "Enable",
-            "Move the cursor to stay visible when scrolling manually.\nCan be used together with 'Centered cursor'.",
+            "Disable code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
         ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.cursorScrollEnabled).onChange(async (value) => {
-                this.plugin.settings.cursorScrollEnabled = value;
+            toggle.setValue(this.plugin.settings.codeBlockScrollEnabled).onChange(async (value) => {
+                this.plugin.settings.codeBlockScrollEnabled = value;
+                this.plugin.codeBlock.updateStyle();
                 await this.plugin.saveSettings();
             }),
         );
     }
 
-    private displayHorizontalScrollingSettings() {
-        this.containerEl.createEl("br");
-        this.createHeading("Horizontal scrolling");
-
-        this.createSetting(
-            "Code blocks",
-            "Disable code wrapping & allow horizontal scrolling in code blocks.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.horizontalScrollingCodeBlockEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.horizontalScrollingCodeBlockEnabled = value;
-                    this.plugin.codeBlock.updateStyle();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        this.createSetting(
-            "Inline MathJax",
-            "Scroll inline MathJax without scrolling the entire document.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.horizontalScrollingMathjaxEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.horizontalScrollingMathjaxEnabled = value;
-                    this.plugin.mathJax.updateStyle();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        if (Platform.isMobile) return;
-        this.createSetting(
-            "File tree",
-            "Allow horizontal scrolling in the file tree and show a scrollbar.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.horizontalScrollingFileTreeEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.horizontalScrollingFileTreeEnabled = value;
-                    this.plugin.fileTree.updateStyle();
-                    await this.plugin.saveSettings();
-                }),
-        );
-    }
-
     private displayRestoreScrollSettings() {
-        this.containerEl.createEl("br");
+        this.displaySplitter();
         this.createHeading(
-            "Remember scroll/cursor position",
+            "Remember scroll position",
             "Automatically save your position before closing a file and restore it upon opening the file again.\nThe position will not be restored if the file is already opened in a tab of the same split.",
         );
 
@@ -646,11 +603,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayImageZoomSettings() {
         if (Platform.isMobile) return;
 
-        this.containerEl.createEl("br");
-        this.createHeading("Scroll to zoom images");
+        this.displaySplitter();
+        this.createHeading("Image zooming");
 
         this.createSetting(
-            "Enabled",
+            "Enable",
             "Hover over an image and scroll while holding the ctrl key to zoom.",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.imageZoomEnabled).onChange(async (value) => {
@@ -660,10 +617,46 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
     }
 
+    private displayMathJaxSettings() {
+        this.displaySplitter();
+        this.createHeading("Inline MathJax");
+
+        this.createSetting(
+            "Enable",
+            "Allow horizontal scrolling of inline MathJax without scrolling the entire viewport.",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.mathjaxScrollEnabled).onChange(async (value) => {
+                this.plugin.settings.mathjaxScrollEnabled = value;
+                this.plugin.mathJax.updateStyle();
+                await this.plugin.saveSettings();
+            }),
+        );
+    }
+
+    private displayFileTreeSettings() {
+        if (Platform.isMobile) return;
+
+        this.displaySplitter();
+        this.createHeading("File tree");
+
+        this.createSetting(
+            "Enable",
+            "Allow horizontal scrolling in the file tree and show a scrollbar.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.horizontalFileTreeEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.horizontalFileTreeEnabled = value;
+                    this.plugin.fileTree.updateStyle();
+                    await this.plugin.saveSettings();
+                }),
+        );
+    }
+
     private displayScrollbarSettings() {
         if (Platform.isMacOS) return;
 
-        this.containerEl.createEl("br");
+        this.displaySplitter();
         this.createHeading("Scrollbar appearance");
 
         this.createSetting(
@@ -709,7 +702,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayLineLengthSettings() {
         if (Platform.isMobile) return;
 
-        this.containerEl.createEl("br");
+        this.displaySplitter();
         this.createHeading("Line length");
 
         const readableLineLengthEnabled = this.plugin.lineLength.getObsidianReadableLineLength();
@@ -814,7 +807,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayReadModeKeybindsSettings() {
         if (Platform.isMobile) return;
 
-        this.containerEl.createEl("br");
+        this.displaySplitter();
         this.createHeading("Reading mode");
 
         this.createSetting("Line scroll keybinds", "Scroll by single lines with j/k.").addToggle(
@@ -850,10 +843,30 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
     }
 
+    private displayRibbonSettings() {
+        if (Platform.isDesktop) return;
+
+        this.displaySplitter();
+        this.createHeading("Ribbon commands");
+
+        this.createSetting(
+            "Commands for scrolling to top/bottom",
+            "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.ribbonScrollButtonsEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.ribbonScrollButtonsEnabled = value;
+                    this.plugin.commands.updateRibbonButtons();
+                    await this.plugin.saveSettings();
+                }),
+        );
+    }
+
     private displayMouseScrollSettings() {
         if (Platform.isMobile) return;
 
-        this.containerEl.createEl("br");
+        this.displaySplitter();
         this.createHeading("Mouse & Touchpad scroll");
 
         this.createSetting(
@@ -1027,23 +1040,25 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
     }
 
-    private displayRibbonSettings() {
-        if (Platform.isDesktop) return;
+    private displayCursorScrollSettings() {
+        if (Platform.isMobile) return;
 
-        this.containerEl.createEl("br");
-        this.createHeading("Ribbon commands");
+        if (!this.plugin.settings.enableExperimentalSettings) {
+            this.plugin.settings.cursorScrollEnabled = DEFAULT_SETTINGS.cursorScrollEnabled;
+            return;
+        }
+
+        this.displaySplitter();
+        this.createHeading("Text cursor follows scroll (Experimental)");
 
         this.createSetting(
-            "Commands for scrolling to top/bottom",
-            "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+            "Enable",
+            "Move the cursor to stay visible when scrolling manually.\nCan be used together with 'Centered cursor'.",
         ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.ribbonScrollButtonsEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.ribbonScrollButtonsEnabled = value;
-                    this.plugin.commands.updateRibbonButtons();
-                    await this.plugin.saveSettings();
-                }),
+            toggle.setValue(this.plugin.settings.cursorScrollEnabled).onChange(async (value) => {
+                this.plugin.settings.cursorScrollEnabled = value;
+                await this.plugin.saveSettings();
+            }),
         );
     }
 }

@@ -21,7 +21,7 @@ export class MathJax {
      */
     public updateStyle(): void {
         // Only proceed if state changed.
-        const isEnabled = this.plugin.settings.horizontalScrollingMathjaxEnabled;
+        const isEnabled = this.plugin.settings.mathjaxScrollEnabled;
         if (this.mathJaxEnabled == isEnabled) return;
         this.mathJaxEnabled = isEnabled;
 

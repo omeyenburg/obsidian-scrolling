@@ -21,7 +21,7 @@ export class FileTree {
      */
     public updateStyle(): void {
         // Only proceed if state changed.
-        const isEnabled = this.plugin.settings.horizontalScrollingFileTreeEnabled;
+        const isEnabled = this.plugin.settings.horizontalFileTreeEnabled;
         if (this.fileTreeScrollEnabled == isEnabled) return;
         this.fileTreeScrollEnabled = isEnabled;
 
