@@ -608,7 +608,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Enable",
-            "Hover over an image and scroll while holding the ctrl key to zoom.",
+            "Hover over an image and scroll while holding the Ctrl key to zoom.",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.imageZoomEnabled).onChange(async (value) => {
                 this.plugin.settings.imageZoomEnabled = value;
@@ -657,7 +657,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (Platform.isMacOS) return;
 
         this.displaySplitter();
-        this.createHeading("Scrollbar appearance");
+        this.createHeading("Scrollbars");
 
         this.createSetting(
             "Scrollbar visibility",
@@ -808,7 +808,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (Platform.isMobile) return;
 
         this.displaySplitter();
-        this.createHeading("Reading mode");
+        this.createHeading("Reading mode keybinds");
 
         this.createSetting("Line scroll keybinds", "Scroll by single lines with j/k.").addToggle(
             (toggle) =>
@@ -867,7 +867,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (Platform.isMobile) return;
 
         this.displaySplitter();
-        this.createHeading("Mouse & Touchpad scroll");
+        this.createHeading("Mouse & Touchpad scrolling");
 
         this.createSetting(
             "Mode",
