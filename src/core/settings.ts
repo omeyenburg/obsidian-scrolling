@@ -103,8 +103,8 @@ export interface ScrollingPluginSettings {
 }
 
 export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
-    followCursorEnabled: true,
-    followCursorRadius: 75,
+    followCursorEnabled: false,
+    followCursorRadius: 50,
     followCursorSmoothness: 25,
     followCursorInstantEditScroll: true,
     followCursorEnableMouse: false,
@@ -112,7 +112,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
     codeBlockScrollEnabled: false,
 
-    restoreScrollMode: "scroll",
+    restoreScrollMode: "top",
     restoreScrollLimit: -1,
     restoreScrollDelay: 5,
     restoreScrollPdf: false,
@@ -122,7 +122,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
 
-    imageZoomEnabled: true,
+    imageZoomEnabled: false,
 
     mathjaxScrollEnabled: false,
 
@@ -187,6 +187,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayMouseScrollSettings();
         this.displayCursorScrollSettings();
 
+        this.displaySplitter();
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
                 frag.createEl("span", {
@@ -306,7 +307,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Enable",
-            "Scroll the view to keep the cursor near the center when you move the cursor.",
+            "Automatically scrolls the view to keep the cursor near the center when you move it.",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.followCursorEnabled).onChange(async (value) => {
                 this.plugin.settings.followCursorEnabled = value;
@@ -400,11 +401,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
     private displayCodeBlockSettings() {
         this.displaySplitter();
-        this.createHeading("Code wrapping");
+        this.createHeading("Prevent code wrapping");
 
         this.createSetting(
             "Enable",
-            "Disable code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
+            "Prevent code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.codeBlockScrollEnabled).onChange(async (value) => {
                 this.plugin.settings.codeBlockScrollEnabled = value;
@@ -439,6 +440,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
+        // Disable further settings if "top" or "bottom" modes are selected.
+        this.settingsEnabled = ["scroll", "cursor"].includes(
+            this.plugin.settings.restoreScrollMode,
+        );
+
         this.createSetting(
             "Delay after opening a note",
             "Number of milliseconds to wait before restoring position.\nUse if restoring works unreliably.",
@@ -451,10 +457,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     this.plugin.settings.restoreScrollDelay = value;
                     await this.plugin.saveSettings();
                 }),
-        );
-
-        this.settingsEnabled = ["scroll", "cursor"].includes(
-            this.plugin.settings.restoreScrollMode,
         );
 
         const count = this.plugin.restoreScroll.getNumEphemeralStates();
@@ -619,7 +621,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
     private displayMathJaxSettings() {
         this.displaySplitter();
-        this.createHeading("Inline MathJax");
+        this.createHeading("Horizontal scrolling of MathJax");
 
         this.createSetting(
             "Enable",
@@ -637,7 +639,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         if (Platform.isMobile) return;
 
         this.displaySplitter();
-        this.createHeading("File tree");
+        this.createHeading("Horizontal scrolling in file tree");
 
         this.createSetting(
             "Enable",
@@ -718,7 +720,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
             }),
         );
 
-        if (!readableLineLengthEnabled) return;
+        // Disable further settings if readable line length is disabled.
+        this.settingsEnabled = readableLineLengthEnabled;
 
         this.createSetting(
             "Length unit",
