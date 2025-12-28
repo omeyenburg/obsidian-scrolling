@@ -48,21 +48,21 @@ All features are **optional** and **fully configurable** in plugin settings.
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/imagezoom.webp" alt="Image zoom preview" style="max-width: 640px; width: 100%; height: auto;">
 
-### Inline MathJax
+### Horizontal Scrolling of Inline MathJax
 
 - Make inline MathJax expressions scrollable
 - This prevents long formulas from extending the viewport
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/mathjax.webp" alt="MathJax preview" style="max-width: 640px; width: 100%; height: auto;">
 
-### File Tree
+### Horizontal Scrolling in File Tree
 
 - Allow horizontal scrolling in the file tree to see long file names
 - Desktop only
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/filetree.webp" alt="Filetree preview" style="max-width: 640px; width: 100%; height: auto;">
 
-### Scrollbars
+### Scrollbar Customization
 
 - Adjust visibility: always show, show while scrolling, or hide
 - Adjust scrollbar width (Linux only)
