@@ -240,16 +240,24 @@ export class RestoreScroll {
         // Mode top means feature is disabled.
         if (this.plugin.settings.restoreScrollMode === "top") return;
 
+        // DEPRECATED
         // Find the matching leaf for that file.
         // Leaf must be flagged as working. If leaf.working turns out not to be reliable,
         // just store the leaf IDs of opened leaves on layoutReady and fileOpen.
+        // this.plugin.app.workspace.iterateRootLeaves((leaf) => {
+        //     if (
+        //         leaf.working &&
+        //         leaf.view instanceof FileView &&
+        //         leaf.view.file.path === file.path
+        //     ) {
+        //         fileLeaf = leaf as FileLeaf;
+        //     }
+        // });
+
         let fileLeaf: FileLeaf | null = null;
+
         this.plugin.app.workspace.iterateRootLeaves((leaf) => {
-            if (
-                leaf.working &&
-                leaf.view instanceof FileView &&
-                leaf.view.file.path === file.path
-            ) {
+            if (leaf.view == this.plugin.app.workspace.getActiveFileView()) {
                 fileLeaf = leaf as FileLeaf;
             }
         });
