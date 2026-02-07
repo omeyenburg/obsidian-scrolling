@@ -187,7 +187,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayMouseScrollSettings();
         this.displayCursorScrollSettings();
 
-        this.displaySplitter();
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
                 frag.createEl("span", {
@@ -297,11 +296,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
         return setting;
     }
 
-    private displaySplitter(): void {
-        this.containerEl.createEl("br");
-        this.containerEl.createEl("br");
-    }
-
     private displayFollowCursorSettings() {
         this.createHeading("Centered cursor");
 
@@ -400,7 +394,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private displayCodeBlockSettings() {
-        this.displaySplitter();
         this.createHeading("Prevent code wrapping");
 
         this.createSetting(
@@ -416,7 +409,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private displayRestoreScrollSettings() {
-        this.displaySplitter();
         this.createHeading(
             "Remember scroll position",
             "Automatically save your position before closing a file and restore it upon opening the file again.\nThe position will not be restored if the file is already opened in a tab of the same split.",
@@ -605,7 +597,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayImageZoomSettings() {
         if (Platform.isMobile) return;
 
-        this.displaySplitter();
         this.createHeading("Image zooming");
 
         this.createSetting(
@@ -620,7 +611,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     }
 
     private displayMathJaxSettings() {
-        this.displaySplitter();
         this.createHeading("Horizontal scrolling of MathJax");
 
         this.createSetting(
@@ -638,7 +628,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayFileTreeSettings() {
         if (Platform.isMobile) return;
 
-        this.displaySplitter();
         this.createHeading("Horizontal scrolling in file tree");
 
         this.createSetting(
@@ -658,7 +647,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayScrollbarSettings() {
         if (Platform.isMacOS) return;
 
-        this.displaySplitter();
         this.createHeading("Scrollbars");
 
         this.createSetting(
@@ -704,7 +692,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayLineLengthSettings() {
         if (Platform.isMobile) return;
 
-        this.displaySplitter();
         this.createHeading("Line length");
 
         const readableLineLengthEnabled = this.plugin.lineLength.getObsidianReadableLineLength();
@@ -810,7 +797,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayReadModeKeybindsSettings() {
         if (Platform.isMobile) return;
 
-        this.displaySplitter();
         this.createHeading("Reading mode keybinds");
 
         this.createSetting("Line scroll keybinds", "Scroll by single lines with j/k.").addToggle(
@@ -849,7 +835,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayRibbonSettings() {
         if (Platform.isDesktop) return;
 
-        this.displaySplitter();
         this.createHeading("Ribbon commands");
 
         this.createSetting(
@@ -869,7 +854,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
     private displayMouseScrollSettings() {
         if (Platform.isMobile) return;
 
-        this.displaySplitter();
         this.createHeading("Mouse & Touchpad scrolling");
 
         this.createSetting(
@@ -1051,7 +1035,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
             return;
         }
 
-        this.displaySplitter();
         this.createHeading("Text cursor follows scroll (Experimental)");
 
         this.createSetting(
