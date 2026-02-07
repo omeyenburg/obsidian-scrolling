@@ -41,6 +41,8 @@ export class RestoreScroll {
     private readonly storeStateDebounced: Debouncer<[HTMLElement?, Event?], void>;
     private readonly writeStatesFileDebounced: Debouncer<[], void>;
 
+    private openLeafIds = new Set();
+
     private linkUsed = false;
 
     private workspaceInitialized: boolean;
@@ -100,6 +102,7 @@ export class RestoreScroll {
         plugin.events.onScroll(this.scrollHandler.bind(this));
         plugin.events.onMouseUp(this.mouseUpHandler.bind(this));
         plugin.events.onFileOpen(this.fileOpenHandler.bind(this));
+        // plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
         plugin.events.onFileDelete(this.fileDeleteHandler.bind(this));
         plugin.events.onFileRename(this.fileRenameHandler.bind(this));
         plugin.events.onLayoutReady(this.layoutReadyHandler.bind(this));
@@ -224,7 +227,7 @@ export class RestoreScroll {
      * Does not restore if heading link is used or links are disabled and any link is used.
      * Might break if the same file is opened twice in different tabs simultaneously .
      */
-    private fileOpenHandler(file: TFile): void {
+    private fileOpenHandler(_file: TFile): void {
         // Do not restore on initial load. Responsiblity of layoutReadyHandler.
         if (!this.workspaceInitialized) return;
         if (this.plugin.settings.restoreScrollInitialOnly) return;
@@ -240,29 +243,19 @@ export class RestoreScroll {
         // Mode top means feature is disabled.
         if (this.plugin.settings.restoreScrollMode === "top") return;
 
-        // DEPRECATED
-        // Find the matching leaf for that file.
-        // Leaf must be flagged as working. If leaf.working turns out not to be reliable,
-        // just store the leaf IDs of opened leaves on layoutReady and fileOpen.
-        // this.plugin.app.workspace.iterateRootLeaves((leaf) => {
-        //     if (
-        //         leaf.working &&
-        //         leaf.view instanceof FileView &&
-        //         leaf.view.file.path === file.path
-        //     ) {
-        //         fileLeaf = leaf as FileLeaf;
-        //     }
-        // });
-
-        let fileLeaf: FileLeaf | null = null;
-
-        this.plugin.app.workspace.iterateRootLeaves((leaf) => {
-            if (leaf.view == this.plugin.app.workspace.getActiveFileView()) {
-                fileLeaf = leaf as FileLeaf;
-            }
-        });
-
+        // Get the currently opened leaf
+        let fileLeaf = (this.plugin.app.workspace.getActiveFileView()?.leaf as FileLeaf) || null;
         if (fileLeaf === null) return;
+
+        // File-open event is invoked on switching tabs!
+        // This keeps track of all currently opened leafs.
+        // Might make the isFileOpenedInSplit redundant.
+        let isOpened = this.openLeafIds.has(this.getFileId(fileLeaf.view));
+        this.openLeafIds.clear();
+        this.plugin.app.workspace.iterateRootLeaves((leaf) => {
+            if (leaf.view instanceof FileView) this.openLeafIds.add(this.getFileId(leaf.view));
+        });
+        if (isOpened) return;
 
         // Check whether the same file is already opened in other tab of the same split.
         if (this.isFileOpenedInSplit(fileLeaf)) return;
