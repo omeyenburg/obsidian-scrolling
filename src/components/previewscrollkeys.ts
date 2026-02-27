@@ -46,7 +46,7 @@ export class PreviewScrollKeys {
 
         // Only scroll if editor is in focus
         const modal = document.body.getElementsByClassName("mod-dim");
-        if (modal.length != 0 || document.activeElement !== document.body) return;
+        if (modal.length != 0) return;
 
         this.scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
         if (!this.scroller) return;
