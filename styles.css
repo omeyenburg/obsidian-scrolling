@@ -122,3 +122,32 @@ body.scrolling-image-zoom-enabled div.image-container {
     display: block;
     overflow: hidden;
 }
+
+/* --- Scroll buttons --- */
+#scrolling-overlay-button {
+    position: absolute;
+    bottom: 40px;
+    right: 20px;
+    z-index: 9999;
+}
+
+#scrolling-overlay-button svg {
+    width: 100%;
+    height: 100%;
+}
+
+#scrolling-overlay-button > button {
+    width: 30px;
+    height: 30px;
+
+    margin: 5px;
+    padding: 15%;
+
+    color: var(--text-color);
+    background-color: var(--background-primary-alt);
+}
+
+#scrolling-overlay-button > button:hover {
+    color: var(--text-on-accent);
+    background-color: var(--interactive-accent-hover);
+}

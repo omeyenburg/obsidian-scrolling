@@ -12,6 +12,7 @@ import { PreviewScrollKeys } from "@components/previewscrollkeys";
 import { ImageZoom } from "@components/imagezoom";
 import { LineLength } from "@components/linelength";
 import { Commands } from "@components/commands";
+import { ScrollButtons } from "@components/scrollbuttons";
 
 import { Events } from "@core/events";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "@core/settings";
@@ -20,18 +21,18 @@ export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
     events!: Events;
 
-    codeBlock!: CodeBlock;
-    fileTree!: FileTree;
-    mathJax!: MathJax;
-    followCursor!: FollowCursor;
+    // codeBlock!: CodeBlock;
+    // fileTree!: FileTree;
+    // mathJax!: MathJax;
+    // followCursor!: FollowCursor;
     followScroll!: FollowScroll;
     mouseScroll!: MouseScroll;
     restoreScroll!: RestoreScroll;
-    scrollbar!: Scrollbar;
-    previewScrollKeys!: PreviewScrollKeys;
-    imageZoom!: ImageZoom;
-    lineLength!: LineLength;
-    commands!: Commands;
+    // scrollbar!: Scrollbar;
+    // previewScrollKeys!: PreviewScrollKeys;
+    // imageZoom!: ImageZoom;
+    // lineLength!: LineLength;
+    // commands!: Commands;
 
     async onload() {
         await this.loadSettings();
@@ -39,18 +40,20 @@ export default class ScrollingPlugin extends Plugin {
 
         this.events = new Events(this);
 
-        this.codeBlock = new CodeBlock(this);
-        this.fileTree = new FileTree(this);
-        this.mathJax = new MathJax(this);
-        this.followCursor = new FollowCursor(this);
+        new CodeBlock(this);
+        new FileTree(this);
+        new MathJax(this);
+        new FollowCursor(this);
         this.followScroll = new FollowScroll(this);
         this.mouseScroll = new MouseScroll(this);
         this.restoreScroll = new RestoreScroll(this);
-        this.scrollbar = new Scrollbar(this);
-        this.previewScrollKeys = new PreviewScrollKeys(this);
-        this.imageZoom = new ImageZoom(this);
-        this.lineLength = new LineLength(this);
-        this.commands = new Commands(this);
+        new Scrollbar(this);
+        new PreviewScrollKeys(this);
+        new ImageZoom(this);
+        new LineLength(this);
+        new Commands(this);
+
+        new ScrollButtons(this);
 
         this.events.postInit();
 
@@ -59,6 +62,7 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async onunload() {
+        this.events.unload();
         console.log("ScrollingPlugin unloaded");
     }
 
