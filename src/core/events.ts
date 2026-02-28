@@ -46,6 +46,8 @@ export class Events {
         (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => any
     > = new Set();
 
+    private unloadCallbacks: Set<() => any> = new Set();
+
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
@@ -100,6 +102,21 @@ export class Events {
         this.plugin.registerEditorExtension(
             EditorView.updateListener.of(this.viewUpdateHandler.bind(this)),
         );
+    }
+
+    /**
+     * Called on plugin unload.
+     */
+    public unload(): void {
+        this.unloadCallbacks.forEach((callback) => callback());
+    }
+
+    /**
+     * Registers a callback for plugin unload.
+     * @param callback Called with the plugin is unloaded.
+     */
+    public onUnload(callback: () => any): void {
+        this.unloadCallbacks.add(callback);
     }
 
     /**
