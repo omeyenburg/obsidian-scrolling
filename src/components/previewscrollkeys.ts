@@ -44,12 +44,15 @@ export class PreviewScrollKeys {
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || view.getMode() !== "preview") return;
 
-        // Only scroll if editor is in focus
+        // Only scroll if no modal is opened
         const modal = document.body.getElementsByClassName("mod-dim");
         if (modal.length != 0) return;
 
         this.scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
         if (!this.scroller) return;
+
+        // Only scroll if editor is in focus
+        if (document.activeElement !== document.body && document.activeElement !== this.scroller) return
 
         const now = event.timeStamp;
         const deltaTime = now - this.lastKeyPress;
