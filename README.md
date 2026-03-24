@@ -1,6 +1,8 @@
 # Scrolling
 
-A plugin to improve and extend scrolling and navigation in [Obsidian](https://obsidian.md/) with quality-of-life features such as:
+A plugin to improve and extend scrolling and navigation in [Obsidian](https://obsidian.md/) with quality-of-life features.
+
+Quick overview:
 
 - **Centered Cursor**: Keep cursor centered while editing
 - **Code Wrapping**: Disable code wrapping & allow horizontal scrolling
