@@ -638,6 +638,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.horizontalFileTreeEnabled)
                 .onChange(async (value) => {
                     this.plugin.settings.horizontalFileTreeEnabled = value;
+                    // TODO: refactor: module should subscribe to event
                     this.plugin.fileTree.updateStyle();
                     await this.plugin.saveSettings();
                 }),
