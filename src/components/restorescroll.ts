@@ -232,9 +232,8 @@ export class RestoreScroll {
         if (!this.workspaceInitialized) return;
         if (this.plugin.settings.restoreScrollInitialOnly) return;
 
-        // Do not restore if heading link is used.
-        const headingLinkUsed =
-            this.plugin.app.workspace.containerEl.querySelector("span.is-flashing");
+        // Do not restore if heading link/search is used.
+        const headingLinkUsed = this.plugin.app.workspace.containerEl.querySelector(".is-flashing");
         if (headingLinkUsed) return;
 
         // Do not restore if any link was used and links are disabled.
@@ -267,6 +266,10 @@ export class RestoreScroll {
         let numFrames = 0;
         const MAX_ATTEMPTS = 100;
         const iter = () => {
+            // Check again if heading link/search was used, in case file loads slowly.
+            const headingLinkUsed = this.plugin.app.workspace.containerEl.querySelector(".is-flashing");
+            if (headingLinkUsed) return;
+
             if (fileLeaf && fileLeaf.working && numFrames++ < MAX_ATTEMPTS) {
                 window.requestAnimationFrame(iter);
             } else {
@@ -353,6 +356,8 @@ export class RestoreScroll {
             if (!ephemeralState) return;
             ({ cursor, scroll, scrollTop } = ephemeralState);
         }
+
+        console.log("restore");
 
         if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
             if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
