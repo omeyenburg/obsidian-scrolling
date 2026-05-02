@@ -106,16 +106,21 @@ body.scrolling-image-zoom-enabled img:not(.cm-widgetBuffer) {
 }
 
 /* prevent overflow for inline images in source view */
-body.scrolling-image-zoom-enabled .cm-line:has(img:not(.cm-widgetBuffer)) {
+body.scrolling-image-zoom-enabled .cm-content:has(img:not(.cm-widgetBuffer)) {
     overflow: hidden;
 }
 
 /* prevent overflow for images in tables in source view (overflow: hidden) */
 /* prevent overflow for images in tables in preview view (display: inline-block) */
-body.scrolling-image-zoom-enabled .cm-line div.image-embed,
-body.scrolling-image-zoom-enabled .cm-line span.image-embed {
+body.scrolling-image-zoom-enabled .cm-content div.image-embed,
+body.scrolling-image-zoom-enabled .cm-content span.image-embed {
     overflow: hidden;
     display: inline-block;
+}
+
+/* prevent overflow for images in tables in preview view */
+body.scrolling-image-zoom-enabled .el-p:has(img:not(.cm-widgetBuffer)) {
+    overflow: hidden;
 }
 
 body.scrolling-image-zoom-enabled div.image-container {
