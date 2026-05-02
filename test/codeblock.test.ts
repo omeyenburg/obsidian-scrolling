@@ -185,7 +185,7 @@ describe("CodeBlock", () => {
 
     describe("updateStyle", () => {
         test("adds CSS class when enabled", () => {
-            mockPlugin.settings.horizontalScrollingCodeBlockEnabled = true;
+            mockPlugin.settings.codeBlockScrollEnabled = true;
             codeBlock.updateStyle();
 
             expect(document.body.classList.contains("scrolling-horizontal-code-blocks")).toBe(true);
