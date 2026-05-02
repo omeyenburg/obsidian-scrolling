@@ -357,8 +357,6 @@ export class RestoreScroll {
             ({ cursor, scroll, scrollTop } = ephemeralState);
         }
 
-        console.log("restore");
-
         if (view instanceof MarkdownView && view.getMode() === "source" && (scroll || cursor)) {
             if (cursor && this.plugin.settings.restoreScrollMode === "cursor") {
                 view.editor.setCursor(cursor.from);
