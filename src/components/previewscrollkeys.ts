@@ -82,10 +82,6 @@ export class PreviewScrollKeys {
         }
     }
 
-    private scrollHalfPage(direction: -1 | 1) {
-        this.scroller.scrollBy({ top: (this.scroller.clientHeight * direction) / 2 });
-    }
-
     private scrollLine(direction: -1 | 1, deltaTime: number) {
         if (!this.plugin.settings.readingLineScrollEnabled) return;
 
@@ -102,13 +98,14 @@ export class PreviewScrollKeys {
         this.animateScrollLine(this.goal, change / steps, steps);
     }
 
-    private animateScrollLine(goal: number, stepSize: number, step: number): void {
-        if (step <= 0) return;
+    private scrollHalfPage(direction: -1 | 1) {
+        if (!this.plugin.settings.readingHalfPageScrollEnabled) return;
 
-        this.scroller.scrollTo({ top: goal - stepSize * (step - 1) });
-        this.animationFrame = window.requestAnimationFrame(() =>
-            this.animateScrollLine(goal, stepSize, step - 1),
-        );
+        let change = (this.scroller.clientHeight * direction) / 2;
+        let goal = this.scroller.scrollTop + change
+
+        const steps = 5;
+        this.animateScrollLine(goal, change / steps, steps)
     }
 
     private scrollToTop() {
@@ -121,5 +118,18 @@ export class PreviewScrollKeys {
         if (!this.plugin.settings.readingTopBottomScrollEnabled) return;
 
         this.scroller.scrollTo({ top: 1000000000 });
+    }
+
+    /**
+     * Shared utility function to scroll smoothly towards a goal.
+     * stepSize should be signed.
+     */
+    private animateScrollLine(goal: number, stepSize: number, step: number): void {
+        if (step <= 0) return;
+
+        this.scroller.scrollTo({ top: goal - stepSize * (step - 1) });
+        this.animationFrame = window.requestAnimationFrame(() =>
+            this.animateScrollLine(goal, stepSize, step - 1),
+        );
     }
 }
