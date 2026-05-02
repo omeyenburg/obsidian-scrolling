@@ -87,6 +87,8 @@ export class PreviewScrollKeys {
     }
 
     private scrollLine(direction: -1 | 1, deltaTime: number) {
+        if (!this.plugin.settings.readingLineScrollEnabled) return;
+
         if (this.goal !== null) {
             this.scroller.scrollTo({ top: this.goal });
         }
@@ -110,10 +112,14 @@ export class PreviewScrollKeys {
     }
 
     private scrollToTop() {
+        if (!this.plugin.settings.readingTopBottomScrollEnabled) return;
+
         this.scroller.scrollTo({ top: 0 });
     }
 
     private scrollToBottom() {
+        if (!this.plugin.settings.readingTopBottomScrollEnabled) return;
+
         this.scroller.scrollTo({ top: 1000000000 });
     }
 }
