@@ -12,7 +12,7 @@ import { PreviewScrollKeys } from "@components/previewscrollkeys";
 import { ImageZoom } from "@components/imagezoom";
 import { LineLength } from "@components/linelength";
 import { Commands } from "@components/commands";
-import { ScrollButtons } from "@components/scrollbuttons";
+// import { ScrollButtons } from "@components/scrollbuttons";
 
 import { Events } from "@core/events";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "@core/settings";
@@ -53,7 +53,7 @@ export default class ScrollingPlugin extends Plugin {
         this.lineLength = new LineLength(this);
         this.commands = new Commands(this);
 
-        new ScrollButtons(this);
+        // new ScrollButtons(this);
 
         this.events.postInit();
 
