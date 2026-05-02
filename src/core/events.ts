@@ -368,7 +368,10 @@ export class Events {
         // Run cancelling callbacks.
         // As soon as one callback returns true abort handling event.
         for (const { callback } of this.wheelCancellingHandlers) {
-            if (callback(event)) return;
+            if (callback(event)) {
+                event.preventDefault()
+                return;
+            };
         }
 
         if (!event.deltaY) return;
