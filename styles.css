@@ -105,14 +105,10 @@ body.scrolling-image-zoom-enabled img:not(.cm-widgetBuffer) {
     transform-origin: top left;
 }
 
-/* prevent overflow for inline images in source view */
-body.scrolling-image-zoom-enabled .cm-content:has(img:not(.cm-widgetBuffer)) {
-    overflow: hidden;
-}
-
 /* prevent overflow for images in tables in source view (overflow: hidden) */
 /* prevent overflow for images in tables in preview view (display: inline-block) */
 body.scrolling-image-zoom-enabled .cm-content div.image-embed,
+body.scrolling-image-zoom-enabled .cm-content div.image-embed div.image-wrapper,
 body.scrolling-image-zoom-enabled .cm-content span.image-embed {
     overflow: hidden;
     display: inline-block;
