@@ -189,21 +189,21 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
-                frag.createEl("span", {
+                frag.createSpan({
                     text: "To report bugs or provide feedback, please use the ",
                 });
                 frag.createEl("a", {
                     text: "issue tracker",
                     href: "https://github.com/omeyenburg/obsidian-scrolling/issues",
                 });
-                frag.createEl("span", {
+                frag.createSpan({
                     text: " and the ",
                 });
                 frag.createEl("a", {
                     text: "discussion page",
                     href: "https://github.com/omeyenburg/obsidian-scrolling/discussions",
                 });
-                frag.createEl("span", {
+                frag.createSpan({
                     text: ".",
                 });
             }),
@@ -239,7 +239,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         setting.setDesc(
             createFragment((frag) =>
                 lines.forEach((line, index) => {
-                    frag.createEl("span", { text: line });
+                    frag.createSpan({ text: line });
                     if (index < lines.length - 1) {
                         frag.createEl("br");
                     }
