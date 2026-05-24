@@ -51,13 +51,14 @@ export class RestoreScroll {
     private readonly STORE_INTERVAL = 97;
     private readonly FILE_WRITE_INTERVAL = 293;
 
-    public static readonly DEFAULT_FILE_PATH =
-        ".obsidian/plugins/scrolling/scrolling-positions.json";
-    public static readonly FALLBACK_FILE_PATH =
-        ".obsidian/plugins/obsidian-scrolling/scrolling-positions.json";
+    public readonly DEFAULT_FILE_PATH: string;
+    public readonly FALLBACK_FILE_PATH: string;
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
+
+        this.DEFAULT_FILE_PATH = this.plugin.app.vault.configDir + "/plugins/scrolling/scrolling-positions.json"
+        this.FALLBACK_FILE_PATH = this.plugin.app.vault.configDir + "/plugins/obsidian-scrolling/scrolling-positions.json"
 
         // True when plugin is reloaded.
         this.workspaceInitialized = this.plugin.app.workspace.layoutReady;
@@ -431,14 +432,14 @@ export class RestoreScroll {
         if (await this.directoryOfFileExists(this.plugin.settings.restoreScrollFilePath)) return;
 
         // Check default path
-        if (await this.directoryOfFileExists(RestoreScroll.DEFAULT_FILE_PATH)) {
-            this.plugin.settings.restoreScrollFilePath = RestoreScroll.DEFAULT_FILE_PATH;
+        if (await this.directoryOfFileExists(this.DEFAULT_FILE_PATH)) {
+            this.plugin.settings.restoreScrollFilePath = this.DEFAULT_FILE_PATH;
             return;
         }
 
         // Check fallback path
-        if (await this.directoryOfFileExists(RestoreScroll.FALLBACK_FILE_PATH)) {
-            this.plugin.settings.restoreScrollFilePath = RestoreScroll.FALLBACK_FILE_PATH;
+        if (await this.directoryOfFileExists(this.FALLBACK_FILE_PATH)) {
+            this.plugin.settings.restoreScrollFilePath = this.FALLBACK_FILE_PATH;
             return;
         }
     }
