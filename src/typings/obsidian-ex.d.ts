@@ -37,6 +37,8 @@ import {
 import { EditorView } from "@codemirror/view";
 import { EditorState, Extension } from "@codemirror/state";
 
+/* eslint-disable -- External definition file containing overridden types */
+
 interface Account {
     /**
      * The company associated with the activated commercial license
