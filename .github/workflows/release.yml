@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v3
 
@@ -23,13 +24,23 @@ jobs:
           npm install
           npm run build
 
+      - name: Attest build artifacts
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: main.js, styles.css
+
+      - name: Collect attestation files
+        id: attestation
+        run: |
+          ATTEST_FILES=$(ls .github/attestations/*.intoto.jsonl | xargs)
+          echo "files=$ATTEST_FILES" >> "$GITHUB_OUTPUT"
+
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-
           gh release create "$tag" \
             --title="$tag" \
             --draft \
-            main.js manifest.json styles.css
+            main.js manifest.json styles.css ${{ steps.attestation.outputs.files }}
