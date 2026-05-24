@@ -3,7 +3,7 @@ import { MarkdownView, setIcon } from "obsidian";
 import type { default as ScrollingPlugin } from "@core/main";
 
 function getButtonContainer(): Element | null {
-    let containers = document.getElementsByClassName(
+    let containers = activeDocument.getElementsByClassName(
         "workspace-tabs mod-top mod-top-left-space mod-top-right-space",
     );
     if (containers.length != 1) return null;

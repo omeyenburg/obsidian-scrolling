@@ -52,7 +52,7 @@ export class PreviewScrollKeys {
         if (!this.scroller) return;
 
         // Only scroll if editor is in focus
-        if (activeDocument.activeElement !== document.body && document.activeElement !== this.scroller) return
+        if (activeDocument.activeElement !== activeDocument.body && activeDocument.activeElement !== this.scroller) return
 
         const now = event.timeStamp;
         const deltaTime = now - this.lastKeyPress;

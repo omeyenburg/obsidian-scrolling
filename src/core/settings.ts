@@ -424,7 +424,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             dropdown
                 .addOption("top", "Start at top (Obsidian's default)")
                 .addOption("bottom", "Start at bottom")
-                .addOption("cursor", "Restore cursor position")
+                .addOption("cursor", "Restore Cursor position")
                 .addOption("scroll", "Restore scroll position")
                 .setValue(this.plugin.settings.restoreScrollMode)
                 .onChange(async (value) => {
@@ -869,7 +869,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             dropdown
                 .addOption("disabled", "Disabled")
                 .addOption("native", "Native")
-                .addOption("simulated", "Simulated (Experimental)")
+                .addOption("simulated", "Simulated (experimental)")
                 .setValue(this.plugin.settings.scrollMode)
                 .onChange(async (value) => {
                     this.plugin.settings.scrollMode = value;
