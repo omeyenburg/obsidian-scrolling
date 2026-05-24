@@ -101,7 +101,7 @@ export class FollowCursor {
      */
     private cursorInTable(editor: Editor): boolean {
         const { from } = editor.cm.state.selection.main;
-        const tree = syntaxTree(editor.cm.state as any);
+        const tree = syntaxTree(editor.cm.state);
         let node = tree.resolve(from, -1);
 
         while (node) {

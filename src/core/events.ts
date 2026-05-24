@@ -34,19 +34,19 @@ export class Events {
     private skipViewUpdate = false;
 
     private cursorUpdateHandlers: Set<
-        (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => any
+        (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => void
     > = new Set();
-    private geometryChangeHandlers: Set<(editor: Editor) => any> = new Set();
-    private resizeHandlers: Set<() => any> = new Set();
-    private touchHandlers: Set<(event: TouchEvent, deltaX: number, deltaY: number) => any> =
+    private geometryChangeHandlers: Set<(editor: Editor) => void> = new Set();
+    private resizeHandlers: Set<() => void> = new Set();
+    private touchHandlers: Set<(event: TouchEvent, deltaX: number, deltaY: number) => void> =
         new Set();
     private wheelCancellingHandlers: { callback: (event: Event) => boolean; priority: number }[] =
         [];
     private wheelExtendedHandlers: Set<
-        (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => any
+        (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => void
     > = new Set();
 
-    private unloadCallbacks: Set<() => any> = new Set();
+    private unloadCallbacks: Set<() => void> = new Set();
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -115,16 +115,16 @@ export class Events {
      * Registers a callback for plugin unload.
      * @param callback Called with the plugin is unloaded.
      */
-    public onUnload(callback: () => any): void {
+    public onUnload(callback: () => void): void {
         this.unloadCallbacks.add(callback);
     }
 
     /**
      * Registers a callback for cursor updates in the editor.
-     * @param callback Called with the editor, whether the document changed, and whether Vim mode switched.
+     * @param callback Called with the editor, whether the activeDocument changed, and whether Vim mode switched.
      */
     public onCursorUpdate(
-        callback: (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => any,
+        callback: (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => void,
     ): void {
         this.cursorUpdateHandlers.add(callback);
     }
@@ -133,7 +133,7 @@ export class Events {
      * Registers a callback that is triggered when a file is deleted from the vault.
      * @param callback Receives the deleted file.
      */
-    public onFileDelete(callback: (file: TAbstractFile) => any): void {
+    public onFileDelete(callback: (file: TAbstractFile) => void): void {
         this.plugin.registerEvent(this.plugin.app.vault.on("delete", callback));
     }
 
@@ -141,7 +141,7 @@ export class Events {
      * Registers a callback that is triggered when a file is opened in the workspace.
      * @param callback Receives the opened file, or null if no file is active.
      */
-    public onFileOpen(callback: (file: TFile | null) => any): void {
+    public onFileOpen(callback: (file: TFile | null) => void): void {
         this.plugin.registerEvent(this.plugin.app.workspace.on("file-open", callback));
     }
 
@@ -149,7 +149,7 @@ export class Events {
      * Registers a callback that is triggered when a file is renamed in the vault.
      * @param callback Receives the renamed file and its previous path.
      */
-    public onFileRename(callback: (file: TAbstractFile, oldPath: string) => any): void {
+    public onFileRename(callback: (file: TAbstractFile, oldPath: string) => void): void {
         this.plugin.registerEvent(this.plugin.app.vault.on("rename", callback));
     }
 
@@ -157,7 +157,7 @@ export class Events {
      * Registers a callback for geometry changes in the editor, e.g., resizing or layout updates.
      * @param callback Receives the editor where the geometry change occurred.
      */
-    public onGeometryChange(callback: (editor: Editor) => any): void {
+    public onGeometryChange(callback: (editor: Editor) => void): void {
         this.geometryChangeHandlers.add(callback);
     }
 
@@ -165,23 +165,23 @@ export class Events {
      * Registers a callback for keydown events.
      * @param callback Receives the KeyboardEvent.
      */
-    public onKeyDown(callback: (ev: KeyboardEvent) => any): void {
-        this.plugin.registerDomEvent(document, "keydown", callback, { passive: true });
+    public onKeyDown(callback: (ev: KeyboardEvent) => void): void {
+        this.plugin.registerDomEvent(activeDocument, "keydown", callback, { passive: true });
     }
 
     /**
      * Registers a callback for keyup events.
      * @param callback Receives the KeyboardEvent.
      */
-    public onKeyUp(callback: (ev: KeyboardEvent) => any): void {
-        this.plugin.registerDomEvent(document, "keyup", callback, { passive: true });
+    public onKeyUp(callback: (ev: KeyboardEvent) => void): void {
+        this.plugin.registerDomEvent(activeDocument, "keyup", callback, { passive: true });
     }
 
     /**
      * Registers a callback to run once when the workspace layout is ready.
      * @param callback Function to run after layout initialization.
      */
-    public onLayoutReady(callback: () => any): void {
+    public onLayoutReady(callback: () => void): void {
         this.plugin.app.workspace.onLayoutReady(callback);
     }
 
@@ -189,7 +189,7 @@ export class Events {
      * Registers a callback when the active workspace leaf changes.
      * @param callback Receives the new active leaf or null.
      */
-    public onLeafChange(callback: (leaf: WorkspaceLeaf | null) => any): void {
+    public onLeafChange(callback: (leaf: WorkspaceLeaf | null) => void): void {
         this.plugin.registerEvent(this.plugin.app.workspace.on("active-leaf-change", callback));
     }
 
@@ -198,9 +198,9 @@ export class Events {
      * Desktop only; does nothing on mobile.
      * @param callback Receives the MouseEvent.
      */
-    public onMouseUp(callback: (ev: MouseEvent) => any): void {
+    public onMouseUp(callback: (ev: MouseEvent) => void): void {
         if (Platform.isDesktop) {
-            this.plugin.registerDomEvent(document, "mouseup", callback, { passive: true });
+            this.plugin.registerDomEvent(activeDocument, "mouseup", callback, { passive: true });
         }
     }
 
@@ -208,27 +208,27 @@ export class Events {
      * Registers a callback for resize events on the workspace.
      * @param callback Called whenever a resize is detected.
      */
-    public onResize(callback: () => any): void {
+    public onResize(callback: () => void): void {
         this.resizeHandlers.add(callback);
     }
 
     /**
-     * Registers a callback for scroll events anywhere in the document.
+     * Registers a callback for scroll events anywhere in the activeDocument.
      * @param callback Receives the scroll Event.
      */
-    public onScroll(callback: (ev: Event) => any): void {
-        this.plugin.registerDomEvent(document, "scroll", callback, {
+    public onScroll(callback: (ev: Event) => void): void {
+        this.plugin.registerDomEvent(activeDocument, "scroll", callback, {
             capture: true,
             passive: true,
         });
     }
 
     /**
-     * Registers a callback for scroll-end events anywhere in the document.
+     * Registers a callback for scroll-end events anywhere in the activeDocument.
      * @param callback Receives the scrollend Event.
      */
-    public onScrollEnd(callback: (ev: Event) => any): void {
-        this.plugin.registerDomEvent(document, "scrollend", callback, {
+    public onScrollEnd(callback: (ev: Event) => void): void {
+        this.plugin.registerDomEvent(activeDocument, "scrollend", callback, {
             capture: true,
             passive: true,
         });
@@ -238,7 +238,7 @@ export class Events {
      * Registers a callback for touch move events.
      * @param callback Receives the TouchEvent and the deltaX/deltaY since the last touch event.
      */
-    public onTouchMove(callback: (event: TouchEvent, deltaX: number, deltaY: number) => any): void {
+    public onTouchMove(callback: (event: TouchEvent, deltaX: number, deltaY: number) => void): void {
         this.touchHandlers.add(callback);
     }
 
@@ -259,7 +259,7 @@ export class Events {
      * The callback might be blocked by a cancelling wheel handler.
      */
     public onWheelExtended(
-        callback: (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => any,
+        callback: (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => void,
     ): void {
         this.wheelExtendedHandlers.add(callback);
     }
@@ -400,7 +400,7 @@ export class Events {
         }
 
         // Traverse DOM to find actual scrollable element
-        while (el && el != document.body) {
+        while (el && el != activeDocument.body) {
             const { overflowY } = getComputedStyle(el);
             if (
                 (overflowY === "auto" || overflowY === "scroll") &&

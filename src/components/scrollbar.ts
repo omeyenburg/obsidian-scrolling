@@ -4,34 +4,34 @@ import type { default as ScrollingPlugin } from "@core/main";
 
 function setVisibility(visibility: string): void {
     if (visibility === "hide") {
-        document.body.removeClass("scrolling-visibility-scroll");
-        document.body.addClass("scrolling-visibility-hide");
+        activeDocument.body.removeClass("scrolling-visibility-scroll");
+        activeDocument.body.addClass("scrolling-visibility-hide");
     } else if (visibility === "scroll") {
-        document.body.removeClass("scrolling-visibility-hide");
-        document.body.addClass("scrolling-visibility-scroll");
+        activeDocument.body.removeClass("scrolling-visibility-hide");
+        activeDocument.body.addClass("scrolling-visibility-scroll");
     } else {
-        document.body.removeClass("scrolling-visibility-scroll");
-        document.body.removeClass("scrolling-visibility-hide");
+        activeDocument.body.removeClass("scrolling-visibility-scroll");
+        activeDocument.body.removeClass("scrolling-visibility-hide");
     }
 }
 
 function setWidth(width: number) {
     if (width >= 0) {
-        document.body.addClass("scrolling-scrollbar-width");
-        document.body.style.setProperty("--scrolling-scrollbar-width", `${width}px`);
+        activeDocument.body.addClass("scrolling-scrollbar-width");
+        activeDocument.body.style.setProperty("--scrolling-scrollbar-width", `${width}px`);
     } else {
-        document.body.removeClass("scrolling-scrollbar-width");
+        activeDocument.body.removeClass("scrolling-scrollbar-width");
     }
 }
 
 function cleanup(): void {
-    document.body.removeClasses([
+    activeDocument.body.removeClasses([
         "scrolling-scrollbar-width",
         "scrolling-visibility-hide",
         "scrolling-visibility-scroll",
     ]);
 
-    document.body.style.removeProperty("--scrolling-scrollbar-width");
+    activeDocument.body.style.removeProperty("--scrolling-scrollbar-width");
 }
 
 export class Scrollbar {

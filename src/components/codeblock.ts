@@ -57,7 +57,7 @@ export class CodeBlock {
             false,
         );
 
-        document.body.style.setProperty(
+        activeDocument.body.style.setProperty(
             "--scrolling-extra-line-length",
             `${this.EXTRA_LINE_LENGTH}px`,
         );
@@ -66,7 +66,7 @@ export class CodeBlock {
 
         plugin.register(() => {
             window.cancelAnimationFrame(this.scrollAnimationFrame);
-            document.body.removeClass("scrolling-horizontal-code-blocks");
+            activeDocument.body.removeClass("scrolling-horizontal-code-blocks");
         });
 
         plugin.events.onScroll(this.scrollHandler.bind(this));
@@ -83,9 +83,9 @@ export class CodeBlock {
      */
     public updateStyle(): void {
         if (this.plugin.settings.codeBlockScrollEnabled) {
-            document.body.addClass("scrolling-horizontal-code-blocks");
+            activeDocument.body.addClass("scrolling-horizontal-code-blocks");
         } else {
-            document.body.removeClass("scrolling-horizontal-code-blocks");
+            activeDocument.body.removeClass("scrolling-horizontal-code-blocks");
         }
     }
 

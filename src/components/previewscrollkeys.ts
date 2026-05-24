@@ -3,7 +3,7 @@ import { MarkdownView, Platform } from "obsidian";
 import type { default as ScrollingPlugin } from "@core/main";
 
 function getLineHeight() {
-    const cssFontSize = document.body.getCssPropertyValue("--font-text-size");
+    const cssFontSize = activeDocument.body.getCssPropertyValue("--font-text-size");
     const charHeight = Number.parseInt(cssFontSize) || 16;
     return charHeight * 1.5;
 }
@@ -45,14 +45,14 @@ export class PreviewScrollKeys {
         if (!view || view.getMode() !== "preview") return;
 
         // Only scroll if no modal is opened
-        const modal = document.body.getElementsByClassName("mod-dim");
+        const modal = activeDocument.body.getElementsByClassName("mod-dim");
         if (modal.length != 0) return;
 
         this.scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
         if (!this.scroller) return;
 
         // Only scroll if editor is in focus
-        if (document.activeElement !== document.body && document.activeElement !== this.scroller) return
+        if (activeDocument.activeElement !== document.body && document.activeElement !== this.scroller) return
 
         const now = event.timeStamp;
         const deltaTime = now - this.lastKeyPress;

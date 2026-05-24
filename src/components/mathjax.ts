@@ -11,7 +11,7 @@ export class MathJax {
         window.requestAnimationFrame(this.updateStyle.bind(this));
 
         plugin.register(() => {
-            document.body.removeClass("scrolling-horizontal-mathjax");
+            activeDocument.body.removeClass("scrolling-horizontal-mathjax");
         });
     }
 
@@ -26,9 +26,9 @@ export class MathJax {
         this.mathJaxEnabled = isEnabled;
 
         if (isEnabled) {
-            document.body.addClass("scrolling-horizontal-mathjax");
+            activeDocument.body.addClass("scrolling-horizontal-mathjax");
         } else {
-            document.body.removeClass("scrolling-horizontal-mathjax");
+            activeDocument.body.removeClass("scrolling-horizontal-mathjax");
         }
     }
 }

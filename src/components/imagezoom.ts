@@ -47,7 +47,7 @@ export class ImageZoom {
      */
     private unload() {
         this.resetFile();
-        document.body.classList.remove("scrolling-image-zoom-enabled");
+        activeDocument.body.classList.remove("scrolling-image-zoom-enabled");
     }
 
     /**
@@ -55,9 +55,9 @@ export class ImageZoom {
      */
     public updateStyles(): void {
         if (this.plugin.settings.imageZoomEnabled) {
-            document.body.classList.add("scrolling-image-zoom-enabled");
+            activeDocument.body.classList.add("scrolling-image-zoom-enabled");
         } else {
-            document.body.classList.remove("scrolling-image-zoom-enabled");
+            activeDocument.body.classList.remove("scrolling-image-zoom-enabled");
         }
     }
 
@@ -104,8 +104,8 @@ export class ImageZoom {
     private resetFile(editor?: Editor): void {
         // Only remove listeners if they were attached
         if (this.eventListenersAttached) {
-            document.removeEventListener("mousemove", this.pointerMoveHandler);
-            document.removeEventListener("mouseup", this.pointerUpHandler);
+            activeDocument.removeEventListener("mousemove", this.pointerMoveHandler);
+            activeDocument.removeEventListener("mouseup", this.pointerUpHandler);
             this.eventListenersAttached = false;
         }
 
@@ -300,7 +300,7 @@ export class ImageZoom {
 
     /**
      * Initialize image dragging with mouse pointer.
-     * Attaches pointer up and move handlers to document.
+     * Attaches pointer up and move handlers to activeDocument.
      */
     private pointerDownHandler = (event: MouseEvent) => {
         if (event.button !== 0) return;
@@ -319,8 +319,8 @@ export class ImageZoom {
         event.preventDefault();
 
         if (!this.eventListenersAttached) {
-            document.addEventListener("mousemove", this.pointerMoveHandler);
-            document.addEventListener("mouseup", this.pointerUpHandler);
+            activeDocument.addEventListener("mousemove", this.pointerMoveHandler);
+            activeDocument.addEventListener("mouseup", this.pointerUpHandler);
             this.eventListenersAttached = true;
         }
     };
@@ -360,8 +360,8 @@ export class ImageZoom {
     private pointerUpHandler = () => {
         this.currentDragTarget = null;
         if (this.eventListenersAttached) {
-            document.removeEventListener("mousemove", this.pointerMoveHandler);
-            document.removeEventListener("mouseup", this.pointerUpHandler);
+            activeDocument.removeEventListener("mousemove", this.pointerMoveHandler);
+            activeDocument.removeEventListener("mouseup", this.pointerUpHandler);
             this.eventListenersAttached = false;
         }
     };

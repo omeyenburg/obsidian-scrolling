@@ -36,7 +36,7 @@ export class ScrollButtons {
         });
     }
 
-    private createButton(icon: string, callback: () => any) {
+    private createButton(icon: string, callback: () => void) {
         let button = this.buttonContainer.createEl("button");
         button.addEventListener("click", callback);
 
