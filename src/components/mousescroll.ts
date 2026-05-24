@@ -47,11 +47,8 @@ export class MouseScroll {
     private currentEl: HTMLElement | null = null;
     private readonly DEFAULT_FRAME_TIME = 16.67;
 
-    private readonly IS_MAC_OS: boolean;
-
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
-        this.IS_MAC_OS = window.navigator.userAgent.includes("Mac OS");
 
         plugin.register(() => {
             window.cancelAnimationFrame(this.mouseAnimationFrame);
@@ -312,7 +309,7 @@ export class MouseScroll {
             }
         }
 
-        if (this.IS_MAC_OS) {
+        if (Platform.isMacOS) {
             mouseScore -= 0.1;
 
             // On MacOS touchpad seems to report integer values for some reason
