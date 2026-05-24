@@ -15,13 +15,13 @@ body.scrolling-visibility-hide *::-webkit-scrollbar {
 body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar:not(:hover),
 body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-thumb:not(:hover),
 body.scrolling-visibility-scroll *:not(.scrolling-show-temporary)::-webkit-scrollbar-track:not(:hover) {
-    background: transparent !important;
+    background: transparent;
 }
 
 /* scrollbar width */
 body.scrolling-scrollbar-width *::-webkit-scrollbar {
-    width: var(--scrolling-scrollbar-width) !important;
-    height: var(--scrolling-scrollbar-width) !important;
+    width: var(--scrolling-scrollbar-width);
+    height: var(--scrolling-scrollbar-width);
 }
 
 /* --- Code blocks --- */
