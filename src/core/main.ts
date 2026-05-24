@@ -58,12 +58,10 @@ export default class ScrollingPlugin extends Plugin {
         this.events.postInit();
 
         await this.restoreScroll.loadStatesFile();
-        console.log("ScrollingPlugin loaded");
     }
 
     async onunload() {
         this.events.unload();
-        console.log("ScrollingPlugin unloaded");
     }
 
     async loadSettings() {
