@@ -25,13 +25,13 @@ export class Commands {
 
         plugin.addCommand({
             id: "scroll-to-top",
-            name: "to top",
+            name: "To top",
             callback: this.scrollCallbackWrapper(scrollToTop),
         });
 
         plugin.addCommand({
             id: "scroll-to-bottom",
-            name: "to bottom",
+            name: "To bottom",
             callback: this.scrollCallbackWrapper(scrollToBottom),
         });
 
