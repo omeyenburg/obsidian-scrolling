@@ -24,9 +24,7 @@ export class ScrollButtons {
     }
 
     private layoutReadyHandler() {
-        this.buttonContainer = getButtonContainer().createEl("div", {
-            attr: { id: "scrolling-overlay-button" },
-        });
+        getButtonContainer().createDiv({ attr: { id: "scrolling-overlay-button" } });
 
         this.createButton("arrow-up", this.scrollToTop.bind(this));
         this.createButton("arrow-down", this.scrollToBottom.bind(this));
@@ -40,8 +38,8 @@ export class ScrollButtons {
         let button = this.buttonContainer.createEl("button");
         button.addEventListener("click", callback);
 
-        button.setCssStyles({display: "none"})
-        window.setTimeout(() => button.setCssStyles({display: "block"}), 100);
+        button.setCssStyles({ display: "none" });
+        window.setTimeout(() => button.setCssStyles({ display: "block" }), 100);
 
         setIcon(button, icon);
     }

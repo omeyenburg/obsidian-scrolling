@@ -183,7 +183,7 @@ export class RestoreScroll {
         if (oldNormalizedPath && (await adapter.exists(oldNormalizedPath))) {
             try {
                 await adapter.rename(oldNormalizedPath, newNormalizedPath);
-            } catch (e) {
+            } catch {
                 new Notice("Invalid file path!");
                 return;
             }
