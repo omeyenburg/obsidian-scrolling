@@ -555,7 +555,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
             // Submit new file path when pressing enter
             const handleKeydown = (e: KeyboardEvent) => {
-                if (e.key === "Enter") onConfirm();
+                if (e.key === "Enter") void onConfirm();
             };
             input.inputEl.addEventListener("keydown", handleKeydown);
             this.plugin.register(() => input.inputEl.removeEventListener("keydown", handleKeydown));
