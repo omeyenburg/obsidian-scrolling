@@ -120,7 +120,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollFileLink: true,
     restoreScrollInitialOnly: false,
     restoreScrollFileEnabled: true,
-    restoreScrollFilePath: RestoreScroll.DEFAULT_FILE_PATH,
+    restoreScrollFilePath: undefined,
 
     imageZoomEnabled: false,
 

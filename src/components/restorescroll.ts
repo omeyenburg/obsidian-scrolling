@@ -51,14 +51,12 @@ export class RestoreScroll {
     private readonly STORE_INTERVAL = 97;
     private readonly FILE_WRITE_INTERVAL = 293;
 
-    public readonly DEFAULT_FILE_PATH: string;
-    public readonly FALLBACK_FILE_PATH: string;
-
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
-        this.DEFAULT_FILE_PATH = this.plugin.app.vault.configDir + "/plugins/scrolling/scrolling-positions.json"
-        this.FALLBACK_FILE_PATH = this.plugin.app.vault.configDir + "/plugins/obsidian-scrolling/scrolling-positions.json"
+        if (plugin.settings.restoreScrollFilePath === undefined) {
+            plugin.settings.restoreScrollFilePath = this.getDefaultStateFilePath();
+        }
 
         // True when plugin is reloaded.
         this.workspaceInitialized = this.plugin.app.workspace.layoutReady;
@@ -268,7 +266,8 @@ export class RestoreScroll {
         const MAX_ATTEMPTS = 100;
         const iter = () => {
             // Check again if heading link/search was used, in case file loads slowly.
-            const headingLinkUsed = this.plugin.app.workspace.containerEl.querySelector(".is-flashing");
+            const headingLinkUsed =
+                this.plugin.app.workspace.containerEl.querySelector(".is-flashing");
             if (headingLinkUsed) return;
 
             if (fileLeaf && fileLeaf.working && numFrames++ < MAX_ATTEMPTS) {
@@ -321,6 +320,13 @@ export class RestoreScroll {
     private fileRenameHandler(file: TAbstractFile, old: string): void {
         this.ephemeralStates[file.path] = this.ephemeralStates[old];
         delete this.ephemeralStates[old];
+    }
+
+    /**
+     * Do not confuse with renameStatesFile.
+     */
+    private getDefaultStateFilePath(): string {
+        return this.plugin.manifest.dir + "/scrolling-positions.json";
     }
 
     /**
@@ -432,14 +438,9 @@ export class RestoreScroll {
         if (await this.directoryOfFileExists(this.plugin.settings.restoreScrollFilePath)) return;
 
         // Check default path
-        if (await this.directoryOfFileExists(this.DEFAULT_FILE_PATH)) {
-            this.plugin.settings.restoreScrollFilePath = this.DEFAULT_FILE_PATH;
-            return;
-        }
-
-        // Check fallback path
-        if (await this.directoryOfFileExists(this.FALLBACK_FILE_PATH)) {
-            this.plugin.settings.restoreScrollFilePath = this.FALLBACK_FILE_PATH;
+        let default_path = this.getDefaultStateFilePath();
+        if (await this.directoryOfFileExists(default_path)) {
+            this.plugin.settings.restoreScrollFilePath = default_path;
             return;
         }
     }
@@ -475,14 +476,9 @@ export class RestoreScroll {
             return true;
 
         // Check default path
-        if (await this.plugin.app.vault.adapter.exists(RestoreScroll.DEFAULT_FILE_PATH)) {
-            this.plugin.settings.restoreScrollFilePath = RestoreScroll.DEFAULT_FILE_PATH;
-            return true;
-        }
-
-        // Check fallback path
-        if (await this.plugin.app.vault.adapter.exists(RestoreScroll.FALLBACK_FILE_PATH)) {
-            this.plugin.settings.restoreScrollFilePath = RestoreScroll.FALLBACK_FILE_PATH;
+        let default_path = this.getDefaultStateFilePath();
+        if (await this.directoryOfFileExists(default_path)) {
+            this.plugin.settings.restoreScrollFilePath = default_path;
             return true;
         }
 
