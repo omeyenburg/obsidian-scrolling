@@ -42,7 +42,7 @@ body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.c
     cursor: text;
 }
 
-body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end):has(br):not(:has(span)) {
+body.scrolling-horizontal-code-blocks .markdown-source-view .HyperMD-codeblock.cm-line:not(.HyperMD-codeblock-begin):not(.HyperMD-codeblock-end):has(> br) {
     max-height: calc(1em * var(--line-height-normal));
 }
 
@@ -115,7 +115,7 @@ body.scrolling-image-zoom-enabled .cm-content span.image-embed {
 }
 
 /* prevent overflow for images in tables in preview view */
-body.scrolling-image-zoom-enabled .el-p:has(img:not(.cm-widgetBuffer)) {
+body.scrolling-image-zoom-enabled .el-p:has(> p > span > img:not(.cm-widgetBuffer)) {
     overflow: hidden;
 }
 
