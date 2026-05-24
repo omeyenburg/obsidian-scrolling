@@ -40,8 +40,8 @@ export class ScrollButtons {
         let button = this.buttonContainer.createEl("button");
         button.addEventListener("click", callback);
 
-        button.style.display = "none";
-        window.setTimeout(() => (button.style.display = "block"), 100);
+        button.setCssStyles({display: "none"})
+        window.setTimeout(() => button.setCssStyles({display: "block"}), 100);
 
         setIcon(button, icon);
     }

@@ -131,11 +131,14 @@ export class ImageZoom {
      * Reset the zoom and stored data of the specified image.
      */
     private resetImage = (target: HTMLElement) => {
-        target.style.cursor = "";
-        target.style.transform = "";
-
-        target.parentElement.style.clipPath = "";
-        target.parentElement.style.height = "";
+        target.setCssStyles({
+            cursor: "",
+            transform: "",
+        });
+        target.parentElement.setCssStyles({
+            clipPath: "",
+            height: "",
+        });
 
         target.dataset.zoomData = "";
         target.dataset.scale = "";
@@ -193,15 +196,17 @@ export class ImageZoom {
             translateY,
         );
 
-        target.style.transform = `translate(${clampedTranslateX}px, ${clampedTranslateY}px) scale(${scale})`;
+        target.setCssStyles({
+            transform: `translate(${clampedTranslateX}px, ${clampedTranslateY}px) scale(${scale})`,
+        });
         target.dataset.translateX = clampedTranslateX.toString();
         target.dataset.translateY = clampedTranslateY.toString();
         target.dataset.scale = scale.toString();
 
         if (scale > this.MIN_SCALE) {
-            target.style.cursor = "grab";
+            target.setCssStyles({ cursor: "grab" });
         } else {
-            target.style.cursor = "";
+            target.setCssStyles({ cursor: "" });
         }
 
         event.preventDefault();
@@ -225,13 +230,17 @@ export class ImageZoom {
         if (viewType === "markdown") {
             if (target.parentElement.previousElementSibling?.localName === "div") {
                 // Single image on one line
-                target.parentElement.style.clipPath = `inset(0 ${parentRect.width - imageRect.width}px ${parentRect.bottom - imageRect.bottom}px 0)`;
+                target.parentElement.setCssStyles({
+                    clipPath: `inset(0 ${parentRect.width - imageRect.width}px ${parentRect.bottom - imageRect.bottom}px 0)`,
+                });
             } else {
                 // Inline image with text before
-                target.parentElement.style.clipPath = `inset(-${imageRect.height - parentRect.height + parentRect.bottom - imageRect.bottom}px 0 ${parentRect.bottom - imageRect.bottom}px 0)`;
+                target.parentElement.setCssStyles({
+                    clipPath: `inset(-${imageRect.height - parentRect.height + parentRect.bottom - imageRect.bottom}px 0 ${parentRect.bottom - imageRect.bottom}px 0)`,
+                });
             }
         } else if (viewType === "image") {
-            target.parentElement.style.height = "100%";
+            target.parentElement.setCssStyles({ height: "100%" });
         } else return false;
 
         target.dataset.zoomData = "true";
@@ -349,7 +358,9 @@ export class ImageZoom {
             translateY,
         );
 
-        target.style.transform = `translate(${clampedTranslateX}px, ${clampedTranslateY}px) scale(${scale})`;
+        target.setCssStyles({
+            transform: `translate(${clampedTranslateX}px, ${clampedTranslateY}px) scale(${scale})`,
+        });
         target.dataset.translateX = clampedTranslateX.toString();
         target.dataset.translateY = clampedTranslateY.toString();
     };

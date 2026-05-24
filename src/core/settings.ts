@@ -272,9 +272,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
         }
 
         if (!this.settingsEnabled) {
-            setting.infoEl.style.opacity = "0.4";
-            setting.controlEl.style.opacity = "0.4";
-            setting.controlEl.style.filter = "grayscale(100%)";
+            setting.infoEl.setCssStyles({ opacity: "0.4" });
+            setting.controlEl.setCssStyles({
+                opacity: "0.4",
+                filter: "grayscale(100%)",
+            });
 
             window.setTimeout(() => {
                 setting.components.forEach((comp) => {
@@ -564,16 +566,18 @@ export class ScrollingSettingTab extends PluginSettingTab {
             let parentEl: HTMLElement;
             if (input.inputEl.parentElement) {
                 parentEl = input.inputEl.parentElement;
-                parentEl.style.display = "flex";
-                parentEl.style.alignItems = "flex-end";
-                parentEl.style.flexDirection = "column";
-                parentEl.style.marginBottom = "-1.5em";
+                parentEl.setCssStyles({
+                    display: "flex",
+                    alignItems: "flex-end",
+                    flexDirection: "column",
+                    marginBottom: "-1.5em",
+                });
             } else {
                 parentEl = this.containerEl;
             }
 
             const buttonRow = parentEl.createDiv({ cls: "setting-item-control" });
-            buttonRow.style.display = "flex";
+            buttonRow.setCssStyles({ display: "flex" });
 
             // Reset button
             const resetButton = buttonRow.createDiv({

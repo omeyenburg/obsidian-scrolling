@@ -306,8 +306,8 @@ export class CodeBlock {
         );
 
         // Vim cursor is now in view, show it.
-        if (cursorEl && cursorEl.style.display !== "block") {
-            cursorEl.style.display = "block";
+        if (cursorEl) {
+            cursorEl.setCssStyles({ display: "block" });
         }
 
         this.updateHorizontalScroll();
