@@ -4,7 +4,6 @@ import { CodeBlock } from "@components/codeblock";
 import { FileTree } from "@components/filetree";
 import { MathJax } from "@components/mathjax";
 import { FollowCursor } from "@components/followcursor";
-import { FollowScroll } from "@components/followscroll";
 import { MouseScroll } from "@components/mousescroll";
 import { RestoreScroll } from "@components/restorescroll";
 import { Scrollbar } from "@components/scrollbar";
@@ -25,7 +24,6 @@ export default class ScrollingPlugin extends Plugin {
     fileTree!: FileTree;
     mathJax!: MathJax;
     followCursor!: FollowCursor;
-    followScroll!: FollowScroll;
     mouseScroll!: MouseScroll;
     restoreScroll!: RestoreScroll;
     scrollbar!: Scrollbar;
@@ -44,7 +42,6 @@ export default class ScrollingPlugin extends Plugin {
         this.fileTree = new FileTree(this);
         this.mathJax = new MathJax(this);
         this.followCursor = new FollowCursor(this);
-        this.followScroll = new FollowScroll(this);
         this.mouseScroll = new MouseScroll(this);
         this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);

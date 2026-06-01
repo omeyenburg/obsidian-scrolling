@@ -314,7 +314,7 @@ export class CodeBlock {
 
         // Tell CodeMirror to update cursor
         if (this.cachedCursor !== null) {
-            this.plugin.followScroll.skipCursor = true;
+            this.plugin.events.skipNextViewUpdate()
             editor.cm.dispatch({ selection: editor.cm.state.selection });
         }
     }

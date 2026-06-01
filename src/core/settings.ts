@@ -1,7 +1,6 @@
 import { Platform, PluginSettingTab, Setting, SliderComponent, setIcon } from "obsidian";
 
 import type { default as ScrollingPlugin } from "@core/main";
-import { RestoreScroll } from "@components/restorescroll";
 
 export interface ScrollingPluginSettings {
     /** Scroll viewport when moving the cursor or editing. */
@@ -95,9 +94,6 @@ export interface ScrollingPluginSettings {
     /** Threshold between precise and smooth scrolling. In percent. (1-100) */
     simulatedTouchpadFrictionThreshold: number;
 
-    /** Move cursor while scrolling manually. (Desktop only) */
-    cursorScrollEnabled: boolean;
-
     /** Show experimental settings. (hidden) */
     enableExperimentalSettings: boolean;
 }
@@ -154,8 +150,6 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     simulatedTouchpadFrictionThreshold: 20,
     simulatedTouchpadSpeed: 50,
 
-    cursorScrollEnabled: false,
-
     enableExperimentalSettings: false,
 };
 
@@ -185,7 +179,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayReadModeKeybindsSettings();
         this.displayRibbonSettings();
         this.displayMouseScrollSettings();
-        this.displayCursorScrollSettings();
 
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
@@ -1030,26 +1023,5 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
         }
-    }
-
-    private displayCursorScrollSettings() {
-        if (Platform.isMobile) return;
-
-        if (!this.plugin.settings.enableExperimentalSettings) {
-            this.plugin.settings.cursorScrollEnabled = DEFAULT_SETTINGS.cursorScrollEnabled;
-            return;
-        }
-
-        this.createHeading("Text cursor follows scroll (Experimental)");
-
-        this.createSetting(
-            "Enable",
-            "Move the cursor to stay visible when scrolling manually.\nCan be used together with 'Centered cursor'.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.cursorScrollEnabled).onChange(async (value) => {
-                this.plugin.settings.cursorScrollEnabled = value;
-                await this.plugin.saveSettings();
-            }),
-        );
     }
 }

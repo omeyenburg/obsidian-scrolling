@@ -32,6 +32,7 @@ export class Events {
     private lastWheelScrollElement: HTMLElement | null;
 
     private skipViewUpdate = false;
+    private shouldSkipNextViewUpdate = false;
 
     private cursorUpdateHandlers: Set<
         (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => void
@@ -109,6 +110,13 @@ export class Events {
      */
     public unload(): void {
         this.unloadCallbacks.forEach((callback) => callback());
+    }
+
+    /**
+     * Skip next view update.
+     */
+    public skipNextViewUpdate() {
+        this.shouldSkipNextViewUpdate = true;
     }
 
     /**
@@ -297,8 +305,8 @@ export class Events {
      * @param update The ViewUpdate provided by CodeMirror.
      */
     private viewUpdateHandler(update: ViewUpdate): void {
-        if (this.plugin.followScroll.skipCursor) {
-            this.plugin.followScroll.skipCursor = false;
+        if (this.shouldSkipNextViewUpdate) {
+            this.shouldSkipNextViewUpdate = false;
             return;
         }
 
