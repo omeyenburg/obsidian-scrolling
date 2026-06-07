@@ -94,6 +94,9 @@ export interface ScrollingPluginSettings {
     /** Threshold between precise and smooth scrolling. In percent. (1-100) */
     simulatedTouchpadFrictionThreshold: number;
 
+    /** Show scroll-to-top/bottom buttons (experimental) */
+    scrollButtonsEnabled: boolean;
+
     /** Show experimental settings. (hidden) */
     enableExperimentalSettings: boolean;
 }
@@ -150,6 +153,8 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     simulatedTouchpadFrictionThreshold: 20,
     simulatedTouchpadSpeed: 50,
 
+    scrollButtonsEnabled: false,
+
     enableExperimentalSettings: false,
 };
 
@@ -179,6 +184,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayReadModeKeybindsSettings();
         this.displayRibbonSettings();
         this.displayMouseScrollSettings();
+        this.displayScrollButtonSettings();
 
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
@@ -204,7 +210,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createSetting(
             "Enable experimental settings",
-            "Settings that are likely to be removed or unstable in their current state.",
+            "Features that are unfinished or likely to be removed.",
         ).addToggle((toggle) =>
             toggle
                 .setValue(this.plugin.settings.enableExperimentalSettings)
@@ -1023,5 +1029,22 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
         }
+    }
+
+    private displayScrollButtonSettings() {
+        this.createHeading("Scroll buttons");
+
+        this.createSetting(
+            "Show top/bottom scroll buttons",
+            "Adds buttons to scroll to the top/bottom of the file",
+        ).addToggle((toggle) =>
+            toggle
+                .setValue(this.plugin.settings.scrollButtonsEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.scrollButtonsEnabled = value;
+                    this.plugin.scrollButtons.setup()
+                    await this.plugin.saveSettings();
+                }),
+        );
     }
 }

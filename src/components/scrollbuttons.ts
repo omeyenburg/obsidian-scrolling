@@ -10,17 +10,33 @@ export class ScrollButtons {
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
-        plugin.events.onLayoutReady(this.layoutReadyHandler.bind(this));
+        plugin.events.onLayoutReady(this.setup.bind(this));
         plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
     }
 
-    private layoutReadyHandler(): void {
+    public setup(): void {
+        for (const leaf of this.leaves) {
+            const c = leaf.view.containerEl.findAll(".scrolling-overlay-button-container");
+            for (const el of c) {
+                el.remove();
+            }
+        }
+        this.leaves.clear();
+
+        if (!this.plugin.settings.scrollButtonsEnabled) {
+            return;
+        }
+
         this.plugin.app.workspace.iterateRootLeaves((leaf) => {
             this.initLeaf(leaf);
         });
     }
 
     private leafChangeHandler(view: MarkdownView): void {
+        if (!this.plugin.settings.scrollButtonsEnabled) {
+            return;
+        }
+
         if (view.leaf) {
             this.initLeaf(view.leaf);
             return;
@@ -45,7 +61,7 @@ export class ScrollButtons {
 
     private initView(view: MarkdownView): void {
         let buttonContainer = view.containerEl.createDiv({
-            attr: { id: "scrolling-overlay-button-container" },
+            cls: "scrolling-overlay-button-container",
         });
 
         this.createButton(buttonContainer, "arrow-up", this.scrollToTop.bind(this, view));
@@ -81,7 +97,7 @@ export class ScrollButtons {
                 scroller.scrollTo({ top: pos });
                 window.requestAnimationFrame(() => {
                     scroller.scrollTo({ top: pos });
-                })
+                });
                 break;
         }
     }

@@ -31,6 +31,7 @@ export default class ScrollingPlugin extends Plugin {
     imageZoom!: ImageZoom;
     lineLength!: LineLength;
     commands!: Commands;
+    scrollButtons!: ScrollButtons;
 
     async onload() {
         await this.loadSettings();
@@ -49,8 +50,7 @@ export default class ScrollingPlugin extends Plugin {
         this.imageZoom = new ImageZoom(this);
         this.lineLength = new LineLength(this);
         this.commands = new Commands(this);
-
-        new ScrollButtons(this);
+        this.scrollButtons = new ScrollButtons(this);
 
         this.events.postInit();
 
