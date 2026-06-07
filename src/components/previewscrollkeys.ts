@@ -118,6 +118,9 @@ export class PreviewScrollKeys {
         if (!this.plugin.settings.readingTopBottomScrollEnabled) return;
 
         this.scroller.scrollTo({ top: 1000000000 });
+        window.requestAnimationFrame(() => {
+            this.scroller.scrollTo({ top: 1000000000 });
+        })
     }
 
     /**
