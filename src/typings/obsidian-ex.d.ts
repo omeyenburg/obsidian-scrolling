@@ -37,8 +37,6 @@ import {
 import { EditorView } from "@codemirror/view";
 import { EditorState, Extension } from "@codemirror/state";
 
-/* eslint-disable -- External definition file containing overridden types */
-
 interface Account {
     /**
      * The company associated with the activated commercial license
@@ -204,7 +202,7 @@ interface ThemeManifest {
      * Version of the theme
      * @remark Defaults to "0.0.0" if no theme manifest was provided in the repository
      */
-    version: "0.0.0" | string;
+    version: string;
 }
 
 interface CustomCSS extends Component {
@@ -257,7 +255,7 @@ interface CustomCSS extends Component {
      * Currently active theme, given by its name
      * @remark "" is the default Obsidian theme
      */
-    theme: "" | string;
+    theme: string;
     /**
      * Mapping of theme names to their manifest
      */
@@ -1226,35 +1224,35 @@ interface AppVaultConfig {
     /**
      * Appearance > Accent color
      */
-    accentColor: "" | string;
+    accentColor: string;
     /**
      * Files & Links > Automatically update internal links
      */
-    alwaysUpdateLinks?: false | boolean;
+    alwaysUpdateLinks?: boolean;
     /**
      * Files & Links > Attachment folder path
      */
-    attachmentFolderPath?: "/" | string;
+    attachmentFolderPath?: string;
     /**
      * Editor > Auto convert HTML
      */
-    autoConvertHtml?: true | boolean;
+    autoConvertHtml?: boolean;
     /**
      * Editor > Auto pair brackets
      */
-    autoPairBrackets?: true | boolean;
+    autoPairBrackets?: boolean;
     /**
      * Editor > Auto pair Markdown syntax
      */
-    autoPairMarkdown?: true | boolean;
+    autoPairMarkdown?: boolean;
     /**
      * Appearance > Font size
      */
-    baseFontSize?: 16 | number;
+    baseFontSize?: number;
     /**
      * Appearance > Quick font size adjustment
      */
-    baseFontSizeAction?: true | boolean;
+    baseFontSizeAction?: boolean;
     /**
      * Community Plugins > Browse > Sort order
      */
@@ -1271,7 +1269,7 @@ interface AppVaultConfig {
      * Appearance > Theme
      * @remark "" is the default Obsidian theme
      */
-    cssTheme?: "" | string;
+    cssTheme?: string;
     /**
      * Editor > Default view for new tabs
      */
@@ -1279,7 +1277,7 @@ interface AppVaultConfig {
     /**
      *
      */
-    emacsyKeys?: true | boolean;
+    emacsyKeys?: boolean;
     /**
      * Appearance > CSS snippets
      */
@@ -1291,15 +1289,15 @@ interface AppVaultConfig {
     /**
      * Editor > Always focus new tabs
      */
-    focusNewTab?: true | boolean;
+    focusNewTab?: boolean;
     /**
      * Editor > Fold heading
      */
-    foldHeading?: true | boolean;
+    foldHeading?: boolean;
     /**
      * Editor > Fold indent
      */
-    foldIndent?: true | boolean;
+    foldIndent?: boolean;
     /**
      * Hotkeys
      * @deprecated Likely not used anymore
@@ -1308,23 +1306,23 @@ interface AppVaultConfig {
     /**
      * Appearance > Interface font
      */
-    interfaceFontFamily?: "" | string;
+    interfaceFontFamily?: string;
     /**
      * Editor > Use legacy editor
      */
-    legacyEditor?: false | boolean;
+    legacyEditor?: boolean;
     /**
      *
      */
-    livePreview?: true | boolean;
+    livePreview?: boolean;
     /**
      * Mobile > Configure mobile Quick Action
      */
-    mobilePullAction?: "command-palette:open" | string;
+    mobilePullAction?: string;
     /**
      *
      */
-    mobileQuickRibbonItem?: "" | string;
+    mobileQuickRibbonItem?: string;
     /**
      * Mobile > Manage toolbar options
      */
@@ -1332,7 +1330,7 @@ interface AppVaultConfig {
     /**
      *
      */
-    monospaceFontFamily?: "" | string;
+    monospaceFontFamily?: string;
     /**
      * Appearance > Native menus
      */
@@ -1340,7 +1338,7 @@ interface AppVaultConfig {
     /**
      * Files & Links > Default location for new notes | 'folder' > Folder to create new notes in
      */
-    newFileFolderPath?: "/" | string;
+    newFileFolderPath?: string;
     /**
      * Files & Links > Default location for new notes
      */
@@ -1353,15 +1351,15 @@ interface AppVaultConfig {
      * Saved on executing 'Export to PDF' command
      */
     pdfExportSettings?: {
-        pageSize: "letter" | string;
-        landscape: false | boolean;
-        margin: "0" | string;
-        downscalePercent: 100 | number;
+        pageSize: string;
+        landscape: boolean;
+        margin: string;
+        downscalePercent: number;
     };
     /**
      * Files & Links > Confirm line deletion
      */
-    promptDelete?: true | boolean;
+    promptDelete?: boolean;
     /**
      * Editor > Properties in document
      */
@@ -1369,43 +1367,43 @@ interface AppVaultConfig {
     /**
      * Editor > Readable line length
      */
-    readableLineLength?: true | boolean;
+    readableLineLength?: boolean;
     /**
      * Editor > Right-to-left (RTL)
      */
-    rightToLeft?: false | boolean;
+    rightToLeft?: boolean;
     /**
      * @deprecated Removed as of version 1.4.3
      */
-    showFrontmatter?: false | boolean;
+    showFrontmatter?: boolean;
     /**
      * Editor > Show indentation guides
      */
-    showIndentGuide?: true | boolean;
+    showIndentGuide?: boolean;
     /**
      * Editor > Show inline title
      */
-    showInlineTitle?: true | boolean;
+    showInlineTitle?: boolean;
     /**
      * Editor > Show line numbers
      */
-    showLineNumber?: false | boolean;
+    showLineNumber?: boolean;
     /**
      * Files & Links > Detect all file extensions
      */
-    showUnsupportedFiles?: false | boolean;
+    showUnsupportedFiles?: boolean;
     /**
      * Appearance > Show tab title bar
      */
-    showViewHeader?: false | boolean;
+    showViewHeader?: boolean;
     /**
      * Editor > Smart indent lists
      */
-    smartIndentList?: true | boolean;
+    smartIndentList?: boolean;
     /**
      * Editor > Spellcheck
      */
-    spellcheck?: false | boolean;
+    spellcheck?: boolean;
     /**
      * @deprecated
      */
@@ -1417,15 +1415,15 @@ interface AppVaultConfig {
     /**
      * Editor > Strict line breaks
      */
-    strictLineBreaks?: false | boolean;
+    strictLineBreaks?: boolean;
     /**
      * Editor > Tab indent size
      */
-    tabSize?: 4 | number;
+    tabSize?: number;
     /**
      * Appearance > Text font
      */
-    textFontFamily?: "" | string;
+    textFontFamily?: string;
     /**
      * Appearance > Base color scheme
      * @remark Not be confused with cssTheme, this setting is for the light/dark mode
@@ -1435,7 +1433,7 @@ interface AppVaultConfig {
     /**
      * Appearance > Translucent window
      */
-    translucency?: false | boolean;
+    translucency?: boolean;
     /**
      * Files & Links > Deleted files
      */
@@ -1447,11 +1445,11 @@ interface AppVaultConfig {
     /**
      * Files & Links > Use [[Wikilinks]]
      */
-    useMarkdownLinks?: false | boolean;
+    useMarkdownLinks?: boolean;
     /**
      * Editor > Indent using tabs
      */
-    useTab?: true | boolean;
+    useTab?: boolean;
     /**
      * Files & Links > Excluded files
      */
@@ -1459,7 +1457,7 @@ interface AppVaultConfig {
     /**
      * Editor > Vim key bindings
      */
-    vimMode?: false | boolean;
+    vimMode?: boolean;
 }
 
 interface FileEntry {
@@ -2039,6 +2037,7 @@ declare module "obsidian" {
         /**
          * @internal Scope that this scope is a child of
          */
+        // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents -- explicit typing
         parent: EScope | undefined;
         /**
          * @internal - Callback to execute when scope is matched

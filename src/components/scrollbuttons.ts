@@ -88,17 +88,14 @@ export class ScrollButtons {
     }
 
     private scrollTo(view: MarkdownView, pos: number): void {
-        switch (view.getMode()) {
-            case "source":
-                view.currentMode.applyScroll(pos);
-                break;
-            case "preview":
-                let scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
+        if (view.getMode() == "source") {
+            view.currentMode.applyScroll(pos);
+        } else {
+            let scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
+            scroller.scrollTo({ top: pos });
+            window.requestAnimationFrame(() => {
                 scroller.scrollTo({ top: pos });
-                window.requestAnimationFrame(() => {
-                    scroller.scrollTo({ top: pos });
-                });
-                break;
+            });
         }
     }
 }
