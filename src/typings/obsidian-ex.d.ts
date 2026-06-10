@@ -37,6 +37,8 @@ import {
 import { EditorView } from "@codemirror/view";
 import { EditorState, Extension } from "@codemirror/state";
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- typings can have any type */
+
 interface Account {
     /**
      * The company associated with the activated commercial license
