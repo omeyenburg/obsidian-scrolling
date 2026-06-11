@@ -43,7 +43,7 @@ export class RestoreScroll {
 
     private openLeafIds = new Set();
 
-    private linkUsed = false;
+    public linkUsed = false;
 
     private workspaceInitialized: boolean;
 
@@ -75,7 +75,6 @@ export class RestoreScroll {
 
         // Monkey-patch the OpenLinkText function
         // to mark interaction as link use.
-        const self = this;
         plugin.register(
             around(Workspace.prototype, {
                 openLinkText(oldOpenLinkText) {
@@ -85,12 +84,12 @@ export class RestoreScroll {
                         newLeaf?: boolean,
                         openViewState?: OpenViewState,
                     ) {
-                        self.linkUsed = true;
+                        plugin.restoreScroll.linkUsed = true;
 
                         const args = [linktext, sourcePath, newLeaf, openViewState];
                         const result = await oldOpenLinkText.apply(this, args);
 
-                        self.linkUsed = false;
+                        plugin.restoreScroll.linkUsed = false;
 
                         return result;
                     };
@@ -101,7 +100,6 @@ export class RestoreScroll {
         plugin.events.onScroll(this.scrollHandler.bind(this));
         plugin.events.onMouseUp(this.mouseUpHandler.bind(this));
         plugin.events.onFileOpen(this.fileOpenHandler.bind(this));
-        // plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
         plugin.events.onFileDelete(this.fileDeleteHandler.bind(this));
         plugin.events.onFileRename(this.fileRenameHandler.bind(this));
         plugin.events.onLayoutReady(this.layoutReadyHandler.bind(this));
