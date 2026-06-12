@@ -18,6 +18,11 @@ const mockPlugin = {
     },
 };
 
+// Add setCssStyles method to HTMLElement prototype
+(HTMLElement.prototype as any).setCssStyles = function (styles: Record<string, string>) {
+    Object.assign(this.style, styles);
+};
+
 describe("ImageZoom", () => {
     let imageZoom: ImageZoom;
 
