@@ -27,6 +27,12 @@ export class ScrollButtons {
             return;
         }
 
+        if (this.plugin.settings.scrollButtonsPosition === "top") {
+            activeDocument.body.classList.add("scrolling-overlay-buttons-top");
+        } else {
+            activeDocument.body.classList.remove("scrolling-overlay-buttons-top");
+        }
+
         this.plugin.app.workspace.iterateRootLeaves((leaf) => {
             this.initLeaf(leaf);
         });

@@ -128,7 +128,7 @@ body.scrolling-image-zoom-enabled div.image-container {
 .scrolling-overlay-button-container {
     position: absolute;
     bottom: 40px;
-    right: 20px;
+    right: var(--size-4-3);
     z-index: 9999;
     gap: 10px;
     display: flex;
@@ -141,8 +141,36 @@ body.scrolling-image-zoom-enabled div.image-container {
 }
 
 .scrolling-overlay-button {
-    width: 35px;
-    height: 35px;
-    /* color: var(--text-color); */
-    /* background-color: var(--background-primary-alt); */
+    width: 40px;
+    height: 40px;
+}
+
+/* optional setting `scrolling-overlay-buttons-top` */
+body.scrolling-overlay-buttons-top .scrolling-overlay-button-container,
+body.scrolling-overlay-buttons-top .scrolling-overlay-button-container {
+    top: calc(var(--header-height) + var(--size-4-3));
+    bottom: unset;
+}
+
+/* mobile version */
+body.is-mobile .scrolling-overlay-button,
+body.is-tablet .scrolling-overlay-button {
+    width: var(--view-header-height);
+    height: var(--view-header-height);
+    border-radius: 0;
+}
+
+body.is-mobile .scrolling-overlay-button-container,
+body.is-tablet .scrolling-overlay-button-container {
+    border-radius: var(--button-radius);
+    overflow: hidden;
+    gap: 0;
+    bottom: calc(var(--navbar-bottom-offset) - var(--keyboard-height) - 2px + var(--navbar-height) + var(--size-4-3));
+}
+
+/* mobile version: optional setting `scrolling-overlay-buttons-top` */
+body.is-mobile.scrolling-overlay-buttons-top .scrolling-overlay-button-container,
+body.is-tablet.scrolling-overlay-buttons-top .scrolling-overlay-button-container {
+    top: calc(var(--view-header-height) + var(--view-header-top-offset) + var(--size-4-3));
+    bottom: unset;
 }

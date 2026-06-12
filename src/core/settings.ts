@@ -96,6 +96,7 @@ export interface ScrollingPluginSettings {
 
     /** Show scroll-to-top/bottom buttons (experimental) */
     scrollButtonsEnabled: boolean;
+    scrollButtonsPosition: string;
 
     /** Show experimental settings. (hidden) */
     enableExperimentalSettings: boolean;
@@ -154,6 +155,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     simulatedTouchpadSpeed: 50,
 
     scrollButtonsEnabled: false,
+    scrollButtonsPosition: "bottom",
 
     enableExperimentalSettings: false,
 };
@@ -183,8 +185,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayLineLengthSettings();
         this.displayReadModeKeybindsSettings();
         this.displayRibbonSettings();
-        this.displayMouseScrollSettings();
         this.displayScrollButtonSettings();
+        this.displayMouseScrollSettings();
 
         this.createHeading("Issues & feature requests").setDesc(
             createFragment((frag) => {
@@ -222,9 +224,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
 
         // Initially/after reloading scrollHeight equals clientHeight.
-        if (previousScrollBottom > this.containerEl.clientHeight) {
-            this.containerEl.scrollTop = this.containerEl.scrollHeight - previousScrollBottom;
-        }
+        this.containerEl.scrollTop = this.containerEl.scrollHeight - previousScrollBottom;
     }
 
     private setDesc(setting: Setting, desc: string): void {
@@ -855,6 +855,37 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
     }
 
+    private displayScrollButtonSettings() {
+        this.createHeading("Scroll buttons");
+
+        this.createSetting(
+            "Show top/bottom scroll buttons",
+            "Adds buttons to scroll to the top/bottom of the file",
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.scrollButtonsEnabled).onChange(async (value) => {
+                this.plugin.settings.scrollButtonsEnabled = value;
+                this.plugin.scrollButtons.setup();
+                this.display();
+                await this.plugin.saveSettings();
+            }),
+        );
+        this.settingsEnabled = this.plugin.settings.scrollButtonsEnabled;
+
+        this.createSetting(
+            "Show top/bottom scroll buttons",
+            "Adds buttons to scroll to the top/bottom of the file",
+        ).addDropdown((toggle) =>
+            toggle
+                .addOptions({ top: "Top", bottom: "Bottom" })
+                .setValue(this.plugin.settings.scrollButtonsPosition)
+                .onChange(async (value) => {
+                    this.plugin.settings.scrollButtonsPosition = value;
+                    this.plugin.scrollButtons.setup();
+                    await this.plugin.saveSettings();
+                }),
+        );
+    }
+
     private displayMouseScrollSettings() {
         if (Platform.isMobile) return;
 
@@ -1029,22 +1060,5 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     }),
             );
         }
-    }
-
-    private displayScrollButtonSettings() {
-        this.createHeading("Scroll buttons");
-
-        this.createSetting(
-            "Show top/bottom scroll buttons",
-            "Adds buttons to scroll to the top/bottom of the file",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.scrollButtonsEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.scrollButtonsEnabled = value;
-                    this.plugin.scrollButtons.setup()
-                    await this.plugin.saveSettings();
-                }),
-        );
     }
 }
