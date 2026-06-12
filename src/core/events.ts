@@ -1,6 +1,15 @@
-import { Platform, WorkspaceLeaf, Editor, TFile, TAbstractFile } from "obsidian";
+import {
+    Platform,
+    WorkspaceLeaf,
+    Editor,
+    TFile,
+    TAbstractFile,
+    OpenViewState,
+    Workspace,
+} from "obsidian";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
+import { around } from "monkey-around";
 
 import type { default as ScrollingPlugin } from "@core/main";
 
@@ -30,6 +39,11 @@ export class Events {
 
     private lastWheelEventTime = 0;
     private lastWheelScrollElement: HTMLElement | null;
+
+    /**
+     * Indicates whether Obsidian is opening a link right now.
+     */
+    public isOpeningWithLink = false;
 
     private skipViewUpdate = false;
     private shouldSkipNextViewUpdate = false;
@@ -94,6 +108,29 @@ export class Events {
                 observer.disconnect();
             });
         });
+
+        // Monkey-patch the OpenLinkText function to mark interaction as link use.
+        plugin.register(
+            around(Workspace.prototype, {
+                openLinkText(oldOpenLinkText) {
+                    return async function (
+                        linktext: string,
+                        sourcePath: string,
+                        newLeaf?: boolean,
+                        openViewState?: OpenViewState,
+                    ) {
+                        plugin.events.isOpeningWithLink = true;
+
+                        const args = [linktext, sourcePath, newLeaf, openViewState];
+                        const result = await oldOpenLinkText.apply(this, args);
+
+                        plugin.events.isOpeningWithLink = false;
+
+                        return result;
+                    };
+                },
+            }),
+        );
     }
 
     /**
@@ -305,6 +342,10 @@ export class Events {
      * @param update The ViewUpdate provided by CodeMirror.
      */
     private viewUpdateHandler(update: ViewUpdate): void {
+        if (this.isOpeningWithLink) {
+            return;
+        }
+
         if (this.shouldSkipNextViewUpdate) {
             this.shouldSkipNextViewUpdate = false;
             return;
@@ -377,9 +418,9 @@ export class Events {
         // As soon as one callback returns true abort handling event.
         for (const { callback } of this.wheelCancellingHandlers) {
             if (callback(event)) {
-                event.preventDefault()
+                event.preventDefault();
                 return;
-            };
+            }
         }
 
         if (!event.deltaY) return;

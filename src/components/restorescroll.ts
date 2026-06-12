@@ -5,16 +5,13 @@ import {
     FileView,
     MarkdownView,
     Notice,
-    OpenViewState,
     Platform,
     TAbstractFile,
     TFile,
-    Workspace,
     WorkspaceLeaf,
     debounce,
     normalizePath,
 } from "obsidian";
-import { around } from "monkey-around";
 
 import { default as ScrollingPlugin } from "@core/main";
 
@@ -42,8 +39,6 @@ export class RestoreScroll {
     private readonly writeStatesFileDebounced: Debouncer<[], void>;
 
     private openLeafIds = new Set();
-
-    public linkUsed = false;
 
     private workspaceInitialized: boolean;
 
@@ -73,29 +68,8 @@ export class RestoreScroll {
             true,
         );
 
-        // Monkey-patch the OpenLinkText function
-        // to mark interaction as link use.
-        plugin.register(
-            around(Workspace.prototype, {
-                openLinkText(oldOpenLinkText) {
-                    return async function (
-                        linktext: string,
-                        sourcePath: string,
-                        newLeaf?: boolean,
-                        openViewState?: OpenViewState,
-                    ) {
-                        plugin.restoreScroll.linkUsed = true;
-
-                        const args = [linktext, sourcePath, newLeaf, openViewState];
-                        const result = await oldOpenLinkText.apply(this, args);
-
-                        plugin.restoreScroll.linkUsed = false;
-
-                        return result;
-                    };
-                },
-            }),
-        );
+        // TODO: consider simply patching into WorkspaceLeaf.setViewState. It contains info about flashing element
+        // see core/events for monkey patching
 
         plugin.events.onScroll(this.scrollHandler.bind(this));
         plugin.events.onMouseUp(this.mouseUpHandler.bind(this));
@@ -230,11 +204,13 @@ export class RestoreScroll {
         if (this.plugin.settings.restoreScrollInitialOnly) return;
 
         // Do not restore if heading link/search is used.
+        // BUG: is-flashing might be still active on an element in the previous view
+        // NOTE: can be avoided by hooking into WorkspaceLeaf.setViewState directly
         const headingLinkUsed = this.plugin.app.workspace.containerEl.querySelector(".is-flashing");
         if (headingLinkUsed) return;
 
         // Do not restore if any link was used and links are disabled.
-        if (this.linkUsed && !this.plugin.settings.restoreScrollFileLink) return;
+        if (this.plugin.events.isOpeningWithLink && !this.plugin.settings.restoreScrollFileLink) return;
 
         // Mode top means feature is disabled.
         if (this.plugin.settings.restoreScrollMode === "top") return;
