@@ -567,7 +567,11 @@ export class RestoreScroll {
             if (scrollTop) this.ephemeralStates[fileId] = { timestamp, scrollTop };
         }
 
-        this.discardOldStates();
+        if (this.plugin.settings.restoreScrollAge) {
+            this.discardNewStates();
+        } else {
+            this.discardOldStates();
+        }
     }
 
     /**
@@ -582,6 +586,24 @@ export class RestoreScroll {
             return;
 
         entries.sort(([, a], [, b]) => b.timestamp - a.timestamp);
+
+        this.ephemeralStates = Object.fromEntries(
+            entries.slice(0, this.plugin.settings.restoreScrollLimit),
+        );
+    }
+
+    /**
+     * Limits the number of stored file states by timestamp and discards the newest.
+     */
+    private discardNewStates() {
+        const entries = Object.entries(this.ephemeralStates);
+        if (
+            this.plugin.settings.restoreScrollLimit <= 0 ||
+            entries.length <= this.plugin.settings.restoreScrollLimit
+        )
+            return;
+
+        entries.sort(([, a], [, b]) => a.timestamp - b.timestamp);
 
         this.ephemeralStates = Object.fromEntries(
             entries.slice(0, this.plugin.settings.restoreScrollLimit),
