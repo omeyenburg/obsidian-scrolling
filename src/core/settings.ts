@@ -23,6 +23,10 @@ export interface ScrollingPluginSettings {
     restoreScrollMode: string;
     /** Number of scroll position entries. Use negative values to ignore the limit. */
     restoreScrollLimit: number;
+    
+    /** Choose to keep scroll positions of the oldest entries instead of most recent (default) */
+    restoreScrollAge: boolean;
+
     /** Delay before restoring the position in ms. (0-300) */
     restoreScrollDelay: number;
     /** Enable scroll position in pdf files. */
@@ -114,6 +118,7 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 
     restoreScrollMode: "top",
     restoreScrollLimit: -1,
+    restoreScrollAge: false,
     restoreScrollDelay: 5,
     restoreScrollPdf: false,
     restoreScrollBases: false,
@@ -465,17 +470,42 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         ? this.plugin.settings.restoreScrollLimit.toString()
                         : "",
                 )
-                .onChange((value: string) => {
+                .onChange(async (value: string) => {
                     const limit = +value;
                     if (limit.toString().contains(".")) return;
-                    if (limit <= 0) {
+                    
+                    if (limit <= 0 || isNaN(limit)) {
                         this.plugin.settings.restoreScrollLimit = -1;
-                        return;
+                    } else {
+                        this.plugin.settings.restoreScrollLimit = limit;
                     }
 
-                    this.plugin.settings.restoreScrollLimit = limit;
+                    await this.plugin.saveSettings();
+
+                    if (restoreScrollAgeSetting) {
+                        const shouldShow = this.plugin.settings.restoreScrollLimit > 0;
+                        // Collapse the space entirely by modifying 'display'
+                        restoreScrollAgeSetting.settingEl.style.display = shouldShow ? "" : "none";
+                    }
                 });
         });
+
+        const restoreScrollAgeSetting = this.createSetting(
+            "Keep oldest scroll positions",
+            "When the limit is reached, keep the oldest saved positions instead of the most recent ones (default).",
+            () => (this.plugin.settings.restoreScrollAge = DEFAULT_SETTINGS.restoreScrollAge),
+            ).addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.restoreScrollAge)
+                    .onChange(async (value) => {
+                        this.plugin.settings.restoreScrollAge = value;
+                        await this.plugin.saveSettings();
+                }),
+        );
+
+        const initialShow = this.plugin.settings.restoreScrollLimit > 0;
+        restoreScrollAgeSetting.settingEl.style.display = initialShow ? "" : "none";
+
 
         if (Platform.isMobile) {
             this.createSetting(
