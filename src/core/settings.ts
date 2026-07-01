@@ -98,8 +98,9 @@ export interface ScrollingPluginSettings {
     /** Threshold between precise and smooth scrolling. In percent. (1-100) */
     simulatedTouchpadFrictionThreshold: number;
 
-    /** Show scroll-to-top/bottom buttons (experimental) */
+    /** Show scroll-to-top/bottom buttons */
     scrollButtonsEnabled: boolean;
+    /** Where to show the buttons. Values: top, bottom */
     scrollButtonsPosition: string;
 
     /** Show experimental settings. (hidden) */
@@ -902,8 +903,8 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.settingsEnabled = this.plugin.settings.scrollButtonsEnabled;
 
         this.createSetting(
-            "Show top/bottom scroll buttons",
-            "Adds buttons to scroll to the top/bottom of the file",
+            "Button position",
+            "Moves the buttons in the note",
         ).addDropdown((toggle) =>
             toggle
                 .addOptions({ top: "Top", bottom: "Bottom" })
