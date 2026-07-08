@@ -83,6 +83,7 @@ export class FollowCursor {
         docChanged: boolean,
         vimModeChanged: boolean,
     ): void {
+        if (!editor.hasFocus()) return;
         if (vimModeChanged) return;
 
         // Cancel if mouse up, unless this setting allows it.
