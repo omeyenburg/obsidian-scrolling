@@ -41,7 +41,8 @@ export class LineLength {
             }
 
             // Obsidian already uses this property
-            activeDocument.body.style.setProperty("--file-line-width", lineLength);
+            this.plugin.setStyleProperty("--file-line-width", lineLength);
+
         },
         this.UPDATE_INTERVAL,
         false,

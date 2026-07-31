@@ -71,4 +71,36 @@ export default class ScrollingPlugin extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
     }
+
+    getMainDoc(): Document {
+        return this.app.workspace.containerEl.ownerDocument;
+    }
+
+    enableStyleClass(name: string | string[]) {
+        if (Array.isArray(name)) {
+            for (const n of name) {
+                this.getMainDoc().body.addClass(n);
+            }
+        } else {
+            this.getMainDoc().body.addClass(name);
+        }
+    }
+
+    disableStyleClass(name: string | string[]) {
+        if (Array.isArray(name)) {
+            for (const n of name) {
+                this.getMainDoc().body.removeClass(n);
+            }
+        } else {
+            this.getMainDoc().body.removeClass(name);
+        }
+    }
+
+    setStyleProperty(key: string, value: string) {
+        this.getMainDoc().body.style.setProperty(key, value);
+    }
+
+    removeStyleProperty(key: string) {
+        this.getMainDoc().body.style.removeProperty(key);
+    }
 }

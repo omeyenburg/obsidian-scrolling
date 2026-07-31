@@ -2,38 +2,6 @@ import { Platform } from "obsidian";
 
 import type { default as ScrollingPlugin } from "@core/main";
 
-function setVisibility(visibility: string): void {
-    if (visibility === "hide") {
-        activeDocument.body.removeClass("scrolling-visibility-scroll");
-        activeDocument.body.addClass("scrolling-visibility-hide");
-    } else if (visibility === "scroll") {
-        activeDocument.body.removeClass("scrolling-visibility-hide");
-        activeDocument.body.addClass("scrolling-visibility-scroll");
-    } else {
-        activeDocument.body.removeClass("scrolling-visibility-scroll");
-        activeDocument.body.removeClass("scrolling-visibility-hide");
-    }
-}
-
-function setWidth(width: number) {
-    if (width >= 0) {
-        activeDocument.body.addClass("scrolling-scrollbar-width");
-        activeDocument.body.style.setProperty("--scrolling-scrollbar-width", `${width}px`);
-    } else {
-        activeDocument.body.removeClass("scrolling-scrollbar-width");
-    }
-}
-
-function cleanup(): void {
-    activeDocument.body.removeClasses([
-        "scrolling-scrollbar-width",
-        "scrolling-visibility-hide",
-        "scrolling-visibility-scroll",
-    ]);
-
-    activeDocument.body.style.removeProperty("--scrolling-scrollbar-width");
-}
-
 export class Scrollbar {
     private readonly plugin: ScrollingPlugin;
 
@@ -45,7 +13,7 @@ export class Scrollbar {
         this.plugin = plugin;
 
         this.updateStyle();
-        plugin.register(cleanup);
+        plugin.register(this.cleanup.bind(this));
 
         plugin.events.onScroll(this.scrollHandler.bind(this));
     }
@@ -58,12 +26,12 @@ export class Scrollbar {
         // Styling scrollbars doesnt work on MacOS.
         if (Platform.isMacOS) return;
 
-        setVisibility(this.plugin.settings.scrollbarVisibility);
+        this.setVisibility(this.plugin.settings.scrollbarVisibility);
 
         // Default width on Linux (Desktop) appears to be 12px.
         // Only Linux supports this option. Android does support this, but has different defaults.
         if (Platform.isLinux && Platform.isDesktop) {
-            setWidth(this.plugin.settings.scrollbarWidth);
+            this.setWidth(this.plugin.settings.scrollbarWidth);
         }
     }
 
@@ -95,5 +63,37 @@ export class Scrollbar {
     private hideScrollbarTemporary(el: HTMLElement) {
         el.classList.remove("scrolling-show-temporary");
         this.scrollTimeouts.delete(el);
+    }
+
+    private setVisibility(visibility: string): void {
+        if (visibility === "hide") {
+            this.plugin.disableStyleClass("scrolling-visibility-scroll");
+            this.plugin.enableStyleClass("scrolling-visibility-hide");
+        } else if (visibility === "scroll") {
+            this.plugin.disableStyleClass("scrolling-visibility-hide");
+            this.plugin.enableStyleClass("scrolling-visibility-scroll");
+        } else {
+            this.plugin.disableStyleClass("scrolling-visibility-scroll");
+            this.plugin.disableStyleClass("scrolling-visibility-hide");
+        }
+    }
+
+    private setWidth(width: number) {
+        if (width >= 0) {
+            this.plugin.enableStyleClass("scrolling-scrollbar-width");
+            this.plugin.setStyleProperty("--scrolling-scrollbar-width", `${width}px`);
+        } else {
+            this.plugin.disableStyleClass("scrolling-scrollbar-width");
+        }
+    }
+
+    private cleanup(): void {
+        this.plugin.disableStyleClass([
+            "scrolling-scrollbar-width",
+            "scrolling-visibility-hide",
+            "scrolling-visibility-scroll",
+        ]);
+
+        this.plugin.removeStyleProperty("--scrolling-scrollbar-width");
     }
 }

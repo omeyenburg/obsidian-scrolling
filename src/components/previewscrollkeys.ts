@@ -2,12 +2,6 @@ import { MarkdownView, Platform } from "obsidian";
 
 import type { default as ScrollingPlugin } from "@core/main";
 
-function getLineHeight() {
-    const cssFontSize = activeDocument.body.getCssPropertyValue("--font-text-size");
-    const charHeight = Number.parseInt(cssFontSize) || 16;
-    return charHeight * 1.5;
-}
-
 export class PreviewScrollKeys {
     private plugin: ScrollingPlugin;
 
@@ -45,6 +39,7 @@ export class PreviewScrollKeys {
         if (!view || view.getMode() !== "preview") return;
 
         // Only scroll if no modal is opened
+        // TODO: might not be necessary in obsidian 1.13.0+
         const modal = activeDocument.body.getElementsByClassName("mod-dim");
         if (modal.length != 0) return;
 
@@ -52,7 +47,11 @@ export class PreviewScrollKeys {
         if (!this.scroller) return;
 
         // Only scroll if editor is in focus
-        if (activeDocument.activeElement !== activeDocument.body && activeDocument.activeElement !== this.scroller) return
+        if (
+            activeDocument.activeElement !== activeDocument.body &&
+            activeDocument.activeElement !== this.scroller
+        )
+            return;
 
         const now = event.timeStamp;
         const deltaTime = now - this.lastKeyPress;
@@ -90,7 +89,7 @@ export class PreviewScrollKeys {
         }
 
         const deltaTimeNormalization = deltaTime < 200 ? deltaTime * 0.02 : 1;
-        const change = getLineHeight() * direction * deltaTimeNormalization;
+        const change = this.getLineHeight() * direction * deltaTimeNormalization;
         this.goal = this.scroller.scrollTop + change;
 
         const steps = 5;
@@ -102,10 +101,10 @@ export class PreviewScrollKeys {
         if (!this.plugin.settings.readingHalfPageScrollEnabled) return;
 
         let change = (this.scroller.clientHeight * direction) / 2;
-        let goal = this.scroller.scrollTop + change
+        let goal = this.scroller.scrollTop + change;
 
         const steps = 5;
-        this.animateScrollLine(goal, change / steps, steps)
+        this.animateScrollLine(goal, change / steps, steps);
     }
 
     private scrollToTop() {
@@ -120,7 +119,7 @@ export class PreviewScrollKeys {
         this.scroller.scrollTo({ top: 1000000000 });
         window.requestAnimationFrame(() => {
             this.scroller.scrollTo({ top: 1000000000 });
-        })
+        });
     }
 
     /**
@@ -134,5 +133,11 @@ export class PreviewScrollKeys {
         this.animationFrame = window.requestAnimationFrame(() =>
             this.animateScrollLine(goal, stepSize, step - 1),
         );
+    }
+
+    private getLineHeight() {
+        const cssFontSize = this.plugin.getMainDoc().body.getCssPropertyValue("--font-text-size");
+        const charHeight = Number.parseInt(cssFontSize) || 16;
+        return charHeight * 1.5;
     }
 }

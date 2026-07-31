@@ -211,7 +211,7 @@ export class Events {
      * @param callback Receives the KeyboardEvent.
      */
     public onKeyDown(callback: (ev: KeyboardEvent) => void): void {
-        this.plugin.registerDomEvent(activeDocument, "keydown", callback, { passive: true });
+        this.plugin.registerDomEvent(this.plugin.getMainDoc(), "keydown", callback, { passive: true });
     }
 
     /**
@@ -219,7 +219,7 @@ export class Events {
      * @param callback Receives the KeyboardEvent.
      */
     public onKeyUp(callback: (ev: KeyboardEvent) => void): void {
-        this.plugin.registerDomEvent(activeDocument, "keyup", callback, { passive: true });
+        this.plugin.registerDomEvent(this.plugin.getMainDoc(), "keyup", callback, { passive: true });
     }
 
     /**
@@ -245,7 +245,7 @@ export class Events {
      */
     public onMouseUp(callback: (ev: MouseEvent) => void): void {
         if (Platform.isDesktop) {
-            this.plugin.registerDomEvent(activeDocument, "mouseup", callback, { passive: true });
+            this.plugin.registerDomEvent(this.plugin.getMainDoc(), "mouseup", callback, { passive: true });
         }
     }
 
@@ -262,7 +262,7 @@ export class Events {
      * @param callback Receives the scroll Event.
      */
     public onScroll(callback: (ev: Event) => void): void {
-        this.plugin.registerDomEvent(activeDocument, "scroll", callback, {
+        this.plugin.registerDomEvent(this.plugin.getMainDoc(), "scroll", callback, {
             capture: true,
             passive: true,
         });
@@ -273,7 +273,7 @@ export class Events {
      * @param callback Receives the scrollend Event.
      */
     public onScrollEnd(callback: (ev: Event) => void): void {
-        this.plugin.registerDomEvent(activeDocument, "scrollend", callback, {
+        this.plugin.registerDomEvent(this.plugin.getMainDoc(), "scrollend", callback, {
             capture: true,
             passive: true,
         });
@@ -283,7 +283,9 @@ export class Events {
      * Registers a callback for touch move events.
      * @param callback Receives the TouchEvent and the deltaX/deltaY since the last touch event.
      */
-    public onTouchMove(callback: (event: TouchEvent, deltaX: number, deltaY: number) => void): void {
+    public onTouchMove(
+        callback: (event: TouchEvent, deltaX: number, deltaY: number) => void,
+    ): void {
         this.touchHandlers.add(callback);
     }
 
