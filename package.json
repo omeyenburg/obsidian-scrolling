@@ -17,6 +17,7 @@
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@obsidian-typings/obsidian-public-latest": "^6.29.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
     "esbuild": "^0.28.1",
