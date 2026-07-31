@@ -59,6 +59,6 @@ export class LineLength {
      * Query value of 'Readable line length' setting in vault.
      */
     public getObsidianReadableLineLength(): boolean {
-        return this.plugin.app.vault.getConfig("readableLineLength");
+        return this.plugin.app.vault.getConfig("readableLineLength") as boolean;
     }
 }

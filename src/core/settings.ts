@@ -23,7 +23,7 @@ export interface ScrollingPluginSettings {
     restoreScrollMode: string;
     /** Number of scroll position entries. Use negative values to ignore the limit. */
     restoreScrollLimit: number;
-    
+
     /** Choose to keep scroll positions of the oldest entries instead of most recent (default) */
     restoreScrollAge: boolean;
 
@@ -468,7 +468,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .onChange(async (value: string) => {
                     const limit = +value;
                     if (limit.toString().contains(".")) return;
-                    
+
                     if (limit <= 0 || isNaN(limit)) {
                         this.plugin.settings.restoreScrollLimit = -1;
                     } else {
@@ -489,18 +489,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
             "Keep oldest scroll positions",
             "When the limit is reached, keep the oldest saved positions instead of the most recent ones (default).",
             () => (this.plugin.settings.restoreScrollAge = DEFAULT_SETTINGS.restoreScrollAge),
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.restoreScrollAge)
-                    .onChange(async (value) => {
-                        this.plugin.settings.restoreScrollAge = value;
-                        await this.plugin.saveSettings();
-                }),
+        ).addToggle((toggle) =>
+            toggle.setValue(this.plugin.settings.restoreScrollAge).onChange(async (value) => {
+                this.plugin.settings.restoreScrollAge = value;
+                await this.plugin.saveSettings();
+            }),
         );
 
         const initialShow = this.plugin.settings.restoreScrollLimit > 0;
         restoreScrollAgeSetting.settingEl.style.display = initialShow ? "" : "none";
-
 
         if (Platform.isMobile) {
             this.createSetting(
@@ -880,18 +877,16 @@ export class ScrollingSettingTab extends PluginSettingTab {
         );
         this.settingsEnabled = this.plugin.settings.scrollButtonsEnabled;
 
-        this.createSetting(
-            "Button position",
-            "Moves the buttons in the note",
-        ).addDropdown((toggle) =>
-            toggle
-                .addOptions({ top: "Top", bottom: "Bottom" })
-                .setValue(this.plugin.settings.scrollButtonsPosition)
-                .onChange(async (value) => {
-                    this.plugin.settings.scrollButtonsPosition = value;
-                    this.plugin.scrollButtons.setup();
-                    await this.plugin.saveSettings();
-                }),
+        this.createSetting("Button position", "Moves the buttons in the note").addDropdown(
+            (toggle) =>
+                toggle
+                    .addOptions({ top: "Top", bottom: "Bottom" })
+                    .setValue(this.plugin.settings.scrollButtonsPosition)
+                    .onChange(async (value) => {
+                        this.plugin.settings.scrollButtonsPosition = value;
+                        this.plugin.scrollButtons.setup();
+                        await this.plugin.saveSettings();
+                    }),
         );
     }
 

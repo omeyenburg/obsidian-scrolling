@@ -210,7 +210,8 @@ export class RestoreScroll {
         if (headingLinkUsed) return;
 
         // Do not restore if any link was used and links are disabled.
-        if (this.plugin.events.isOpeningWithLink && !this.plugin.settings.restoreScrollFileLink) return;
+        if (this.plugin.events.isOpeningWithLink && !this.plugin.settings.restoreScrollFileLink)
+            return;
 
         // Mode top means feature is disabled.
         if (this.plugin.settings.restoreScrollMode === "top") return;
@@ -310,7 +311,13 @@ export class RestoreScroll {
         if (!(leaf.view instanceof FileView)) return false;
 
         for (let sibling of leaf.parentSplit.children) {
-            if (sibling.view === leaf.view || !(sibling.view instanceof FileView)) continue;
+            if (
+                !(sibling instanceof WorkspaceLeaf) ||
+                !(sibling.view instanceof FileView) ||
+                sibling.view === leaf.view
+            ) {
+                continue;
+            }
             if (leaf.view.file.path == sibling.view.file.path) return true;
         }
 
@@ -600,17 +607,13 @@ export class RestoreScroll {
         const entries = Object.entries(this.ephemeralStates);
         const limit = this.plugin.settings.restoreScrollLimit;
 
-        if (
-            limit <= 0 ||
-            entries.length <= limit
-        )
-            return;
+        if (limit <= 0 || entries.length <= limit) return;
 
         entries.sort(([, a], [, b]) => a.timestamp - b.timestamp);
-        
+
         const oldestStates = entries.slice(0, limit);
         const newestStates = entries.slice(limit);
-    
+
         // Update states of existing old files to register new scroll positions
         const statesToKeep = new Map(oldestStates);
         for (const [fileTitle, state] of newestStates) {
