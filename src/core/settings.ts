@@ -42,9 +42,6 @@ export interface ScrollingPluginSettings {
     /** Path to cache file. */
     restoreScrollFilePath: string;
 
-    /** Zoom when hovering over images. Desktop only. (Zoom guesture & vertical scroll while holding ctrl) */
-    imageZoomEnabled: boolean;
-
     /** Cut off long mathjax lines & make them scrollable. */
     mathjaxScrollEnabled: boolean;
 
@@ -128,8 +125,6 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
     restoreScrollFileEnabled: true,
     restoreScrollFilePath: undefined,
 
-    imageZoomEnabled: false,
-
     mathjaxScrollEnabled: false,
 
     horizontalFileTreeEnabled: false,
@@ -184,7 +179,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
         this.displayFollowCursorSettings();
         this.displayCodeBlockSettings();
         this.displayRestoreScrollSettings();
-        this.displayImageZoomSettings();
         this.displayMathJaxSettings();
         this.displayFileTreeSettings();
         this.displayScrollbarSettings();
@@ -626,22 +620,6 @@ export class ScrollingSettingTab extends PluginSettingTab {
             confirmButton.onclick = onConfirm;
             confirmButton.disabled = !this.settingsEnabled;
         });
-    }
-
-    private displayImageZoomSettings() {
-        if (Platform.isMobile) return;
-
-        this.createHeading("Image zooming");
-
-        this.createSetting(
-            "Enable",
-            "Hover over an image and scroll while holding the Ctrl key to zoom.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.imageZoomEnabled).onChange(async (value) => {
-                this.plugin.settings.imageZoomEnabled = value;
-                await this.plugin.saveSettings();
-            }),
-        );
     }
 
     private displayMathJaxSettings() {

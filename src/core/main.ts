@@ -8,7 +8,6 @@ import { MouseScroll } from "@components/mousescroll";
 import { RestoreScroll } from "@components/restorescroll";
 import { Scrollbar } from "@components/scrollbar";
 import { PreviewScrollKeys } from "@components/previewscrollkeys";
-import { ImageZoom } from "@components/imagezoom";
 import { LineLength } from "@components/linelength";
 import { Commands } from "@components/commands";
 import { ScrollButtons } from "@components/scrollbuttons";
@@ -28,7 +27,6 @@ export default class ScrollingPlugin extends Plugin {
     restoreScroll!: RestoreScroll;
     scrollbar!: Scrollbar;
     previewScrollKeys!: PreviewScrollKeys;
-    imageZoom!: ImageZoom;
     lineLength!: LineLength;
     commands!: Commands;
     scrollButtons!: ScrollButtons;
@@ -47,7 +45,6 @@ export default class ScrollingPlugin extends Plugin {
         this.restoreScroll = new RestoreScroll(this);
         this.scrollbar = new Scrollbar(this);
         this.previewScrollKeys = new PreviewScrollKeys(this);
-        this.imageZoom = new ImageZoom(this);
         this.lineLength = new LineLength(this);
         this.commands = new Commands(this);
         this.scrollButtons = new ScrollButtons(this);

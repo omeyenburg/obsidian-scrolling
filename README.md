@@ -7,7 +7,7 @@ Quick overview:
 - **Centered Cursor**: Keep cursor centered while editing
 - **Code Wrapping**: Disable code wrapping & allow horizontal scrolling
 - **Remember Scroll Position**: Auto-save and restore scroll/cursor position
-- **Image Zooming**: Scroll to zoom images with Ctrl key
+- **Image Zooming**: Scroll to zoom images with Ctrl key (pre Obsidian 1.13)
 - **MathJax**: Allow horizontal scrolling of long inline MathJax
 - **File Tree**: Allow horizontal scrolling in the file tree
 - **Line Length**: Customize maximum line width for readability
@@ -46,7 +46,7 @@ All features are **optional** and **fully configurable** in plugin settings.
 ### Image Zooming
 
 - Hover over an image, hold Ctrl and scroll to zoom in where your mouse points
-- Desktop only
+- Desktop only, pre Obsidian 1.13 only
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/imagezoom.webp" alt="Image zoom preview" style="max-width: 640px; width: 100%; height: auto;">
 
