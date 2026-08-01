@@ -1,27 +1,30 @@
 import { MarkdownView, WorkspaceLeaf, setIcon } from "obsidian";
-
+import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
+import type { ScrollingPluginSettings } from "@core/settings";
 
-export class ScrollButtons {
-    private plugin: ScrollingPlugin;
-
+export class ScrollButtonsFeature implements Feature {
+    public readonly id = "scrollButtons";
+    private plugin!: ScrollingPlugin;
     private leaves: Set<WorkspaceLeaf> = new Set();
+    private buttonContainers: Set<HTMLElement> = new Set();
 
-    constructor(plugin: ScrollingPlugin) {
+    public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
+        this.plugin.events.onLayoutReady(this.setup.bind(this));
+        this.plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
+    }
 
-        plugin.events.onLayoutReady(this.setup.bind(this));
-        plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
+    public onunload(): void {
+        this.cleanup();
+    }
+
+    public onSettingsChange(settings: ScrollingPluginSettings): void {
+        this.setup();
     }
 
     public setup(): void {
-        for (const leaf of this.leaves) {
-            const c = leaf.view.containerEl.findAll(".scrolling-overlay-button-container");
-            for (const el of c) {
-                el.remove();
-            }
-        }
-        this.leaves.clear();
+        this.clearButtons();
 
         if (!this.plugin.settings.scrollButtonsEnabled) {
             return;
@@ -48,9 +51,9 @@ export class ScrollButtons {
             return;
         }
 
-        view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-        if (view && view.leaf) {
-            this.initLeaf(view.leaf);
+        const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView && activeView.leaf) {
+            this.initLeaf(activeView.leaf);
         }
     }
 
@@ -66,22 +69,18 @@ export class ScrollButtons {
     }
 
     private initView(view: MarkdownView): void {
-        let buttonContainer = view.containerEl.createDiv({
+        const buttonContainer = view.containerEl.createDiv({
             cls: "scrolling-overlay-button-container",
         });
+        this.buttonContainers.add(buttonContainer);
 
         this.createButton(buttonContainer, "arrow-up", this.scrollToTop.bind(this, view));
         this.createButton(buttonContainer, "arrow-down", this.scrollToBottom.bind(this, view));
-
-        this.plugin.events.onUnload(() => {
-            buttonContainer.remove();
-        });
     }
 
     private createButton(buttonContainer: Element, icon: string, callback: () => void): void {
         const button = buttonContainer.createEl("button", { cls: "scrolling-overlay-button" });
         button.addEventListener("click", callback);
-
         setIcon(button, icon);
     }
 
@@ -94,14 +93,38 @@ export class ScrollButtons {
     }
 
     private scrollTo(view: MarkdownView, pos: number): void {
-        if (view.getMode() == "source") {
+        if (view.getMode() === "source") {
             view.currentMode.applyScroll(pos);
         } else {
-            let scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
-            scroller.scrollTo({ top: pos });
-            window.requestAnimationFrame(() => {
+            const scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
+            if (scroller) {
                 scroller.scrollTo({ top: pos });
-            });
+                window.requestAnimationFrame(() => {
+                    scroller.scrollTo({ top: pos });
+                });
+            }
         }
+    }
+
+    private clearButtons(): void {
+        for (const leaf of this.leaves) {
+            if (leaf.view && leaf.view.containerEl) {
+                const containers = leaf.view.containerEl.findAll(".scrolling-overlay-button-container");
+                for (const el of containers) {
+                    el.remove();
+                }
+            }
+        }
+        this.leaves.clear();
+        
+        for (const container of this.buttonContainers) {
+            container.remove();
+        }
+        this.buttonContainers.clear();
+    }
+
+    private cleanup(): void {
+        this.clearButtons();
+        this.plugin.disableStyleClass("scrolling-overlay-buttons-top");
     }
 }

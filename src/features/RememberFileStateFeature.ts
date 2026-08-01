@@ -14,6 +14,8 @@ import {
 } from "obsidian";
 
 import { default as ScrollingPlugin } from "@core/main";
+import type { ScrollingPluginSettings } from "@core/settings";
+import type { Feature } from "@core/Feature";
 
 interface EphemeralState {
     timestamp: number;
@@ -26,8 +28,10 @@ class FileLeaf extends WorkspaceLeaf {
     view: FileView;
 }
 
-export class RestoreScroll {
-    private readonly plugin: ScrollingPlugin;
+export class RememberFileStateFeature implements Feature {
+    readonly id = "rememberFileState";
+
+    private plugin!: ScrollingPlugin;
 
     private ephemeralStates: Record<string, EphemeralState> = {};
 
@@ -35,8 +39,8 @@ export class RestoreScroll {
     // If atleast one file is opening, no file states will be saved.
     private numOpeningFiles = 0;
 
-    private readonly storeStateDebounced: Debouncer<[HTMLElement?, Event?], void>;
-    private readonly writeStatesFileDebounced: Debouncer<[], void>;
+    private storeStateDebounced!: Debouncer<[HTMLElement?, Event?], void>;
+    private writeStatesFileDebounced!: Debouncer<[], void>;
 
     private openLeafIds = new Set();
 
@@ -46,7 +50,7 @@ export class RestoreScroll {
     private readonly STORE_INTERVAL = 97;
     private readonly FILE_WRITE_INTERVAL = 293;
 
-    constructor(plugin: ScrollingPlugin) {
+    onload(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
         if (plugin.settings.restoreScrollFilePath === undefined) {
@@ -79,6 +83,9 @@ export class RestoreScroll {
         plugin.events.onLayoutReady(this.layoutReadyHandler.bind(this));
         plugin.events.onLayoutReady(this.cursorUpdateHandler.bind(this));
     }
+
+    onunload(): void {}
+    onSettingsChange?(settings: ScrollingPluginSettings): void | Promise<void> {}
 
     /**
      * Returns the number of stored file states.
@@ -171,8 +178,8 @@ export class RestoreScroll {
     private scrollHandler(event: Event): void {
         if (!this.workspaceInitialized || this.numOpeningFiles > 0) return;
 
-        this.plugin.restoreScroll.storeStateDebounced(event.target as HTMLElement);
-        this.plugin.restoreScroll.writeStatesFileDebounced();
+        this.storeStateDebounced(event.target as HTMLElement);
+        this.writeStatesFileDebounced();
     }
 
     /**

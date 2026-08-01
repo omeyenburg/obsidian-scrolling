@@ -2,6 +2,8 @@ import { Platform } from "obsidian";
 
 import type { default as ScrollingPlugin } from "@core/main";
 import { clamp } from "@core/util";
+import { Feature } from "@core/Feature";
+import { ScrollingPluginSettings } from "@core/settings";
 
 function easeOut(t: number): number {
     return 1 - (1 - t) ** 2;
@@ -11,8 +13,9 @@ function mean(data: number[]): number {
     return data.reduce((a, b) => a + b, 0) / data.length;
 }
 
-export class MouseScroll {
-    private readonly plugin: ScrollingPlugin;
+export class MouseScrollFeature implements Feature {
+    readonly id = "mouseScroll";
+    private plugin!: ScrollingPlugin;
 
     private touchpadLastUse = -Infinity;
     private touchpadFriction = 0;
@@ -47,7 +50,7 @@ export class MouseScroll {
     private currentEl: HTMLElement | null = null;
     private readonly DEFAULT_FRAME_TIME = 16.67;
 
-    constructor(plugin: ScrollingPlugin) {
+    onload(plugin: ScrollingPlugin) {
         this.plugin = plugin;
 
         plugin.register(() => {
@@ -57,6 +60,9 @@ export class MouseScroll {
 
         plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
     }
+
+    onunload(): void {}
+    onSettingsChange(settings: ScrollingPluginSettings): void | Promise<void> {}
 
     /**
      * Reset velocity on file change.

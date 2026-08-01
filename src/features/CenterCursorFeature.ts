@@ -1,7 +1,8 @@
 import { Editor, MarkdownView, Platform } from "obsidian";
 import { syntaxTree } from "@codemirror/language";
-
+import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
+import type { ScrollingPluginSettings } from "@core/settings";
 import { getVimCursor } from "@core/util";
 
 interface ScrollInfo {
@@ -10,11 +11,11 @@ interface ScrollInfo {
     height: number;
 }
 
-export class FollowCursor {
-    private readonly plugin: ScrollingPlugin;
+export class CenterCursorFeature implements Feature {
+    public readonly id = "followCursor";
+    private plugin!: ScrollingPlugin;
 
     private recentMouseUp = false;
-
     private animationFrame = 0;
     private scrollLastEvent = 0;
 
@@ -22,21 +23,20 @@ export class FollowCursor {
     private cachedScrollDOMRect: DOMRect | null = null;
     private cacheTimestamp = 0;
     private readonly CACHE_DURATION = 100;
-
     private readonly MOUSE_UP_TIMEOUT = 100;
 
-    constructor(plugin: ScrollingPlugin) {
+    public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
 
-        plugin.register(() => {
-            window.cancelAnimationFrame(this.animationFrame);
-        });
+        this.plugin.events.onKeyDown(this.keyDownHandler.bind(this));
+        this.plugin.events.onMouseUp(this.mouseUpHandler.bind(this));
+        this.plugin.events.onCursorUpdate(this.cursorUpdateHandler.bind(this));
+        this.plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
+        this.plugin.events.onResize(this.resizeHandler.bind(this));
+    }
 
-        plugin.events.onKeyDown(this.keyDownHandler.bind(this));
-        plugin.events.onMouseUp(this.mouseUpHandler.bind(this));
-        plugin.events.onCursorUpdate(this.cursorUpdateHandler.bind(this));
-        plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
-        plugin.events.onResize(this.resizeHandler.bind(this));
+    public onunload(): void {
+        window.cancelAnimationFrame(this.animationFrame);
     }
 
     private leafChangeHandler(): void {
@@ -53,31 +53,15 @@ export class FollowCursor {
         this.cacheTimestamp = 0;
     }
 
-    /**
-     * On key down event.
-     * Resets mouse up indicator early.
-     */
     private keyDownHandler(): void {
         this.recentMouseUp = false;
     }
 
-    /**
-     * On mouse up event.
-     * Blocks scroll trigger unless mouse invocation is enabled through settings.
-     */
     private mouseUpHandler(): void {
         this.recentMouseUp = true;
-
-        // recentMouseUp will be reset either when a key is pressed or 100 ms pass.
-        // This timeout is needed, because the keydown event is not reliable:
-        // In normal mode of vim, keydown events are pretty much inaccessible.
         window.setTimeout(() => (this.recentMouseUp = false), this.MOUSE_UP_TIMEOUT);
     }
 
-    /**
-     * On cursor update.
-     * Invokes scroll animation.
-     */
     private cursorUpdateHandler(
         editor: Editor,
         docChanged: boolean,
@@ -86,20 +70,13 @@ export class FollowCursor {
         if (!editor.hasFocus()) return;
         if (vimModeChanged) return;
 
-        // Cancel if mouse up, unless this setting allows it.
         if (this.recentMouseUp && !this.plugin.settings.followCursorEnableMouse) return;
 
-        // Cancel if selecting, unless this setting allows it.
         if (!this.plugin.settings.followCursorEnableSelection && editor.somethingSelected()) return;
 
         this.invokeScroll(editor, docChanged);
     }
 
-    /**
-     * Checks whether the cursor is inside a table.
-     * Uses the syntax tree provided by codemirror.
-     * Requires codemirror/language.
-     */
     private cursorInTable(editor: Editor): boolean {
         const { from } = editor.cm.state.selection.main;
         const tree = syntaxTree(editor.cm.state);
@@ -109,21 +86,15 @@ export class FollowCursor {
             if (node.name.startsWith("HyperMD-table")) {
                 return true;
             }
-
             node = node.parent;
         }
 
         return false;
     }
 
-    /**
-     * Calculates goal position, distance and scroll steps for scroll animation.
-     * Initiates scroll animation if centering scroll is required.
-     */
     private invokeScroll(editor: Editor, docChanged: boolean): void {
         if (!this.plugin.settings.followCursorEnabled) return;
 
-        // Disable in reading view, as this might break cached values.
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return;
 
@@ -133,7 +104,6 @@ export class FollowCursor {
 
         if (deltaTime < 10) return;
 
-        // Use requestMeasure to batch all DOM reads and writes
         editor.cm.requestMeasure({
             key: "followcursor",
             read: (_view) => {
@@ -146,12 +116,10 @@ export class FollowCursor {
 
                 if (signedGoalDistance === 0) return;
 
-                // Only cancel animation frame if one is currently running
                 if (this.animationFrame) {
                     window.cancelAnimationFrame(this.animationFrame);
                 }
 
-                // In tables, many events are emmitted, so skip animations for better performance.
                 if (deltaTime > 100 && !isTable) {
                     const scrollInfo = editor.getScrollInfo() as ScrollInfo;
                     const steps = this.calculateSteps(
@@ -166,19 +134,11 @@ export class FollowCursor {
                     }
                 }
 
-                // Performant fallback used for:
-                // - Many events (within 100ms)
-                // - Cursor inside a table, because Obsidian emits duplicate view updates
-                // - Single step on mobile in Vim normal mode (Issue #11)
                 this.animate(editor, goal, signedGoalDistance, 1);
             },
         });
     }
 
-    /**
-     * Measures cursor position and calculates scroll goal.
-     * Batches all DOM reads for better performance.
-     */
     private measureCursorPosition(
         editor: Editor,
     ): {
@@ -186,24 +146,20 @@ export class FollowCursor {
         goal: number;
         isTable: boolean;
     } | null {
-        // Query active line only once
         const activeLineEl = editor.cm.scrollDOM.querySelector(".cm-active.cm-line");
         if (!activeLineEl) return null;
 
         const isTable = this.cursorInTable(editor);
 
-        // Use cached scrollDOM rect if valid
         const scrollDOMRect = this.getCachedScrollDOMRect(editor.cm.scrollDOM);
         if (!scrollDOMRect) return null;
 
         let cursorRelativeTop: number;
 
         if (isTable) {
-            // Works well with tables
             const activeLineRect = activeLineEl.getBoundingClientRect();
             cursorRelativeTop = activeLineRect.top;
         } else {
-            // Works well with wrapped lines and images
             const cursorCoord = editor.getCursor("head");
             const lineStartOffset = editor.cm.state.doc.line(cursorCoord.line + 1).from;
             const cursorOffset = lineStartOffset + cursorCoord.ch;
@@ -212,7 +168,6 @@ export class FollowCursor {
             cursorRelativeTop = cursorCoords?.top || 0;
         }
 
-        // Vertical offset of editor viewport, accounting for vertical splits.
         cursorRelativeTop -= scrollDOMRect.top - editor.cm.defaultLineHeight;
 
         const scrollInfo = editor.getScrollInfo() as ScrollInfo;
@@ -222,13 +177,9 @@ export class FollowCursor {
         return { signedGoalDistance, goal, isTable };
     }
 
-    /**
-     * Returns cached scrollDOM rect or creates new one if cache is stale.
-     */
     private getCachedScrollDOMRect(scrollDOM: HTMLElement): DOMRect | null {
         const now = performance.now();
 
-        // Check if cache is valid
         if (
             this.cachedScrollDOM === scrollDOM &&
             this.cachedScrollDOMRect &&
@@ -237,7 +188,6 @@ export class FollowCursor {
             return this.cachedScrollDOMRect;
         }
 
-        // Update cache
         this.cachedScrollDOM = scrollDOM;
         this.cachedScrollDOMRect = scrollDOM.getBoundingClientRect();
         this.cacheTimestamp = now;
@@ -245,9 +195,6 @@ export class FollowCursor {
         return this.cachedScrollDOMRect;
     }
 
-    /**
-     * Scrolls to the goal over a specified number of frames.
-     */
     private animate(editor: Editor, goal: number, stepSize: number, step: number): void {
         if (step <= 0) return;
 
@@ -257,14 +204,10 @@ export class FollowCursor {
         );
     }
 
-    /**
-     * Returns the signed distance to the goal position relative on the screen
-     * based on the current cursor position and a valid radius from the center.
-     */
     private calculateGoalDistance(cursorRelativeTop: number, scrollInfo: ScrollInfo) {
         const radiusPercent = this.plugin.settings.followCursorRadius;
 
-        let radius = ((scrollInfo.height / 2) * radiusPercent) / 100;
+        const radius = ((scrollInfo.height / 2) * radiusPercent) / 100;
 
         const center = scrollInfo.height / 2;
         const centerOffset = cursorRelativeTop - center;
@@ -278,17 +221,11 @@ export class FollowCursor {
             return 0;
         }
 
-        // Can't scroll by fractions.
         if (Math.abs(signedGoalDistance) < 1) return 0;
 
         return signedGoalDistance;
     }
 
-    /**
-     * Returns number of frames for scroll animation.
-     * Returns reduced number of frames when scrolling further than client height.
-     * Returns 1 step for instant scroll on edit.
-     */
     private calculateSteps(
         goalDistance: number,
         scrollerHeight: number,
@@ -298,7 +235,7 @@ export class FollowCursor {
 
         const SMOOTHNESS_MULTIPLIER = 0.16;
         const smoothness = this.plugin.settings.followCursorSmoothness;
-        let steps = Math.max(1, Math.ceil(SMOOTHNESS_MULTIPLIER * smoothness));
+        const steps = Math.max(1, Math.ceil(SMOOTHNESS_MULTIPLIER * smoothness));
 
         if (goalDistance > scrollerHeight) {
             return Math.ceil(Math.sqrt(steps));

@@ -1,25 +1,27 @@
 import { Platform, debounce } from "obsidian";
-
+import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
+import type { ScrollingPluginSettings } from "@core/settings";
 
-export class LineLength {
-    private readonly plugin: ScrollingPlugin;
+export class LineLengthFeature implements Feature {
+    public readonly id = "lineLength";
+    private plugin!: ScrollingPlugin;
+    private readonly UPDATE_INTERVAL = 30;
 
-    /** Debounce interval (ms) between line length updates. */
-    private UPDATE_INTERVAL = 30;
-
-    constructor(plugin: ScrollingPlugin) {
+    public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
+        this.updateLineLength();
+        console.log("loaded")
+    }
 
+    public onunload(): void {
+        this.plugin.removeStyleProperty("--file-line-width");
+    }
+
+    public onSettingsChange(settings: ScrollingPluginSettings): void {
         this.updateLineLength();
     }
 
-    /**
-     * Updates the editor’s line length using '--file-line-width'.
-     * Does nothing on mobile.
-     * Does nothing if 'Readable line length' is disabled in vault.
-     * Debounced to avoid frequent style recalculations.
-     */
     public updateLineLength = debounce(
         () => {
             if (Platform.isMobile) return;
@@ -40,24 +42,16 @@ export class LineLength {
                     break;
             }
 
-            // Obsidian already uses this property
             this.plugin.setStyleProperty("--file-line-width", lineLength);
-
         },
         this.UPDATE_INTERVAL,
         false,
     );
 
-    /**
-     * Enable or disable 'Readable line length' setting in vault.
-     */
     public setObsidianReadableLineLength(enabled: boolean): void {
         this.plugin.app.vault.setConfig("readableLineLength", enabled);
     }
 
-    /**
-     * Query value of 'Readable line length' setting in vault.
-     */
     public getObsidianReadableLineLength(): boolean {
         return this.plugin.app.vault.getConfig("readableLineLength") as boolean;
     }

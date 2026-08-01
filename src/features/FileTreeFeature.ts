@@ -1,28 +1,28 @@
+import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
+import type { ScrollingPluginSettings } from "@core/settings";
 
-export class FileTree {
-    private readonly plugin: ScrollingPlugin;
-
+export class FileTreeFeature implements Feature {
+    public readonly id = "fileTree";
+    private plugin!: ScrollingPlugin;
     private fileTreeScrollEnabled = false;
 
-    constructor(plugin: ScrollingPlugin) {
+    public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
-
         window.requestAnimationFrame(this.updateStyle.bind(this));
-
-        plugin.register(() => {
-            this.plugin.disableStyleClass("scrolling-horizontal-filetree");
-        });
     }
 
-    /**
-     * Update file tree styles to allow horizontal scrolling.
-     * Called on plugin load and change of settings.
-     */
+    public onunload(): void {
+        this.plugin.disableStyleClass("scrolling-horizontal-filetree");
+    }
+
+    public onSettingsChange(settings: ScrollingPluginSettings): void {
+        this.updateStyle();
+    }
+
     public updateStyle(): void {
-        // Only proceed if state changed.
         const isEnabled = this.plugin.settings.horizontalFileTreeEnabled;
-        if (this.fileTreeScrollEnabled == isEnabled) return;
+        if (this.fileTreeScrollEnabled === isEnabled) return;
         this.fileTreeScrollEnabled = isEnabled;
 
         if (isEnabled) {

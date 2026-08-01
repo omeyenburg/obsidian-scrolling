@@ -433,7 +433,8 @@ export class Events {
         const deltaTime = now - this.lastWheelEventTime;
         this.lastWheelEventTime = now;
 
-        const isStart = this.plugin.mouseScroll.analyzeDelay(deltaTime);
+        // const isStart = this.plugin.mouseScroll.analyzeDelay(deltaTime); // TODO: use
+        const isStart = true;
 
         // Attempt to use cached scroller
         if (

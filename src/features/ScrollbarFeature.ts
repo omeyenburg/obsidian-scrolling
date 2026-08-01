@@ -1,21 +1,27 @@
 import { Platform } from "obsidian";
-
+import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
+import type { ScrollingPluginSettings } from "@core/settings";
 
-export class Scrollbar {
-    private readonly plugin: ScrollingPlugin;
-
+export class ScrollbarFeature implements Feature {
+    public readonly id = "scrollbar";
+    private plugin!: ScrollingPlugin;
     private scrollTimeouts = new Map<HTMLElement, number>();
-
     private readonly SCROLLBAR_IDLE_TIMEOUT = 1000;
 
-    constructor(plugin: ScrollingPlugin) {
+    public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
-
         this.updateStyle();
-        plugin.register(this.cleanup.bind(this));
 
-        plugin.events.onScroll(this.scrollHandler.bind(this));
+        this.plugin.events.onScroll(this.scrollHandler.bind(this));
+    }
+
+    public onunload(): void {
+        this.cleanup();
+    }
+
+    public onSettingsChange(settings: ScrollingPluginSettings): void {
+        this.updateStyle();
     }
 
     private scrollHandler(event: Event): void {
@@ -23,36 +29,29 @@ export class Scrollbar {
     }
 
     public updateStyle(): void {
-        // Styling scrollbars doesnt work on MacOS.
         if (Platform.isMacOS) return;
 
         this.setVisibility(this.plugin.settings.scrollbarVisibility);
 
-        // Default width on Linux (Desktop) appears to be 12px.
-        // Only Linux supports this option. Android does support this, but has different defaults.
         if (Platform.isLinux && Platform.isDesktop) {
             this.setWidth(this.plugin.settings.scrollbarWidth);
         }
     }
 
     private showScrollbarTemporary(event: Event) {
-        // Scrollbars styling doesnt work on MacOS.
         if (Platform.isMacOS) return;
-        if (this.plugin.settings.scrollbarVisibility != "scroll") return;
+        if (this.plugin.settings.scrollbarVisibility !== "scroll") return;
 
         const el = event.target as HTMLElement;
         if (!el) return;
 
-        // Update timeout
         const existingTimeout = this.scrollTimeouts.get(el);
         if (existingTimeout) {
             window.clearTimeout(existingTimeout);
         }
 
-        // Show scrollbar on target element
         el.classList.add("scrolling-show-temporary");
 
-        // Hide scrollbar after delay
         const timeoutId = window.setTimeout(
             () => this.hideScrollbarTemporary(el),
             this.SCROLLBAR_IDLE_TIMEOUT,
@@ -95,5 +94,10 @@ export class Scrollbar {
         ]);
 
         this.plugin.removeStyleProperty("--scrolling-scrollbar-width");
+
+        for (const timeoutId of this.scrollTimeouts.values()) {
+            window.clearTimeout(timeoutId);
+        }
+        this.scrollTimeouts.clear();
     }
 }

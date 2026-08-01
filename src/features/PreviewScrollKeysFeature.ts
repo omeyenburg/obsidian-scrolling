@@ -1,9 +1,10 @@
 import { MarkdownView, Platform } from "obsidian";
-
+import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
 
-export class PreviewScrollKeys {
-    private plugin: ScrollingPlugin;
+export class PreviewScrollKeysFeature implements Feature {
+    public readonly id = "previewScrollKeys";
+    private plugin!: ScrollingPlugin;
 
     private goal: number | null = null;
     private scroller: Element | null = null;
@@ -11,42 +12,34 @@ export class PreviewScrollKeys {
     private lastKeyPress = 0;
     private animationFrame: number;
 
-    constructor(plugin: ScrollingPlugin) {
+    public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
 
-        plugin.events.onKeyUp(this.keyUpHandler.bind(this));
-        plugin.events.onKeyDown(this.keyDownHandler.bind(this));
+        this.plugin.events.onKeyUp(this.keyUpHandler.bind(this));
+        this.plugin.events.onKeyDown(this.keyDownHandler.bind(this));
     }
 
-    /**
-     * On key up event.
-     * Resets goal for line scroll animation.
-     */
+    public onunload(): void {
+        window.cancelAnimationFrame(this.animationFrame);
+    }
+
     private keyUpHandler() {
         this.goal = null;
     }
 
-    /**
-     * On key down event.
-     * Handles specific vim motion keys and scrolls.
-     */
     private keyDownHandler(event: KeyboardEvent) {
         if (Platform.isMobile) return;
         if (event.ctrlKey || event.altKey || event.metaKey) return;
 
-        // Only scroll in preview mode
         const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view || view.getMode() !== "preview") return;
 
-        // Only scroll if no modal is opened
-        // TODO: might not be necessary in obsidian 1.13.0+
         const modal = activeDocument.body.getElementsByClassName("mod-dim");
-        if (modal.length != 0) return;
+        if (modal.length !== 0) return;
 
         this.scroller = view.contentEl.getElementsByClassName("markdown-preview-view")[0];
         if (!this.scroller) return;
 
-        // Only scroll if editor is in focus
         if (
             activeDocument.activeElement !== activeDocument.body &&
             activeDocument.activeElement !== this.scroller
@@ -100,8 +93,8 @@ export class PreviewScrollKeys {
     private scrollHalfPage(direction: -1 | 1) {
         if (!this.plugin.settings.readingHalfPageScrollEnabled) return;
 
-        let change = (this.scroller.clientHeight * direction) / 2;
-        let goal = this.scroller.scrollTop + change;
+        const change = (this.scroller.clientHeight * direction) / 2;
+        const goal = this.scroller.scrollTop + change;
 
         const steps = 5;
         this.animateScrollLine(goal, change / steps, steps);
@@ -118,14 +111,12 @@ export class PreviewScrollKeys {
 
         this.scroller.scrollTo({ top: 1000000000 });
         window.requestAnimationFrame(() => {
-            this.scroller.scrollTo({ top: 1000000000 });
+            if (this.scroller) {
+                this.scroller.scrollTo({ top: 1000000000 });
+            }
         });
     }
 
-    /**
-     * Shared utility function to scroll smoothly towards a goal.
-     * stepSize should be signed.
-     */
     private animateScrollLine(goal: number, stepSize: number, step: number): void {
         if (step <= 0) return;
 

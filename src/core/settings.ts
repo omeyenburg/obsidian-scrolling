@@ -403,7 +403,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.codeBlockScrollEnabled).onChange(async (value) => {
                 this.plugin.settings.codeBlockScrollEnabled = value;
-                this.plugin.codeBlock.updateStyle();
+                this.plugin.featureRegistery.triggerSettingsChange();
                 await this.plugin.saveSettings();
             }),
         );
@@ -452,10 +452,11 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 }),
         );
 
-        const count = this.plugin.restoreScroll.getNumEphemeralStates();
+        // const count = this.plugin.featureRegistery.get("restoreScroll").getNumEphemeralStates();
         this.createSetting(
             "Saved positions limit",
-            `Number of files to remember scroll positions for. Leave empty for unlimited.\nCurrently positions for ${count} file${count == 1 ? "" : "s"} are stored.`,
+            // `Number of files to remember scroll positions for. Leave empty for unlimited.\nCurrently positions for ${count} file${count == 1 ? "" : "s"} are stored.`,
+            "TODO",
             () => (this.plugin.settings.restoreScrollLimit = DEFAULT_SETTINGS.restoreScrollLimit),
         ).addText((input) => {
             input
@@ -565,15 +566,15 @@ export class ScrollingSettingTab extends PluginSettingTab {
             });
 
             const onConfirm = async () => {
-                const newFile = await this.plugin.restoreScroll.renameStatesFile(
-                    this.proposedRestoreScrollStoreFile,
-                );
-
-                if (newFile) {
-                    this.plugin.settings.restoreScrollFilePath = newFile;
-                    this.proposedRestoreScrollStoreFile = null;
-                    await this.plugin.saveSettings();
-                }
+                // const newFile = await this.plugin.restoreScroll.renameStatesFile(
+                //     this.proposedRestoreScrollStoreFile,
+                // );
+                //
+                // if (newFile) {
+                //     this.plugin.settings.restoreScrollFilePath = newFile;
+                //     this.proposedRestoreScrollStoreFile = null;
+                //     await this.plugin.saveSettings();
+                // }
             };
 
             // Submit new file path when pressing enter
@@ -628,7 +629,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.mathjaxScrollEnabled).onChange(async (value) => {
                 this.plugin.settings.mathjaxScrollEnabled = value;
-                this.plugin.mathJax.updateStyle();
+                this.plugin.featureRegistery.triggerSettingsChange();
                 await this.plugin.saveSettings();
             }),
         );
@@ -648,7 +649,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.horizontalFileTreeEnabled = value;
                     // TODO: refactor: module should subscribe to event
-                    this.plugin.fileTree.updateStyle();
+                    // this.plugin.fileTree.updateStyle();
                     await this.plugin.saveSettings();
                 }),
         );
@@ -664,7 +665,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
             "When to show the scrollbar in notes and PDFs.",
             () => {
                 this.plugin.settings.scrollbarVisibility = DEFAULT_SETTINGS.scrollbarVisibility;
-                this.plugin.scrollbar.updateStyle();
+                this.plugin.featureRegistery.triggerSettingsChange();
             },
         ).addDropdown((dropdown) =>
             dropdown
@@ -674,7 +675,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.scrollbarVisibility)
                 .onChange(async (value) => {
                     this.plugin.settings.scrollbarVisibility = value;
-                    this.plugin.scrollbar.updateStyle();
+                    this.plugin.featureRegistery.triggerSettingsChange();
                     this.display();
                     await this.plugin.saveSettings();
                 }),
@@ -685,14 +686,14 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
             this.createSetting("Scrollbar thickness", "Scrollbar width in pixels.", () => {
                 this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
-                this.plugin.scrollbar.updateStyle();
+                this.plugin.featureRegistery.triggerSettingsChange();
             }).addSlider((slider) =>
                 slider
                     .setLimits(0, 30, 1)
                     .setValue(this.plugin.settings.scrollbarWidth)
                     .onChange(async (value) => {
                         this.plugin.settings.scrollbarWidth = value;
-                        this.plugin.scrollbar.updateStyle();
+                        this.plugin.featureRegistery.triggerSettingsChange();
                         await this.plugin.saveSettings();
                     }),
             );
@@ -704,21 +705,21 @@ export class ScrollingSettingTab extends PluginSettingTab {
 
         this.createHeading("Line length");
 
-        const readableLineLengthEnabled = this.plugin.lineLength.getObsidianReadableLineLength();
+        // const readableLineLengthEnabled = this.plugin.lineLength.getObsidianReadableLineLength();
 
         this.createSetting(
             "Readable line length",
             "Limit maximum line length. Less content fits on screen, but long blocks of text are more readable.",
         ).addToggle((toggle) =>
-            toggle.setValue(readableLineLengthEnabled).onChange(async (value) => {
-                this.plugin.lineLength.setObsidianReadableLineLength(value);
+            toggle./*setValue(readableLineLengthEnabled).*/onChange(async (value) => {
+                // this.plugin.lineLength.setObsidianReadableLineLength(value);
                 this.display();
                 await this.plugin.saveSettings();
             }),
         );
 
         // Disable further settings if readable line length is disabled.
-        this.settingsEnabled = readableLineLengthEnabled;
+        // this.settingsEnabled = readableLineLengthEnabled;
 
         this.createSetting(
             "Length unit",
@@ -732,7 +733,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.lineLengthUnit)
                 .onChange(async (value) => {
                     this.plugin.settings.lineLengthUnit = value;
-                    this.plugin.lineLength.updateLineLength();
+                    this.plugin.featureRegistery.triggerSettingsChange();
                     this.display();
                     await this.plugin.saveSettings();
                 }),
@@ -745,7 +746,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     "Maximum line length as pixels (px).",
                     () => {
                         this.plugin.settings.lineLengthPixels = DEFAULT_SETTINGS.lineLengthPixels;
-                        this.plugin.lineLength.updateLineLength();
+                        this.plugin.featureRegistery.triggerSettingsChange();
                     },
                 ).addSlider((slider) =>
                     slider
@@ -754,7 +755,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setValue(this.plugin.settings.lineLengthPixels)
                         .onChange(async (value) => {
                             this.plugin.settings.lineLengthPixels = value;
-                            this.plugin.lineLength.updateLineLength();
+                            this.plugin.featureRegistery.triggerSettingsChange();
                             await this.plugin.saveSettings();
                         }),
                 );
@@ -766,7 +767,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     () => {
                         this.plugin.settings.lineLengthCharacters =
                             DEFAULT_SETTINGS.lineLengthCharacters;
-                        this.plugin.lineLength.updateLineLength();
+                            this.plugin.featureRegistery.triggerSettingsChange();
                     },
                 ).addSlider((slider) =>
                     slider
@@ -775,7 +776,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setValue(this.plugin.settings.lineLengthCharacters)
                         .onChange(async (value) => {
                             this.plugin.settings.lineLengthCharacters = value;
-                            this.plugin.lineLength.updateLineLength();
+                            this.plugin.featureRegistery.triggerSettingsChange();
                             await this.plugin.saveSettings();
                         }),
                 );
@@ -787,7 +788,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     () => {
                         this.plugin.settings.lineLengthPercentage =
                             DEFAULT_SETTINGS.lineLengthPercentage;
-                        this.plugin.lineLength.updateLineLength();
+                        this.plugin.featureRegistery.triggerSettingsChange();
                     },
                 ).addSlider((slider) =>
                     slider
@@ -796,7 +797,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                         .setValue(this.plugin.settings.lineLengthPercentage)
                         .onChange(async (value) => {
                             this.plugin.settings.lineLengthPercentage = value;
-                            this.plugin.lineLength.updateLineLength();
+                            this.plugin.featureRegistery.triggerSettingsChange();
                             await this.plugin.saveSettings();
                         }),
                 );
@@ -855,7 +856,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.ribbonScrollButtonsEnabled)
                 .onChange(async (value) => {
                     this.plugin.settings.ribbonScrollButtonsEnabled = value;
-                    this.plugin.commands.updateRibbonButtons();
+                    this.plugin.featureRegistery.triggerSettingsChange();
                     await this.plugin.saveSettings();
                 }),
         );
@@ -870,7 +871,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         ).addToggle((toggle) =>
             toggle.setValue(this.plugin.settings.scrollButtonsEnabled).onChange(async (value) => {
                 this.plugin.settings.scrollButtonsEnabled = value;
-                this.plugin.scrollButtons.setup();
+                this.plugin.featureRegistery.triggerSettingsChange();
                 this.display();
                 await this.plugin.saveSettings();
             }),
@@ -884,7 +885,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.scrollButtonsPosition)
                     .onChange(async (value) => {
                         this.plugin.settings.scrollButtonsPosition = value;
-                        this.plugin.scrollButtons.setup();
+                        this.plugin.featureRegistery.triggerSettingsChange();
                         await this.plugin.saveSettings();
                     }),
         );

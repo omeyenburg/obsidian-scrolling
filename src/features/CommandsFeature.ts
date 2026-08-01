@@ -1,6 +1,7 @@
-import { Platform, MarkdownView } from "obsidian";
-
+import { Platform } from "obsidian";
+import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
+import type { ScrollingPluginSettings } from "@core/settings";
 
 function scrollToTop(el: Element) {
     el.scrollTo({ top: 0 });
@@ -10,31 +11,35 @@ function scrollToBottom(el: Element) {
     el.scrollTo({ top: 1000000000 });
 }
 
-/**
- * Adds two commands to scroll to the top or bottom of a document.
- * The user can add the commands as keybinds and as ribbon buttons.
- */
-export class Commands {
-    private readonly plugin: ScrollingPlugin;
-
+export class CommandsFeature implements Feature {
+    public readonly id = "commands";
+    private plugin!: ScrollingPlugin;
     private scrollTopRibbon: HTMLElement | null = null;
     private scrollBottomRibbon: HTMLElement | null = null;
 
-    constructor(plugin: ScrollingPlugin) {
+    public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
 
-        plugin.addCommand({
+        this.plugin.addCommand({
             id: "scroll-to-top",
             name: "To top",
             callback: this.scrollCallbackWrapper(scrollToTop),
         });
 
-        plugin.addCommand({
+        this.plugin.addCommand({
             id: "scroll-to-bottom",
             name: "To bottom",
             callback: this.scrollCallbackWrapper(scrollToBottom),
         });
 
+        this.updateRibbonButtons();
+    }
+
+    public onunload(): void {
+        this.removeScrollRibbonButtons();
+    }
+
+    public onSettingsChange(settings: ScrollingPluginSettings): void {
         this.updateRibbonButtons();
     }
 
@@ -49,6 +54,7 @@ export class Commands {
     }
 
     private addScrollRibbonButtons(): void {
+        if (this.scrollTopRibbon || this.scrollBottomRibbon) return;
         this.scrollTopRibbon = this.plugin.addRibbonIcon(
             "arrow-up-to-line",
             "Scroll to top",
@@ -64,16 +70,15 @@ export class Commands {
     private removeScrollRibbonButtons(): void {
         if (this.scrollTopRibbon !== null) {
             this.scrollTopRibbon.remove();
+            this.scrollTopRibbon = null;
         }
 
         if (this.scrollBottomRibbon !== null) {
             this.scrollBottomRibbon.remove();
+            this.scrollBottomRibbon = null;
         }
     }
 
-    /**
-     * Invokes a scroll function with the scroller element in pdf, image and markdown files.
-     */
     private scrollCallbackWrapper(scrollFunc: (el: Element) => void) {
         return () => {
             const view = this.plugin.app.workspace.getActiveFileView();
@@ -88,8 +93,8 @@ export class Commands {
                     scroller = view.contentEl.getElementsByClassName("view-content")[0];
                     break;
                 case "markdown":
-                    if ((view as MarkdownView).getMode() === "source") {
-                        scroller = (view as MarkdownView).editor.cm.scrollDOM;
+                    if ((view as any).getMode() === "source") {
+                        scroller = (view as any).editor.cm.scrollDOM;
                     } else {
                         scroller =
                             view.contentEl.getElementsByClassName("markdown-preview-view")[0];
@@ -99,7 +104,9 @@ export class Commands {
                     return;
             }
 
-            scrollFunc(scroller);
+            if (scroller) {
+                scrollFunc(scroller);
+            }
         };
     }
 }

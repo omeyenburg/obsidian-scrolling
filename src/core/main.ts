@@ -1,57 +1,50 @@
 import { Plugin } from "obsidian";
 
-import { CodeBlock } from "@components/codeblock";
-import { FileTree } from "@components/filetree";
-import { MathJax } from "@components/mathjax";
-import { FollowCursor } from "@components/followcursor";
-import { MouseScroll } from "@components/mousescroll";
-import { RestoreScroll } from "@components/restorescroll";
-import { Scrollbar } from "@components/scrollbar";
-import { PreviewScrollKeys } from "@components/previewscrollkeys";
-import { LineLength } from "@components/linelength";
-import { Commands } from "@components/commands";
-import { ScrollButtons } from "@components/scrollbuttons";
+import { CenterCursorFeature } from "@features/CenterCursorFeature";
+import { CodeBlockFeature } from "@features/CodeBlockFeature";
+import { CommandsFeature } from "@features/CommandsFeature";
+import { FileTreeFeature } from "@features/FileTreeFeature";
+import { LineLengthFeature } from "@features/LineLengthFeature";
+import { MathJaxFeature } from "@features/MathJaxFeature";
+import { MouseScrollFeature } from "@features/MouseScrollFeature";
+import { PreviewScrollKeysFeature } from "@features/PreviewScrollKeysFeature";
+import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
+import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
+import { ScrollbarFeature } from "@features/ScrollbarFeature";
 
 import { Events } from "@core/events";
+import { FeatureRegistry } from "@core/FeatureRegistry";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "@core/settings";
 
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
     events!: Events;
-
-    codeBlock!: CodeBlock;
-    fileTree!: FileTree;
-    mathJax!: MathJax;
-    followCursor!: FollowCursor;
-    mouseScroll!: MouseScroll;
-    restoreScroll!: RestoreScroll;
-    scrollbar!: Scrollbar;
-    previewScrollKeys!: PreviewScrollKeys;
-    lineLength!: LineLength;
-    commands!: Commands;
-    scrollButtons!: ScrollButtons;
+    featureRegistery!: FeatureRegistry;
 
     async onload() {
         await this.loadSettings();
         this.addSettingTab(new ScrollingSettingTab(this));
 
         this.events = new Events(this);
+        this.featureRegistery = new FeatureRegistry(this);
 
-        this.codeBlock = new CodeBlock(this);
-        this.fileTree = new FileTree(this);
-        this.mathJax = new MathJax(this);
-        this.followCursor = new FollowCursor(this);
-        this.mouseScroll = new MouseScroll(this);
-        this.restoreScroll = new RestoreScroll(this);
-        this.scrollbar = new Scrollbar(this);
-        this.previewScrollKeys = new PreviewScrollKeys(this);
-        this.lineLength = new LineLength(this);
-        this.commands = new Commands(this);
-        this.scrollButtons = new ScrollButtons(this);
+        this.featureRegistery.register(new CenterCursorFeature());
+        this.featureRegistery.register(new CodeBlockFeature());
+        this.featureRegistery.register(new CommandsFeature());
+        this.featureRegistery.register(new FileTreeFeature());
+        this.featureRegistery.register(new LineLengthFeature());
+        this.featureRegistery.register(new MathJaxFeature());
+        this.featureRegistery.register(new MouseScrollFeature());
+        this.featureRegistery.register(new PreviewScrollKeysFeature());
+        this.featureRegistery.register(new RememberFileStateFeature());
+        this.featureRegistery.register(new ScrollButtonsFeature());
+        this.featureRegistery.register(new ScrollbarFeature());
+
+        await this.featureRegistery.loadAll();
 
         this.events.postInit();
 
-        await this.restoreScroll.loadStatesFile();
+        // await this.restoreScroll.loadStatesFile(); // TODO: must be done
     }
 
     onunload() {
