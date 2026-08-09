@@ -1,17 +1,5 @@
 import { Plugin } from "obsidian";
 
-import { CenterCursorFeature } from "@features/CenterCursorFeature";
-import { CodeBlockFeature } from "@features/CodeBlockFeature";
-import { CommandsFeature } from "@features/CommandsFeature";
-import { FileTreeFeature } from "@features/FileTreeFeature";
-import { LineLengthFeature } from "@features/LineLengthFeature";
-import { MathJaxFeature } from "@features/MathJaxFeature";
-import { MouseScrollFeature } from "@features/MouseScrollFeature";
-import { PreviewScrollKeysFeature } from "@features/PreviewScrollKeysFeature";
-import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
-import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
-import { ScrollbarFeature } from "@features/ScrollbarFeature";
-
 import { Events } from "@core/events";
 import { FeatureRegistry } from "@core/FeatureRegistry";
 import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "@core/settings";
@@ -23,24 +11,13 @@ export default class ScrollingPlugin extends Plugin {
 
     async onload() {
         await this.loadSettings();
-        this.addSettingTab(new ScrollingSettingTab(this));
 
         this.events = new Events(this);
+
         this.featureRegistery = new FeatureRegistry(this);
-
-        this.featureRegistery.register(new CenterCursorFeature());
-        this.featureRegistery.register(new CodeBlockFeature());
-        this.featureRegistery.register(new CommandsFeature());
-        this.featureRegistery.register(new FileTreeFeature());
-        this.featureRegistery.register(new LineLengthFeature());
-        this.featureRegistery.register(new MathJaxFeature());
-        this.featureRegistery.register(new MouseScrollFeature());
-        this.featureRegistery.register(new PreviewScrollKeysFeature());
-        this.featureRegistery.register(new RememberFileStateFeature());
-        this.featureRegistery.register(new ScrollButtonsFeature());
-        this.featureRegistery.register(new ScrollbarFeature());
-
         await this.featureRegistery.loadAll();
+
+        this.addSettingTab(new ScrollingSettingTab(this, this.featureRegistery));
 
         this.events.postInit();
 
@@ -49,6 +26,7 @@ export default class ScrollingPlugin extends Plugin {
 
     onunload() {
         this.events.unload();
+        this.featureRegistery.unloadAll();
     }
 
     async loadSettings() {

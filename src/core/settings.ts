@@ -1,6 +1,14 @@
-import { Platform, PluginSettingTab, Setting, SliderComponent, setIcon } from "obsidian";
+import {
+    Platform,
+    PluginSettingTab,
+    Setting,
+    SettingDefinitionItem,
+    SliderComponent,
+    setIcon,
+} from "obsidian";
 
 import type { default as ScrollingPlugin } from "@core/main";
+import { FeatureRegistry } from "./FeatureRegistry";
 
 export interface ScrollingPluginSettings {
     /** Scroll viewport when moving the cursor or editing. */
@@ -164,906 +172,1185 @@ export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
 export class ScrollingSettingTab extends PluginSettingTab {
     readonly plugin: ScrollingPlugin;
 
-    private settingsEnabled = true;
-    private proposedRestoreScrollStoreFile: string | null = null;
+    // private settingsEnabled = true;
+    // private proposedRestoreScrollStoreFile: string | null = null;
 
-    constructor(plugin: ScrollingPlugin) {
+    constructor(plugin: ScrollingPlugin, private readonly featureRegistery: FeatureRegistry) {
         super(plugin.app, plugin);
         this.plugin = plugin;
+        console.log(featureRegistery.getSettingDefinitions())
+        console.log(featureRegistery.getDefaultSettings())
+        const shape = typeof featureRegistery.getDefaultSettings();
+        console.log(shape)
     }
 
-    display(): void {
-        const previousScrollBottom = this.containerEl.scrollHeight - this.containerEl.scrollTop;
-        this.containerEl.empty();
-
-        this.displayFollowCursorSettings();
-        this.displayCodeBlockSettings();
-        this.displayRestoreScrollSettings();
-        this.displayMathJaxSettings();
-        this.displayFileTreeSettings();
-        this.displayScrollbarSettings();
-        this.displayLineLengthSettings();
-        this.displayReadModeKeybindsSettings();
-        this.displayRibbonSettings();
-        this.displayScrollButtonSettings();
-        this.displayMouseScrollSettings();
-
-        this.createHeading("Issues & feature requests").setDesc(
-            createFragment((frag) => {
-                frag.createSpan({
-                    text: "To report bugs or provide feedback, please use the ",
-                });
-                frag.createEl("a", {
-                    text: "issue tracker",
-                    href: "https://github.com/omeyenburg/obsidian-scrolling/issues",
-                });
-                frag.createSpan({
-                    text: " and the ",
-                });
-                frag.createEl("a", {
-                    text: "discussion page",
-                    href: "https://github.com/omeyenburg/obsidian-scrolling/discussions",
-                });
-                frag.createSpan({
-                    text: ".",
-                });
-            }),
-        );
-
-        this.createSetting(
-            "Enable experimental settings",
-            "Features that are unfinished or likely to be removed.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.enableExperimentalSettings)
-                .onChange(async (value) => {
-                    this.plugin.settings.enableExperimentalSettings = value;
-                    this.display();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        // Initially/after reloading scrollHeight equals clientHeight.
-        this.containerEl.scrollTop = this.containerEl.scrollHeight - previousScrollBottom;
+    getSettingDefinitions() {
+        return this.featureRegistery.getSettingDefinitions()
     }
 
-    private setDesc(setting: Setting, desc: string): void {
-        if (!desc) return;
-        if (!desc.includes("\n")) {
-            setting.setDesc(desc);
-            return;
-        }
-        const lines = desc.split("\n");
-
-        setting.setDesc(
-            createFragment((frag) =>
-                lines.forEach((line, index) => {
-                    frag.createSpan({ text: line });
-                    if (index < lines.length - 1) {
-                        frag.createEl("br");
-                    }
-                }),
-            ),
-        );
-    }
-
-    private createHeading(name: string, desc?: string): Setting {
-        const heading = new Setting(this.containerEl).setName(name).setHeading();
-        this.setDesc(heading, desc);
-        this.settingsEnabled = true;
-        return heading;
-    }
-
-    private createSetting(name: string, desc?: string, onReset?: () => void): Setting {
-        const setting = new Setting(this.containerEl).setName(name);
-        this.setDesc(setting, desc);
-
-        if (onReset) {
-            setting.addExtraButton((button) => {
-                button.setIcon("reset").onClick(async () => {
-                    onReset();
-                    this.display();
-                    await this.plugin.saveSettings();
-                });
-
-                if (this.settingsEnabled) button.setTooltip("Restore default");
-            });
-        }
-
-        if (!this.settingsEnabled) {
-            setting.infoEl.setCssStyles({ opacity: "0.4" });
-            setting.controlEl.setCssStyles({
-                opacity: "0.4",
-                filter: "grayscale(100%)",
-            });
-
-            window.setTimeout(() => {
-                setting.components.forEach((comp) => {
-                    comp.setDisabled(true);
-                });
-            }, 1);
-        } else {
-            // Show tooltip on all enabled sliders
-            // (removing later is not possible)
-            window.setTimeout(() => {
-                setting.components.forEach((comp) => {
-                    if (comp instanceof SliderComponent) {
-                        comp.setDynamicTooltip();
-                    }
-                });
-            }, 1);
-        }
-
-        return setting;
-    }
-
-    private displayFollowCursorSettings() {
-        this.createHeading("Centered cursor");
-
-        this.createSetting(
-            "Enable",
-            "Automatically scrolls the view to keep the cursor near the center when you move it.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.followCursorEnabled).onChange(async (value) => {
-                this.plugin.settings.followCursorEnabled = value;
-                this.display();
-                await this.plugin.saveSettings();
-            }),
-        );
-
-        this.settingsEnabled = this.plugin.settings.followCursorEnabled;
-
-        this.createSetting(
-            "Trigger distance",
-            "How far the cursor can move from the center before scrolling (%).\n0% keeps the cursor perfectly centered.",
-            () => (this.plugin.settings.followCursorRadius = DEFAULT_SETTINGS.followCursorRadius),
-        ).addSlider((slider) =>
-            slider
-                .setLimits(0, 100, 1)
-                .setValue(this.plugin.settings.followCursorRadius)
-                .onChange(async (value) => {
-                    this.plugin.settings.followCursorRadius = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        this.createSetting(
-            "Animation smoothness",
-            "Duration of the scroll animation.",
-            () =>
-                (this.plugin.settings.followCursorSmoothness =
-                    DEFAULT_SETTINGS.followCursorSmoothness),
-        ).addSlider((slider) =>
-            slider
-                .setLimits(0, 100, 1)
-                .setValue(this.plugin.settings.followCursorSmoothness)
-                .onChange(async (value) => {
-                    this.plugin.settings.followCursorSmoothness = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        this.createSetting(
-            "Instant scroll on edit",
-            "Do not scroll smoothly while editing text.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.followCursorInstantEditScroll)
-                .onChange(async (value) => {
-                    this.plugin.settings.followCursorInstantEditScroll = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        if (Platform.isDesktop) {
-            if (!this.plugin.settings.enableExperimentalSettings) {
-                this.plugin.settings.followCursorEnableMouse =
-                    DEFAULT_SETTINGS.followCursorEnableMouse;
-            } else {
-                this.createSetting(
-                    "Trigger on mouse interactions (Experimental)",
-                    "Update when the cursor is moved using the mouse.",
-                ).addToggle((toggle) =>
-                    toggle
-                        .setValue(this.plugin.settings.followCursorEnableMouse)
-                        .onChange(async (value) => {
-                            this.plugin.settings.followCursorEnableMouse = value;
-                            this.display();
-                            await this.plugin.saveSettings();
-                        }),
-                );
-            }
-
-            if (!this.plugin.settings.enableExperimentalSettings) {
-                this.plugin.settings.followCursorEnableSelection =
-                    DEFAULT_SETTINGS.followCursorEnableSelection;
-            } else {
-                this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
-                this.createSetting(
-                    "Trigger on mouse selection (Experimental)",
-                    "Also update when text is selected using the mouse.",
-                ).addToggle((toggle) =>
-                    toggle
-                        .setValue(this.plugin.settings.followCursorEnableSelection)
-                        .onChange(async (value) => {
-                            this.plugin.settings.followCursorEnableSelection = value;
-                            await this.plugin.saveSettings();
-                        }),
-                );
-            }
-        }
-    }
-
-    private displayCodeBlockSettings() {
-        this.createHeading("Prevent code wrapping");
-
-        this.createSetting(
-            "Enable",
-            "Prevent code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.codeBlockScrollEnabled).onChange(async (value) => {
-                this.plugin.settings.codeBlockScrollEnabled = value;
-                this.plugin.featureRegistery.triggerSettingsChange();
-                await this.plugin.saveSettings();
-            }),
-        );
-    }
-
-    private displayRestoreScrollSettings() {
-        this.createHeading(
-            "Remember scroll position",
-            "Automatically save your position before closing a file and restore it upon opening the file again.\nThe position will not be restored if the file is already opened in a tab of the same split.",
-        );
-
-        this.createSetting(
-            "Mode",
-            "Start at the top/bottom of the file, or restore the cursor or scroll position.",
-            () => (this.plugin.settings.restoreScrollMode = DEFAULT_SETTINGS.restoreScrollMode),
-        ).addDropdown((dropdown) =>
-            dropdown
-                .addOption("top", "Start at top (Obsidian's default)")
-                .addOption("bottom", "Start at bottom")
-                .addOption("cursor", "Restore Cursor position")
-                .addOption("scroll", "Restore scroll position")
-                .setValue(this.plugin.settings.restoreScrollMode)
-                .onChange(async (value) => {
-                    this.plugin.settings.restoreScrollMode = value;
-                    this.display();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        // Disable further settings if "top" or "bottom" modes are selected.
-        this.settingsEnabled = ["scroll", "cursor"].includes(
-            this.plugin.settings.restoreScrollMode,
-        );
-
-        this.createSetting(
-            "Delay after opening a note",
-            "Number of milliseconds to wait before restoring position.\nUse if restoring works unreliably.",
-            () => (this.plugin.settings.restoreScrollDelay = DEFAULT_SETTINGS.restoreScrollDelay),
-        ).addSlider((slider) =>
-            slider
-                .setLimits(0, 300, 5)
-                .setValue(this.plugin.settings.restoreScrollDelay)
-                .onChange(async (value) => {
-                    this.plugin.settings.restoreScrollDelay = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        // const count = this.plugin.featureRegistery.get("restoreScroll").getNumEphemeralStates();
-        this.createSetting(
-            "Saved positions limit",
-            // `Number of files to remember scroll positions for. Leave empty for unlimited.\nCurrently positions for ${count} file${count == 1 ? "" : "s"} are stored.`,
-            "TODO",
-            () => (this.plugin.settings.restoreScrollLimit = DEFAULT_SETTINGS.restoreScrollLimit),
-        ).addText((input) => {
-            input
-                .setPlaceholder("Unlimited")
-                .setValue(
-                    this.plugin.settings.restoreScrollLimit > 0
-                        ? this.plugin.settings.restoreScrollLimit.toString()
-                        : "",
-                )
-                .onChange(async (value: string) => {
-                    const limit = +value;
-                    if (limit.toString().contains(".")) return;
-
-                    if (limit <= 0 || isNaN(limit)) {
-                        this.plugin.settings.restoreScrollLimit = -1;
-                    } else {
-                        this.plugin.settings.restoreScrollLimit = limit;
-                    }
-
-                    await this.plugin.saveSettings();
-
-                    if (restoreScrollAgeSetting) {
-                        const shouldShow = this.plugin.settings.restoreScrollLimit > 0;
-                        // Collapse the space entirely by modifying 'display'
-                        restoreScrollAgeSetting.settingEl.style.display = shouldShow ? "" : "none";
-                    }
-                });
-        });
-
-        const restoreScrollAgeSetting = this.createSetting(
-            "Keep oldest scroll positions",
-            "When the limit is reached, keep the oldest saved positions instead of the most recent ones (default).",
-            () => (this.plugin.settings.restoreScrollAge = DEFAULT_SETTINGS.restoreScrollAge),
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.restoreScrollAge).onChange(async (value) => {
-                this.plugin.settings.restoreScrollAge = value;
-                await this.plugin.saveSettings();
-            }),
-        );
-
-        const initialShow = this.plugin.settings.restoreScrollLimit > 0;
-        restoreScrollAgeSetting.settingEl.style.display = initialShow ? "" : "none";
-
-        if (Platform.isMobile) {
-            this.createSetting(
-                "Enable in PDFs",
-                "Enable restoring position in PDF files.",
-            ).addToggle((toggle) =>
-                toggle.setValue(this.plugin.settings.restoreScrollPdf).onChange(async (value) => {
-                    this.plugin.settings.restoreScrollPdf = value;
-                    await this.plugin.saveSettings();
-                }),
-            );
-        }
-
-        this.createSetting("Enable in Bases", "Enable restoring position in Bases.").addToggle(
-            (toggle) =>
-                toggle.setValue(this.plugin.settings.restoreScrollBases).onChange(async (value) => {
-                    this.plugin.settings.restoreScrollBases = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        this.createSetting(
-            "Enable for link use",
-            "Enable restoring position when clicking links to files (not headings).",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.restoreScrollFileLink).onChange(async (value) => {
-                this.plugin.settings.restoreScrollFileLink = value;
-                await this.plugin.saveSettings();
-            }),
-        );
-
-        this.createSetting(
-            "Enable only on launch",
-            "Only restore position once per file per session.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.restoreScrollInitialOnly)
-                .onChange(async (value) => {
-                    this.plugin.settings.restoreScrollInitialOnly = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        this.createSetting(
-            "Store positions in file",
-            "Save positions inside a file to keep them after Obsidian restarts.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.restoreScrollFileEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.restoreScrollFileEnabled = value;
-                    this.display();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        this.settingsEnabled &&= this.plugin.settings.restoreScrollFileEnabled;
-
-        this.createSetting(
-            "Storage file path",
-            "Where to store scrolling & cursor positions.",
-        ).addText((input) => {
-            input.setValue(this.plugin.settings.restoreScrollFilePath).onChange((value) => {
-                this.proposedRestoreScrollStoreFile = value;
-            });
-
-            const onConfirm = async () => {
-                // const newFile = await this.plugin.restoreScroll.renameStatesFile(
-                //     this.proposedRestoreScrollStoreFile,
-                // );
-                //
-                // if (newFile) {
-                //     this.plugin.settings.restoreScrollFilePath = newFile;
-                //     this.proposedRestoreScrollStoreFile = null;
-                //     await this.plugin.saveSettings();
-                // }
-            };
-
-            // Submit new file path when pressing enter
-            const handleKeydown = (e: KeyboardEvent) => {
-                if (e.key === "Enter") void onConfirm();
-            };
-            input.inputEl.addEventListener("keydown", handleKeydown);
-            this.plugin.register(() => input.inputEl.removeEventListener("keydown", handleKeydown));
-
-            // Try vertical layout
-            let parentEl: HTMLElement;
-            if (input.inputEl.parentElement) {
-                parentEl = input.inputEl.parentElement;
-                parentEl.setCssStyles({
-                    display: "flex",
-                    alignItems: "flex-end",
-                    flexDirection: "column",
-                    marginBottom: "-1.5em",
-                });
-            } else {
-                parentEl = this.containerEl;
-            }
-
-            const buttonRow = parentEl.createDiv({ cls: "setting-item-control" });
-            buttonRow.setCssStyles({ display: "flex" });
-
-            // Reset button
-            const resetButton = buttonRow.createDiv({
-                cls: "clickable-icon extra-setting-button",
-            });
-            if (this.settingsEnabled) resetButton.setAttr("aria-label", "Cancel changes");
-            setIcon(resetButton, "reset");
-            resetButton.onclick = () => {
-                if (this.proposedRestoreScrollStoreFile === null) return;
-                input.setValue(this.plugin.settings.restoreScrollFilePath);
-                this.proposedRestoreScrollStoreFile = null;
-            };
-
-            // Submit new file path with confirm button
-            const confirmButton = buttonRow.createEl("button", { text: "Confirm" });
-            confirmButton.onclick = onConfirm;
-            confirmButton.disabled = !this.settingsEnabled;
-        });
-    }
-
-    private displayMathJaxSettings() {
-        this.createHeading("Horizontal scrolling of MathJax");
-
-        this.createSetting(
-            "Enable",
-            "Allow horizontal scrolling of inline MathJax without scrolling the entire viewport.",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.mathjaxScrollEnabled).onChange(async (value) => {
-                this.plugin.settings.mathjaxScrollEnabled = value;
-                this.plugin.featureRegistery.triggerSettingsChange();
-                await this.plugin.saveSettings();
-            }),
-        );
-    }
-
-    private displayFileTreeSettings() {
-        if (Platform.isMobile) return;
-
-        this.createHeading("Horizontal scrolling in file tree");
-
-        this.createSetting(
-            "Enable",
-            "Allow horizontal scrolling in the file tree and show a scrollbar.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.horizontalFileTreeEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.horizontalFileTreeEnabled = value;
-                    // TODO: refactor: module should subscribe to event
-                    // this.plugin.fileTree.updateStyle();
-                    await this.plugin.saveSettings();
-                }),
-        );
-    }
-
-    private displayScrollbarSettings() {
-        if (Platform.isMacOS) return;
-
-        this.createHeading("Scrollbars");
-
-        this.createSetting(
-            "Scrollbar visibility",
-            "When to show the scrollbar in notes and PDFs.",
-            () => {
-                this.plugin.settings.scrollbarVisibility = DEFAULT_SETTINGS.scrollbarVisibility;
-                this.plugin.featureRegistery.triggerSettingsChange();
-            },
-        ).addDropdown((dropdown) =>
-            dropdown
-                .addOption("hide", "Always hide scrollbar")
-                .addOption("scroll", "Show scrollbar while scrolling")
-                .addOption("show", "Always show scrollbar")
-                .setValue(this.plugin.settings.scrollbarVisibility)
-                .onChange(async (value) => {
-                    this.plugin.settings.scrollbarVisibility = value;
-                    this.plugin.featureRegistery.triggerSettingsChange();
-                    this.display();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        if (Platform.isLinux && Platform.isDesktop) {
-            this.settingsEnabled = this.plugin.settings.scrollbarVisibility !== "hide";
-
-            this.createSetting("Scrollbar thickness", "Scrollbar width in pixels.", () => {
-                this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
-                this.plugin.featureRegistery.triggerSettingsChange();
-            }).addSlider((slider) =>
-                slider
-                    .setLimits(0, 30, 1)
-                    .setValue(this.plugin.settings.scrollbarWidth)
-                    .onChange(async (value) => {
-                        this.plugin.settings.scrollbarWidth = value;
-                        this.plugin.featureRegistery.triggerSettingsChange();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
-    }
-
-    private displayLineLengthSettings() {
-        if (Platform.isMobile) return;
-
-        this.createHeading("Line length");
-
-        // const readableLineLengthEnabled = this.plugin.lineLength.getObsidianReadableLineLength();
-
-        this.createSetting(
-            "Readable line length",
-            "Limit maximum line length. Less content fits on screen, but long blocks of text are more readable.",
-        ).addToggle((toggle) =>
-            toggle./*setValue(readableLineLengthEnabled).*/onChange(async (value) => {
-                // this.plugin.lineLength.setObsidianReadableLineLength(value);
-                this.display();
-                await this.plugin.saveSettings();
-            }),
-        );
-
-        // Disable further settings if readable line length is disabled.
-        // this.settingsEnabled = readableLineLengthEnabled;
-
-        this.createSetting(
-            "Length unit",
-            "Choose to set the line length as percentage, pixels or characters.",
-            () => (this.plugin.settings.lineLengthUnit = DEFAULT_SETTINGS.lineLengthUnit),
-        ).addDropdown((dropdown) =>
-            dropdown
-                .addOption("pixels", "Pixels (px)")
-                .addOption("characters", "Characters (ch)")
-                .addOption("percentage", "Percentage (%)")
-                .setValue(this.plugin.settings.lineLengthUnit)
-                .onChange(async (value) => {
-                    this.plugin.settings.lineLengthUnit = value;
-                    this.plugin.featureRegistery.triggerSettingsChange();
-                    this.display();
-                    await this.plugin.saveSettings();
-                }),
-        );
-
-        switch (this.plugin.settings.lineLengthUnit) {
-            case "pixels":
-                this.createSetting(
-                    "Number of pixels",
-                    "Maximum line length as pixels (px).",
-                    () => {
-                        this.plugin.settings.lineLengthPixels = DEFAULT_SETTINGS.lineLengthPixels;
-                        this.plugin.featureRegistery.triggerSettingsChange();
-                    },
-                ).addSlider((slider) =>
-                    slider
-                        .setInstant(true)
-                        .setLimits(400, 3000, 50)
-                        .setValue(this.plugin.settings.lineLengthPixels)
-                        .onChange(async (value) => {
-                            this.plugin.settings.lineLengthPixels = value;
-                            this.plugin.featureRegistery.triggerSettingsChange();
-                            await this.plugin.saveSettings();
-                        }),
-                );
-                break;
-            case "characters":
-                this.createSetting(
-                    "Number of characters",
-                    "Maximum line length as character count (ch).",
-                    () => {
-                        this.plugin.settings.lineLengthCharacters =
-                            DEFAULT_SETTINGS.lineLengthCharacters;
-                            this.plugin.featureRegistery.triggerSettingsChange();
-                    },
-                ).addSlider((slider) =>
-                    slider
-                        .setInstant(true)
-                        .setLimits(30, 200, 1)
-                        .setValue(this.plugin.settings.lineLengthCharacters)
-                        .onChange(async (value) => {
-                            this.plugin.settings.lineLengthCharacters = value;
-                            this.plugin.featureRegistery.triggerSettingsChange();
-                            await this.plugin.saveSettings();
-                        }),
-                );
-                break;
-            case "percentage":
-                this.createSetting(
-                    "Percentage of editor",
-                    "Maximum line length as percentage of the editor width (%).",
-                    () => {
-                        this.plugin.settings.lineLengthPercentage =
-                            DEFAULT_SETTINGS.lineLengthPercentage;
-                        this.plugin.featureRegistery.triggerSettingsChange();
-                    },
-                ).addSlider((slider) =>
-                    slider
-                        .setInstant(true)
-                        .setLimits(20, 100, 2)
-                        .setValue(this.plugin.settings.lineLengthPercentage)
-                        .onChange(async (value) => {
-                            this.plugin.settings.lineLengthPercentage = value;
-                            this.plugin.featureRegistery.triggerSettingsChange();
-                            await this.plugin.saveSettings();
-                        }),
-                );
-                break;
-        }
-    }
-
-    private displayReadModeKeybindsSettings() {
-        if (Platform.isMobile) return;
-
-        this.createHeading("Reading mode keybinds");
-
-        this.createSetting("Line scroll keybinds", "Scroll by single lines with j/k.").addToggle(
-            (toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.readingLineScrollEnabled)
-                    .onChange(async (value) => {
-                        this.plugin.settings.readingLineScrollEnabled = value;
-                        await this.plugin.saveSettings();
-                    }),
-        );
-
-        this.createSetting("Half page scroll keybinds", "Scroll half pages with d/u.").addToggle(
-            (toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.readingHalfPageScrollEnabled)
-                    .onChange(async (value) => {
-                        this.plugin.settings.readingHalfPageScrollEnabled = value;
-                        await this.plugin.saveSettings();
-                    }),
-        );
-
-        this.createSetting(
-            "Top/bottom scroll keybinds",
-            "Scroll to top/bottom with g/G.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.readingTopBottomScrollEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.readingTopBottomScrollEnabled = value;
-                    await this.plugin.saveSettings();
-                }),
-        );
-    }
-
-    private displayRibbonSettings() {
-        if (Platform.isDesktop) return;
-
-        this.createHeading("Ribbon commands");
-
-        this.createSetting(
-            "Commands for scrolling to top/bottom",
-            "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
-        ).addToggle((toggle) =>
-            toggle
-                .setValue(this.plugin.settings.ribbonScrollButtonsEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.ribbonScrollButtonsEnabled = value;
-                    this.plugin.featureRegistery.triggerSettingsChange();
-                    await this.plugin.saveSettings();
-                }),
-        );
-    }
-
-    private displayScrollButtonSettings() {
-        this.createHeading("Scroll buttons");
-
-        this.createSetting(
-            "Show top/bottom scroll buttons",
-            "Adds buttons to scroll to the top/bottom of the file",
-        ).addToggle((toggle) =>
-            toggle.setValue(this.plugin.settings.scrollButtonsEnabled).onChange(async (value) => {
-                this.plugin.settings.scrollButtonsEnabled = value;
-                this.plugin.featureRegistery.triggerSettingsChange();
-                this.display();
-                await this.plugin.saveSettings();
-            }),
-        );
-        this.settingsEnabled = this.plugin.settings.scrollButtonsEnabled;
-
-        this.createSetting("Button position", "Moves the buttons in the note").addDropdown(
-            (toggle) =>
-                toggle
-                    .addOptions({ top: "Top", bottom: "Bottom" })
-                    .setValue(this.plugin.settings.scrollButtonsPosition)
-                    .onChange(async (value) => {
-                        this.plugin.settings.scrollButtonsPosition = value;
-                        this.plugin.featureRegistery.triggerSettingsChange();
-                        await this.plugin.saveSettings();
-                    }),
-        );
-    }
-
-    private displayMouseScrollSettings() {
-        if (Platform.isMobile) return;
-
-        this.createHeading("Mouse & Touchpad scrolling");
-
-        this.createSetting(
-            "Mode",
-            "Native scroll provides simplicity and stability; Simulated scroll is configurable.",
-            () => (this.plugin.settings.scrollMode = DEFAULT_SETTINGS.scrollMode),
-        ).addDropdown((dropdown) => {
-            dropdown
-                .addOption("disabled", "Disabled")
-                .addOption("native", "Native")
-                .addOption("simulated", "Simulated (experimental)")
-                .setValue(this.plugin.settings.scrollMode)
-                .onChange(async (value) => {
-                    this.plugin.settings.scrollMode = value;
-                    this.display();
-                    await this.plugin.saveSettings();
-                });
-        });
-
-        if (this.plugin.settings.scrollMode === "native") {
-            this.createSetting(
-                "Scroll speed multiplier",
-                "Increase the scroll speed. Values below one disable smooth scrolling.",
-                () =>
-                    (this.plugin.settings.nativeScrollMultiplier =
-                        DEFAULT_SETTINGS.nativeScrollMultiplier),
-            ).addSlider((slider) =>
-                slider
-                    .setLimits(0.1, 3, 0.1)
-                    .setValue(this.plugin.settings.nativeScrollMultiplier)
-                    .onChange(async (value) => {
-                        this.plugin.settings.nativeScrollMultiplier = Math.max(value, 0.1);
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Alt speed multiplier",
-                "Speed multiplier while holding the alt key.",
-                () =>
-                    (this.plugin.settings.nativeAltMultiplier =
-                        DEFAULT_SETTINGS.nativeAltMultiplier),
-            ).addSlider((slider) =>
-                slider
-                    .setLimits(0.1, 3, 0.1)
-                    .setValue(this.plugin.settings.nativeAltMultiplier)
-                    .onChange(async (value) => {
-                        this.plugin.settings.nativeAltMultiplier = Math.max(value, 0.1);
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Disable smooth scrolling",
-                "Scroll instantly without transition effect.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.nativeScrollInstant)
-                    .onChange(async (value) => {
-                        this.plugin.settings.nativeScrollInstant = value;
-                        this.display();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        } else if (this.plugin.settings.scrollMode === "simulated") {
-            this.createSetting(
-                "Invert scroll direction (Experimental)",
-                "Reverse the scroll direction for mouse wheel and touchpad input.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.simulatedMouseInvert)
-                    .onChange(async (value) => {
-                        this.plugin.settings.simulatedMouseInvert = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Mouse scroll speed",
-                "How far the page scrolls.",
-                () =>
-                    (this.plugin.settings.simulatedMouseSpeed =
-                        DEFAULT_SETTINGS.simulatedMouseSpeed),
-            ).addSlider((slider) =>
-                slider
-                    .setLimits(1, 100, 1)
-                    .setValue(this.plugin.settings.simulatedMouseSpeed)
-                    .onChange(async (value) => {
-                        this.plugin.settings.simulatedMouseSpeed = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Mouse scroll smoothness",
-                "Duration of the scroll animation.",
-                () =>
-                    (this.plugin.settings.simulatedMouseSmoothness =
-                        DEFAULT_SETTINGS.simulatedMouseSmoothness),
-            ).addSlider((slider) =>
-                slider
-                    .setLimits(0, 100, 1)
-                    .setValue(this.plugin.settings.simulatedMouseSmoothness)
-                    .onChange(async (value) => {
-                        this.plugin.settings.simulatedMouseSmoothness = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Touchpad detection (Experimental)",
-                "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
-            ).addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.simulatedTouchpadEnabled)
-                    .onChange(async (value) => {
-                        this.plugin.settings.simulatedTouchpadEnabled = value;
-                        this.display();
-                        await this.plugin.saveSettings();
-                    }),
-            );
-            this.settingsEnabled &&= this.plugin.settings.simulatedTouchpadEnabled;
-
-            this.createSetting(
-                "Touchpad scroll speed",
-                "How far the page scrolls.",
-                () =>
-                    (this.plugin.settings.simulatedTouchpadSpeed =
-                        DEFAULT_SETTINGS.simulatedTouchpadSpeed),
-            ).addSlider((slider) =>
-                slider
-                    .setLimits(1, 100, 1)
-                    .setValue(this.plugin.settings.simulatedTouchpadSpeed)
-                    .onChange(async (value) => {
-                        this.plugin.settings.simulatedTouchpadSpeed = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Touchpad scroll smoothness",
-                "Duration of the scroll animation.",
-                () =>
-                    (this.plugin.settings.simulatedTouchpadSmoothness =
-                        DEFAULT_SETTINGS.simulatedTouchpadSmoothness),
-            ).addSlider((slider) =>
-                slider
-                    .setLimits(0, 100, 1)
-                    .setValue(this.plugin.settings.simulatedTouchpadSmoothness)
-                    .onChange(async (value) => {
-                        this.plugin.settings.simulatedTouchpadSmoothness = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-
-            this.createSetting(
-                "Touchpad friction threshold",
-                "Threshold between precise and smooth scrolling.\nDefines how much finger movement is needed before scrolling decelerates and stops.",
-                () =>
-                    (this.plugin.settings.simulatedTouchpadFrictionThreshold =
-                        DEFAULT_SETTINGS.simulatedTouchpadFrictionThreshold),
-            ).addSlider((slider) =>
-                slider
-                    .setLimits(1, 100, 1)
-                    .setValue(this.plugin.settings.simulatedTouchpadFrictionThreshold)
-                    .onChange(async (value) => {
-                        this.plugin.settings.simulatedTouchpadFrictionThreshold = value;
-                        await this.plugin.saveSettings();
-                    }),
-            );
-        }
-    }
+    // getSettingDefinitions() {
+    //     return [
+    //         {
+    //             type: "page",
+    //             name: "Centered cursor",
+    //             desc: "Keep cursor centered",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled", defaultValue: true },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough" },
+    //                     },
+    //                 },
+    //                 {
+    //                     name: "Cache key",
+    //                     desc: "Alphanumeric only.",
+    //                     control: {
+    //                         type: "text",
+    //                         key: "cacheKey",
+    //                         placeholder: "default",
+    //                         validate: (value: string) =>
+    //                             /^[a-z0-9]*$/i.test(value.trim())
+    //                                 ? undefined
+    //                                 : "Use letters and digits only.",
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "Code blocks",
+    //             desc: "Disable code wrapping",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "Remember file state",
+    //             desc: "Saves your position and editing mode when closing a file",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "MathJax",
+    //             desc: "Disable code wrapping",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "File Tree",
+    //             desc: "Horizontally scroll long file names in tree",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "Scrollbars",
+    //             desc: "Scrollbar appearance",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "Line length",
+    //             desc: "Change default line length",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "Scroll keybinds",
+    //             desc: "Use keybinds to quickly scroll in reading mode.",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "Scroll buttons",
+    //             desc: "Use editor buttons or ribbon commands for scrolling",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                     disabled: true,
+    //                     heading: "Huh"
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                     heading: "Huhuuu"
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //         {
+    //             type: "page",
+    //             name: "Mouse & Touchpad",
+    //             desc: "Configure behaviour of scrolling with mouse and touchpad",
+    //             displayValue: "value",
+    //             status: "warning",
+    //             items: [
+    //                 {
+    //                     name: "Enable feature",
+    //                     desc: "Turns the feature on or off.",
+    //                     control: { type: "toggle", key: "enabled" },
+    //                 },
+    //                 {
+    //                     name: "Mode",
+    //                     control: {
+    //                         type: "dropdown",
+    //                         key: "mode",
+    //                         defaultValue: "fast",
+    //                         options: { fast: "Fast", thorough: "Thorough..." },
+    //                     },
+    //                 },
+    //             ],
+    //             // page
+    //             visible: true,
+    //         },
+    //     ] satisfies SettingDefinitionItem<string>[];
+    // }
+
+    // display(): void {
+    //     const previousScrollBottom = this.containerEl.scrollHeight - this.containerEl.scrollTop;
+    //     this.containerEl.empty();
+    //
+    //     this.displayFollowCursorSettings();
+    //     this.displayCodeBlockSettings();
+    //     this.displayRestoreScrollSettings();
+    //     this.displayMathJaxSettings();
+    //     this.displayFileTreeSettings();
+    //     this.displayScrollbarSettings();
+    //     this.displayLineLengthSettings();
+    //     this.displayReadModeKeybindsSettings();
+    //     this.displayRibbonSettings();
+    //     this.displayScrollButtonSettings();
+    //     this.displayMouseScrollSettings();
+    //
+    //     this.createHeading("Issues & feature requests").setDesc(
+    //         createFragment((frag) => {
+    //             frag.createSpan({
+    //                 text: "To report bugs or provide feedback, please use the ",
+    //             });
+    //             frag.createEl("a", {
+    //                 text: "issue tracker",
+    //                 href: "https://github.com/omeyenburg/obsidian-scrolling/issues",
+    //             });
+    //             frag.createSpan({
+    //                 text: " and the ",
+    //             });
+    //             frag.createEl("a", {
+    //                 text: "discussion page",
+    //                 href: "https://github.com/omeyenburg/obsidian-scrolling/discussions",
+    //             });
+    //             frag.createSpan({
+    //                 text: ".",
+    //             });
+    //         }),
+    //     );
+    //
+    //     this.createSetting(
+    //         "Enable experimental settings",
+    //         "Features that are unfinished or likely to be removed.",
+    //     ).addToggle((toggle) =>
+    //         toggle
+    //             .setValue(this.plugin.settings.enableExperimentalSettings)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.enableExperimentalSettings = value;
+    //                 this.display();
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     // Initially/after reloading scrollHeight equals clientHeight.
+    //     this.containerEl.scrollTop = this.containerEl.scrollHeight - previousScrollBottom;
+    // }
+    //
+    // private setDesc(setting: Setting, desc: string): void {
+    //     if (!desc) return;
+    //     if (!desc.includes("\n")) {
+    //         setting.setDesc(desc);
+    //         return;
+    //     }
+    //     const lines = desc.split("\n");
+    //
+    //     setting.setDesc(
+    //         createFragment((frag) =>
+    //             lines.forEach((line, index) => {
+    //                 frag.createSpan({ text: line });
+    //                 if (index < lines.length - 1) {
+    //                     frag.createEl("br");
+    //                 }
+    //             }),
+    //         ),
+    //     );
+    // }
+    //
+    // private createHeading(name: string, desc?: string): Setting {
+    //     const heading = new Setting(this.containerEl).setName(name).setHeading();
+    //     this.setDesc(heading, desc);
+    //     this.settingsEnabled = true;
+    //     return heading;
+    // }
+    //
+    // private createSetting(name: string, desc?: string, onReset?: () => void): Setting {
+    //     const setting = new Setting(this.containerEl).setName(name);
+    //     this.setDesc(setting, desc);
+    //
+    //     if (onReset) {
+    //         setting.addExtraButton((button) => {
+    //             button.setIcon("reset").onClick(async () => {
+    //                 onReset();
+    //                 this.display();
+    //                 await this.plugin.saveSettings();
+    //             });
+    //
+    //             if (this.settingsEnabled) button.setTooltip("Restore default");
+    //         });
+    //     }
+    //
+    //     if (!this.settingsEnabled) {
+    //         setting.infoEl.setCssStyles({ opacity: "0.4" });
+    //         setting.controlEl.setCssStyles({
+    //             opacity: "0.4",
+    //             filter: "grayscale(100%)",
+    //         });
+    //
+    //         window.setTimeout(() => {
+    //             setting.components.forEach((comp) => {
+    //                 comp.setDisabled(true);
+    //             });
+    //         }, 1);
+    //     } else {
+    //         // Show tooltip on all enabled sliders
+    //         // (removing later is not possible)
+    //         window.setTimeout(() => {
+    //             setting.components.forEach((comp) => {
+    //                 if (comp instanceof SliderComponent) {
+    //                     comp.setDynamicTooltip();
+    //                 }
+    //             });
+    //         }, 1);
+    //     }
+    //
+    //     return setting;
+    // }
+    //
+    // private displayFollowCursorSettings() {
+    //     this.createHeading("Centered cursor");
+    //
+    //     this.createSetting(
+    //         "Enable",
+    //         "Automatically scrolls the view to keep the cursor near the center when you move it.",
+    //     ).addToggle((toggle) =>
+    //         toggle.setValue(this.plugin.settings.followCursorEnabled).onChange(async (value) => {
+    //             this.plugin.settings.followCursorEnabled = value;
+    //             this.display();
+    //             await this.plugin.saveSettings();
+    //         }),
+    //     );
+    //
+    //     this.settingsEnabled = this.plugin.settings.followCursorEnabled;
+    //
+    //     this.createSetting(
+    //         "Trigger distance",
+    //         "How far the cursor can move from the center before scrolling (%).\n0% keeps the cursor perfectly centered.",
+    //         () => (this.plugin.settings.followCursorRadius = DEFAULT_SETTINGS.followCursorRadius),
+    //     ).addSlider((slider) =>
+    //         slider
+    //             .setLimits(0, 100, 1)
+    //             .setValue(this.plugin.settings.followCursorRadius)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.followCursorRadius = value;
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     this.createSetting(
+    //         "Animation smoothness",
+    //         "Duration of the scroll animation.",
+    //         () =>
+    //             (this.plugin.settings.followCursorSmoothness =
+    //                 DEFAULT_SETTINGS.followCursorSmoothness),
+    //     ).addSlider((slider) =>
+    //         slider
+    //             .setLimits(0, 100, 1)
+    //             .setValue(this.plugin.settings.followCursorSmoothness)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.followCursorSmoothness = value;
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     this.createSetting(
+    //         "Instant scroll on edit",
+    //         "Do not scroll smoothly while editing text.",
+    //     ).addToggle((toggle) =>
+    //         toggle
+    //             .setValue(this.plugin.settings.followCursorInstantEditScroll)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.followCursorInstantEditScroll = value;
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     if (Platform.isDesktop) {
+    //         if (!this.plugin.settings.enableExperimentalSettings) {
+    //             this.plugin.settings.followCursorEnableMouse =
+    //                 DEFAULT_SETTINGS.followCursorEnableMouse;
+    //         } else {
+    //             this.createSetting(
+    //                 "Trigger on mouse interactions (Experimental)",
+    //                 "Update when the cursor is moved using the mouse.",
+    //             ).addToggle((toggle) =>
+    //                 toggle
+    //                     .setValue(this.plugin.settings.followCursorEnableMouse)
+    //                     .onChange(async (value) => {
+    //                         this.plugin.settings.followCursorEnableMouse = value;
+    //                         this.display();
+    //                         await this.plugin.saveSettings();
+    //                     }),
+    //             );
+    //         }
+    //
+    //         if (!this.plugin.settings.enableExperimentalSettings) {
+    //             this.plugin.settings.followCursorEnableSelection =
+    //                 DEFAULT_SETTINGS.followCursorEnableSelection;
+    //         } else {
+    //             this.settingsEnabled &&= this.plugin.settings.followCursorEnableMouse;
+    //             this.createSetting(
+    //                 "Trigger on mouse selection (Experimental)",
+    //                 "Also update when text is selected using the mouse.",
+    //             ).addToggle((toggle) =>
+    //                 toggle
+    //                     .setValue(this.plugin.settings.followCursorEnableSelection)
+    //                     .onChange(async (value) => {
+    //                         this.plugin.settings.followCursorEnableSelection = value;
+    //                         await this.plugin.saveSettings();
+    //                     }),
+    //             );
+    //         }
+    //     }
+    // }
+    //
+    // private displayCodeBlockSettings() {
+    //     this.createHeading("Prevent code wrapping");
+    //
+    //     this.createSetting(
+    //         "Enable",
+    //         "Prevent code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
+    //     ).addToggle((toggle) =>
+    //         toggle.setValue(this.plugin.settings.codeBlockScrollEnabled).onChange(async (value) => {
+    //             this.plugin.settings.codeBlockScrollEnabled = value;
+    //             this.plugin.featureRegistery.triggerSettingsChange();
+    //             await this.plugin.saveSettings();
+    //         }),
+    //     );
+    // }
+    //
+    // private displayRestoreScrollSettings() {
+    //     this.createHeading(
+    //         "Remember scroll position",
+    //         "Automatically save your position before closing a file and restore it upon opening the file again.\nThe position will not be restored if the file is already opened in a tab of the same split.",
+    //     );
+    //
+    //     this.createSetting(
+    //         "Mode",
+    //         "Start at the top/bottom of the file, or restore the cursor or scroll position.",
+    //         () => (this.plugin.settings.restoreScrollMode = DEFAULT_SETTINGS.restoreScrollMode),
+    //     ).addDropdown((dropdown) =>
+    //         dropdown
+    //             .addOption("top", "Start at top (Obsidian's default)")
+    //             .addOption("bottom", "Start at bottom")
+    //             .addOption("cursor", "Restore Cursor position")
+    //             .addOption("scroll", "Restore scroll position")
+    //             .setValue(this.plugin.settings.restoreScrollMode)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.restoreScrollMode = value;
+    //                 this.display();
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     // Disable further settings if "top" or "bottom" modes are selected.
+    //     this.settingsEnabled = ["scroll", "cursor"].includes(
+    //         this.plugin.settings.restoreScrollMode,
+    //     );
+    //
+    //     this.createSetting(
+    //         "Delay after opening a note",
+    //         "Number of milliseconds to wait before restoring position.\nUse if restoring works unreliably.",
+    //         () => (this.plugin.settings.restoreScrollDelay = DEFAULT_SETTINGS.restoreScrollDelay),
+    //     ).addSlider((slider) =>
+    //         slider
+    //             .setLimits(0, 300, 5)
+    //             .setValue(this.plugin.settings.restoreScrollDelay)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.restoreScrollDelay = value;
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     // const count = this.plugin.featureRegistery.get("restoreScroll").getNumEphemeralStates();
+    //     this.createSetting(
+    //         "Saved positions limit",
+    //         // `Number of files to remember scroll positions for. Leave empty for unlimited.\nCurrently positions for ${count} file${count == 1 ? "" : "s"} are stored.`,
+    //         "TODO",
+    //         () => (this.plugin.settings.restoreScrollLimit = DEFAULT_SETTINGS.restoreScrollLimit),
+    //     ).addText((input) => {
+    //         input
+    //             .setPlaceholder("Unlimited")
+    //             .setValue(
+    //                 this.plugin.settings.restoreScrollLimit > 0
+    //                     ? this.plugin.settings.restoreScrollLimit.toString()
+    //                     : "",
+    //             )
+    //             .onChange(async (value: string) => {
+    //                 const limit = +value;
+    //                 if (limit.toString().contains(".")) return;
+    //
+    //                 if (limit <= 0 || isNaN(limit)) {
+    //                     this.plugin.settings.restoreScrollLimit = -1;
+    //                 } else {
+    //                     this.plugin.settings.restoreScrollLimit = limit;
+    //                 }
+    //
+    //                 await this.plugin.saveSettings();
+    //
+    //                 if (restoreScrollAgeSetting) {
+    //                     const shouldShow = this.plugin.settings.restoreScrollLimit > 0;
+    //                     // Collapse the space entirely by modifying 'display'
+    //                     restoreScrollAgeSetting.settingEl.style.display = shouldShow ? "" : "none";
+    //                 }
+    //             });
+    //     });
+    //
+    //     const restoreScrollAgeSetting = this.createSetting(
+    //         "Keep oldest scroll positions",
+    //         "When the limit is reached, keep the oldest saved positions instead of the most recent ones (default).",
+    //         () => (this.plugin.settings.restoreScrollAge = DEFAULT_SETTINGS.restoreScrollAge),
+    //     ).addToggle((toggle) =>
+    //         toggle.setValue(this.plugin.settings.restoreScrollAge).onChange(async (value) => {
+    //             this.plugin.settings.restoreScrollAge = value;
+    //             await this.plugin.saveSettings();
+    //         }),
+    //     );
+    //
+    //     const initialShow = this.plugin.settings.restoreScrollLimit > 0;
+    //     restoreScrollAgeSetting.settingEl.style.display = initialShow ? "" : "none";
+    //
+    //     if (Platform.isMobile) {
+    //         this.createSetting(
+    //             "Enable in PDFs",
+    //             "Enable restoring position in PDF files.",
+    //         ).addToggle((toggle) =>
+    //             toggle.setValue(this.plugin.settings.restoreScrollPdf).onChange(async (value) => {
+    //                 this.plugin.settings.restoreScrollPdf = value;
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //         );
+    //     }
+    //
+    //     this.createSetting("Enable in Bases", "Enable restoring position in Bases.").addToggle(
+    //         (toggle) =>
+    //             toggle.setValue(this.plugin.settings.restoreScrollBases).onChange(async (value) => {
+    //                 this.plugin.settings.restoreScrollBases = value;
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     this.createSetting(
+    //         "Enable for link use",
+    //         "Enable restoring position when clicking links to files (not headings).",
+    //     ).addToggle((toggle) =>
+    //         toggle.setValue(this.plugin.settings.restoreScrollFileLink).onChange(async (value) => {
+    //             this.plugin.settings.restoreScrollFileLink = value;
+    //             await this.plugin.saveSettings();
+    //         }),
+    //     );
+    //
+    //     this.createSetting(
+    //         "Enable only on launch",
+    //         "Only restore position once per file per session.",
+    //     ).addToggle((toggle) =>
+    //         toggle
+    //             .setValue(this.plugin.settings.restoreScrollInitialOnly)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.restoreScrollInitialOnly = value;
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     this.createSetting(
+    //         "Store positions in file",
+    //         "Save positions inside a file to keep them after Obsidian restarts.",
+    //     ).addToggle((toggle) =>
+    //         toggle
+    //             .setValue(this.plugin.settings.restoreScrollFileEnabled)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.restoreScrollFileEnabled = value;
+    //                 this.display();
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     this.settingsEnabled &&= this.plugin.settings.restoreScrollFileEnabled;
+    //
+    //     this.createSetting(
+    //         "Storage file path",
+    //         "Where to store scrolling & cursor positions.",
+    //     ).addText((input) => {
+    //         input.setValue(this.plugin.settings.restoreScrollFilePath).onChange((value) => {
+    //             this.proposedRestoreScrollStoreFile = value;
+    //         });
+    //
+    //         const onConfirm = async () => {
+    //             // const newFile = await this.plugin.restoreScroll.renameStatesFile(
+    //             //     this.proposedRestoreScrollStoreFile,
+    //             // );
+    //             //
+    //             // if (newFile) {
+    //             //     this.plugin.settings.restoreScrollFilePath = newFile;
+    //             //     this.proposedRestoreScrollStoreFile = null;
+    //             //     await this.plugin.saveSettings();
+    //             // }
+    //         };
+    //
+    //         // Submit new file path when pressing enter
+    //         const handleKeydown = (e: KeyboardEvent) => {
+    //             if (e.key === "Enter") void onConfirm();
+    //         };
+    //         input.inputEl.addEventListener("keydown", handleKeydown);
+    //         this.plugin.register(() => input.inputEl.removeEventListener("keydown", handleKeydown));
+    //
+    //         // Try vertical layout
+    //         let parentEl: HTMLElement;
+    //         if (input.inputEl.parentElement) {
+    //             parentEl = input.inputEl.parentElement;
+    //             parentEl.setCssStyles({
+    //                 display: "flex",
+    //                 alignItems: "flex-end",
+    //                 flexDirection: "column",
+    //                 marginBottom: "-1.5em",
+    //             });
+    //         } else {
+    //             parentEl = this.containerEl;
+    //         }
+    //
+    //         const buttonRow = parentEl.createDiv({ cls: "setting-item-control" });
+    //         buttonRow.setCssStyles({ display: "flex" });
+    //
+    //         // Reset button
+    //         const resetButton = buttonRow.createDiv({
+    //             cls: "clickable-icon extra-setting-button",
+    //         });
+    //         if (this.settingsEnabled) resetButton.setAttr("aria-label", "Cancel changes");
+    //         setIcon(resetButton, "reset");
+    //         resetButton.onclick = () => {
+    //             if (this.proposedRestoreScrollStoreFile === null) return;
+    //             input.setValue(this.plugin.settings.restoreScrollFilePath);
+    //             this.proposedRestoreScrollStoreFile = null;
+    //         };
+    //
+    //         // Submit new file path with confirm button
+    //         const confirmButton = buttonRow.createEl("button", { text: "Confirm" });
+    //         confirmButton.onclick = onConfirm;
+    //         confirmButton.disabled = !this.settingsEnabled;
+    //     });
+    // }
+    //
+    // private displayMathJaxSettings() {
+    //     this.createHeading("Horizontal scrolling of MathJax");
+    //
+    //     this.createSetting(
+    //         "Enable",
+    //         "Allow horizontal scrolling of inline MathJax without scrolling the entire viewport.",
+    //     ).addToggle((toggle) =>
+    //         toggle.setValue(this.plugin.settings.mathjaxScrollEnabled).onChange(async (value) => {
+    //             this.plugin.settings.mathjaxScrollEnabled = value;
+    //             this.plugin.featureRegistery.triggerSettingsChange();
+    //             await this.plugin.saveSettings();
+    //         }),
+    //     );
+    // }
+    //
+    // private displayFileTreeSettings() {
+    //     if (Platform.isMobile) return;
+    //
+    //     this.createHeading("Horizontal scrolling in file tree");
+    //
+    //     this.createSetting(
+    //         "Enable",
+    //         "Allow horizontal scrolling in the file tree and show a scrollbar.",
+    //     ).addToggle((toggle) =>
+    //         toggle
+    //             .setValue(this.plugin.settings.horizontalFileTreeEnabled)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.horizontalFileTreeEnabled = value;
+    //                 // TODO: refactor: module should subscribe to event
+    //                 // this.plugin.fileTree.updateStyle();
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    // }
+    //
+    // private displayScrollbarSettings() {
+    //     if (Platform.isMacOS) return;
+    //
+    //     this.createHeading("Scrollbars");
+    //
+    //     this.createSetting(
+    //         "Scrollbar visibility",
+    //         "When to show the scrollbar in notes and PDFs.",
+    //         () => {
+    //             this.plugin.settings.scrollbarVisibility = DEFAULT_SETTINGS.scrollbarVisibility;
+    //             this.plugin.featureRegistery.triggerSettingsChange();
+    //         },
+    //     ).addDropdown((dropdown) =>
+    //         dropdown
+    //             .addOption("hide", "Always hide scrollbar")
+    //             .addOption("scroll", "Show scrollbar while scrolling")
+    //             .addOption("show", "Always show scrollbar")
+    //             .setValue(this.plugin.settings.scrollbarVisibility)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.scrollbarVisibility = value;
+    //                 this.plugin.featureRegistery.triggerSettingsChange();
+    //                 this.display();
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     if (Platform.isLinux && Platform.isDesktop) {
+    //         this.settingsEnabled = this.plugin.settings.scrollbarVisibility !== "hide";
+    //
+    //         this.createSetting("Scrollbar thickness", "Scrollbar width in pixels.", () => {
+    //             this.plugin.settings.scrollbarWidth = DEFAULT_SETTINGS.scrollbarWidth;
+    //             this.plugin.featureRegistery.triggerSettingsChange();
+    //         }).addSlider((slider) =>
+    //             slider
+    //                 .setLimits(0, 30, 1)
+    //                 .setValue(this.plugin.settings.scrollbarWidth)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.scrollbarWidth = value;
+    //                     this.plugin.featureRegistery.triggerSettingsChange();
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //     }
+    // }
+    //
+    // private displayLineLengthSettings() {
+    //     if (Platform.isMobile) return;
+    //
+    //     this.createHeading("Line length");
+    //
+    //     // const readableLineLengthEnabled = this.plugin.lineLength.getObsidianReadableLineLength();
+    //
+    //     this.createSetting(
+    //         "Readable line length",
+    //         "Limit maximum line length. Less content fits on screen, but long blocks of text are more readable.",
+    //     ).addToggle((toggle) =>
+    //         toggle./*setValue(readableLineLengthEnabled).*/ onChange(async (value) => {
+    //             // this.plugin.lineLength.setObsidianReadableLineLength(value);
+    //             this.display();
+    //             await this.plugin.saveSettings();
+    //         }),
+    //     );
+    //
+    //     // Disable further settings if readable line length is disabled.
+    //     // this.settingsEnabled = readableLineLengthEnabled;
+    //
+    //     this.createSetting(
+    //         "Length unit",
+    //         "Choose to set the line length as percentage, pixels or characters.",
+    //         () => (this.plugin.settings.lineLengthUnit = DEFAULT_SETTINGS.lineLengthUnit),
+    //     ).addDropdown((dropdown) =>
+    //         dropdown
+    //             .addOption("pixels", "Pixels (px)")
+    //             .addOption("characters", "Characters (ch)")
+    //             .addOption("percentage", "Percentage (%)")
+    //             .setValue(this.plugin.settings.lineLengthUnit)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.lineLengthUnit = value;
+    //                 this.plugin.featureRegistery.triggerSettingsChange();
+    //                 this.display();
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    //
+    //     switch (this.plugin.settings.lineLengthUnit) {
+    //         case "pixels":
+    //             this.createSetting(
+    //                 "Number of pixels",
+    //                 "Maximum line length as pixels (px).",
+    //                 () => {
+    //                     this.plugin.settings.lineLengthPixels = DEFAULT_SETTINGS.lineLengthPixels;
+    //                     this.plugin.featureRegistery.triggerSettingsChange();
+    //                 },
+    //             ).addSlider((slider) =>
+    //                 slider
+    //                     .setInstant(true)
+    //                     .setLimits(400, 3000, 50)
+    //                     .setValue(this.plugin.settings.lineLengthPixels)
+    //                     .onChange(async (value) => {
+    //                         this.plugin.settings.lineLengthPixels = value;
+    //                         this.plugin.featureRegistery.triggerSettingsChange();
+    //                         await this.plugin.saveSettings();
+    //                     }),
+    //             );
+    //             break;
+    //         case "characters":
+    //             this.createSetting(
+    //                 "Number of characters",
+    //                 "Maximum line length as character count (ch).",
+    //                 () => {
+    //                     this.plugin.settings.lineLengthCharacters =
+    //                         DEFAULT_SETTINGS.lineLengthCharacters;
+    //                     this.plugin.featureRegistery.triggerSettingsChange();
+    //                 },
+    //             ).addSlider((slider) =>
+    //                 slider
+    //                     .setInstant(true)
+    //                     .setLimits(30, 200, 1)
+    //                     .setValue(this.plugin.settings.lineLengthCharacters)
+    //                     .onChange(async (value) => {
+    //                         this.plugin.settings.lineLengthCharacters = value;
+    //                         this.plugin.featureRegistery.triggerSettingsChange();
+    //                         await this.plugin.saveSettings();
+    //                     }),
+    //             );
+    //             break;
+    //         case "percentage":
+    //             this.createSetting(
+    //                 "Percentage of editor",
+    //                 "Maximum line length as percentage of the editor width (%).",
+    //                 () => {
+    //                     this.plugin.settings.lineLengthPercentage =
+    //                         DEFAULT_SETTINGS.lineLengthPercentage;
+    //                     this.plugin.featureRegistery.triggerSettingsChange();
+    //                 },
+    //             ).addSlider((slider) =>
+    //                 slider
+    //                     .setInstant(true)
+    //                     .setLimits(20, 100, 2)
+    //                     .setValue(this.plugin.settings.lineLengthPercentage)
+    //                     .onChange(async (value) => {
+    //                         this.plugin.settings.lineLengthPercentage = value;
+    //                         this.plugin.featureRegistery.triggerSettingsChange();
+    //                         await this.plugin.saveSettings();
+    //                     }),
+    //             );
+    //             break;
+    //     }
+    // }
+    //
+    // private displayReadModeKeybindsSettings() {
+    //     if (Platform.isMobile) return;
+    //
+    //     this.createHeading("Reading mode keybinds");
+    //
+    //     this.createSetting("Line scroll keybinds", "Scroll by single lines with j/k.").addToggle(
+    //         (toggle) =>
+    //             toggle
+    //                 .setValue(this.plugin.settings.readingLineScrollEnabled)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.readingLineScrollEnabled = value;
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //     );
+    //
+    //     this.createSetting("Half page scroll keybinds", "Scroll half pages with d/u.").addToggle(
+    //         (toggle) =>
+    //             toggle
+    //                 .setValue(this.plugin.settings.readingHalfPageScrollEnabled)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.readingHalfPageScrollEnabled = value;
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //     );
+    //
+    //     this.createSetting(
+    //         "Top/bottom scroll keybinds",
+    //         "Scroll to top/bottom with g/G.",
+    //     ).addToggle((toggle) =>
+    //         toggle
+    //             .setValue(this.plugin.settings.readingTopBottomScrollEnabled)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.readingTopBottomScrollEnabled = value;
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    // }
+    //
+    // private displayRibbonSettings() {
+    //     if (Platform.isDesktop) return;
+    //
+    //     this.createHeading("Ribbon commands");
+    //
+    //     this.createSetting(
+    //         "Commands for scrolling to top/bottom",
+    //         "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+    //     ).addToggle((toggle) =>
+    //         toggle
+    //             .setValue(this.plugin.settings.ribbonScrollButtonsEnabled)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.ribbonScrollButtonsEnabled = value;
+    //                 this.plugin.featureRegistery.triggerSettingsChange();
+    //                 await this.plugin.saveSettings();
+    //             }),
+    //     );
+    // }
+    //
+    // private displayScrollButtonSettings() {
+    //     this.createHeading("Scroll buttons");
+    //
+    //     this.createSetting(
+    //         "Show top/bottom scroll buttons",
+    //         "Adds buttons to scroll to the top/bottom of the file",
+    //     ).addToggle((toggle) =>
+    //         toggle.setValue(this.plugin.settings.scrollButtonsEnabled).onChange(async (value) => {
+    //             this.plugin.settings.scrollButtonsEnabled = value;
+    //             this.plugin.featureRegistery.triggerSettingsChange();
+    //             this.display();
+    //             await this.plugin.saveSettings();
+    //         }),
+    //     );
+    //     this.settingsEnabled = this.plugin.settings.scrollButtonsEnabled;
+    //
+    //     this.createSetting("Button position", "Moves the buttons in the note").addDropdown(
+    //         (toggle) =>
+    //             toggle
+    //                 .addOptions({ top: "Top", bottom: "Bottom" })
+    //                 .setValue(this.plugin.settings.scrollButtonsPosition)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.scrollButtonsPosition = value;
+    //                     this.plugin.featureRegistery.triggerSettingsChange();
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //     );
+    // }
+    //
+    // private displayMouseScrollSettings() {
+    //     if (Platform.isMobile) return;
+    //
+    //     this.createHeading("Mouse & Touchpad scrolling");
+    //
+    //     this.createSetting(
+    //         "Mode",
+    //         "Native scroll provides simplicity and stability; Simulated scroll is configurable.",
+    //         () => (this.plugin.settings.scrollMode = DEFAULT_SETTINGS.scrollMode),
+    //     ).addDropdown((dropdown) => {
+    //         dropdown
+    //             .addOption("disabled", "Disabled")
+    //             .addOption("native", "Native")
+    //             .addOption("simulated", "Simulated (experimental)")
+    //             .setValue(this.plugin.settings.scrollMode)
+    //             .onChange(async (value) => {
+    //                 this.plugin.settings.scrollMode = value;
+    //                 this.display();
+    //                 await this.plugin.saveSettings();
+    //             });
+    //     });
+    //
+    //     if (this.plugin.settings.scrollMode === "native") {
+    //         this.createSetting(
+    //             "Scroll speed multiplier",
+    //             "Increase the scroll speed. Values below one disable smooth scrolling.",
+    //             () =>
+    //                 (this.plugin.settings.nativeScrollMultiplier =
+    //                     DEFAULT_SETTINGS.nativeScrollMultiplier),
+    //         ).addSlider((slider) =>
+    //             slider
+    //                 .setLimits(0.1, 3, 0.1)
+    //                 .setValue(this.plugin.settings.nativeScrollMultiplier)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.nativeScrollMultiplier = Math.max(value, 0.1);
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //
+    //         this.createSetting(
+    //             "Alt speed multiplier",
+    //             "Speed multiplier while holding the alt key.",
+    //             () =>
+    //                 (this.plugin.settings.nativeAltMultiplier =
+    //                     DEFAULT_SETTINGS.nativeAltMultiplier),
+    //         ).addSlider((slider) =>
+    //             slider
+    //                 .setLimits(0.1, 3, 0.1)
+    //                 .setValue(this.plugin.settings.nativeAltMultiplier)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.nativeAltMultiplier = Math.max(value, 0.1);
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //
+    //         this.createSetting(
+    //             "Disable smooth scrolling",
+    //             "Scroll instantly without transition effect.",
+    //         ).addToggle((toggle) =>
+    //             toggle
+    //                 .setValue(this.plugin.settings.nativeScrollInstant)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.nativeScrollInstant = value;
+    //                     this.display();
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //     } else if (this.plugin.settings.scrollMode === "simulated") {
+    //         this.createSetting(
+    //             "Invert scroll direction (Experimental)",
+    //             "Reverse the scroll direction for mouse wheel and touchpad input.",
+    //         ).addToggle((toggle) =>
+    //             toggle
+    //                 .setValue(this.plugin.settings.simulatedMouseInvert)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.simulatedMouseInvert = value;
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //
+    //         this.createSetting(
+    //             "Mouse scroll speed",
+    //             "How far the page scrolls.",
+    //             () =>
+    //                 (this.plugin.settings.simulatedMouseSpeed =
+    //                     DEFAULT_SETTINGS.simulatedMouseSpeed),
+    //         ).addSlider((slider) =>
+    //             slider
+    //                 .setLimits(1, 100, 1)
+    //                 .setValue(this.plugin.settings.simulatedMouseSpeed)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.simulatedMouseSpeed = value;
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //
+    //         this.createSetting(
+    //             "Mouse scroll smoothness",
+    //             "Duration of the scroll animation.",
+    //             () =>
+    //                 (this.plugin.settings.simulatedMouseSmoothness =
+    //                     DEFAULT_SETTINGS.simulatedMouseSmoothness),
+    //         ).addSlider((slider) =>
+    //             slider
+    //                 .setLimits(0, 100, 1)
+    //                 .setValue(this.plugin.settings.simulatedMouseSmoothness)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.simulatedMouseSmoothness = value;
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //
+    //         this.createSetting(
+    //             "Touchpad detection (Experimental)",
+    //             "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
+    //         ).addToggle((toggle) =>
+    //             toggle
+    //                 .setValue(this.plugin.settings.simulatedTouchpadEnabled)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.simulatedTouchpadEnabled = value;
+    //                     this.display();
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //         this.settingsEnabled &&= this.plugin.settings.simulatedTouchpadEnabled;
+    //
+    //         this.createSetting(
+    //             "Touchpad scroll speed",
+    //             "How far the page scrolls.",
+    //             () =>
+    //                 (this.plugin.settings.simulatedTouchpadSpeed =
+    //                     DEFAULT_SETTINGS.simulatedTouchpadSpeed),
+    //         ).addSlider((slider) =>
+    //             slider
+    //                 .setLimits(1, 100, 1)
+    //                 .setValue(this.plugin.settings.simulatedTouchpadSpeed)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.simulatedTouchpadSpeed = value;
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //
+    //         this.createSetting(
+    //             "Touchpad scroll smoothness",
+    //             "Duration of the scroll animation.",
+    //             () =>
+    //                 (this.plugin.settings.simulatedTouchpadSmoothness =
+    //                     DEFAULT_SETTINGS.simulatedTouchpadSmoothness),
+    //         ).addSlider((slider) =>
+    //             slider
+    //                 .setLimits(0, 100, 1)
+    //                 .setValue(this.plugin.settings.simulatedTouchpadSmoothness)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.simulatedTouchpadSmoothness = value;
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //
+    //         this.createSetting(
+    //             "Touchpad friction threshold",
+    //             "Threshold between precise and smooth scrolling.\nDefines how much finger movement is needed before scrolling decelerates and stops.",
+    //             () =>
+    //                 (this.plugin.settings.simulatedTouchpadFrictionThreshold =
+    //                     DEFAULT_SETTINGS.simulatedTouchpadFrictionThreshold),
+    //         ).addSlider((slider) =>
+    //             slider
+    //                 .setLimits(1, 100, 1)
+    //                 .setValue(this.plugin.settings.simulatedTouchpadFrictionThreshold)
+    //                 .onChange(async (value) => {
+    //                     this.plugin.settings.simulatedTouchpadFrictionThreshold = value;
+    //                     await this.plugin.saveSettings();
+    //                 }),
+    //         );
+    //     }
+    // }
 }

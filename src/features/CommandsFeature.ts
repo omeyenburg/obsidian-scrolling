@@ -1,4 +1,4 @@
-import { Platform } from "obsidian";
+import { Platform, SettingDefinitionPage } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
 import type { ScrollingPluginSettings } from "@core/settings";
@@ -13,6 +13,13 @@ function scrollToBottom(el: Element) {
 
 export class CommandsFeature implements Feature {
     public readonly id = "commands";
+
+    public readonly settings = {
+        name: "todo: merge into scroll buttons",
+        type: "page",
+        items: [],
+    } as const satisfies SettingDefinitionPage;
+
     private plugin!: ScrollingPlugin;
     private scrollTopRibbon: HTMLElement | null = null;
     private scrollBottomRibbon: HTMLElement | null = null;

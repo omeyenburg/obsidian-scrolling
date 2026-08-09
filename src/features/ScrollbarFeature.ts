@@ -1,10 +1,44 @@
-import { Platform } from "obsidian";
+import { Platform, SettingDefinitionPage } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
 import type { ScrollingPluginSettings } from "@core/settings";
 
 export class ScrollbarFeature implements Feature {
     public readonly id = "scrollbar";
+
+    public readonly settings = {
+        name: "Scrollbars",
+        type: "page",
+        items: [
+            {
+                name: "Scrollbar visibility",
+                desc: "When to show the scrollbar in notes and PDFs.",
+                control: {
+                    type: "dropdown",
+                    key: "scrollbarVisibility",
+                    defaultValue: "scroll",
+                    options: {
+                        hide: "Always hide scrollbar",
+                        scroll: "Show scrollbar while scrolling",
+                        show: "Always show scrollbar",
+                    },
+                },
+            },
+            {
+                name: "Scrollbar thickness",
+                desc: "Scrollbar width in pixels.",
+                control: {
+                    type: "slider",
+                    key: "scrollbarWidth",
+                    defaultValue: 10,
+                    min: 0,
+                    max: 30,
+                    step: 1,
+                },
+            },
+        ],
+    } as const satisfies SettingDefinitionPage;
+
     private plugin!: ScrollingPlugin;
     private scrollTimeouts = new Map<HTMLElement, number>();
     private readonly SCROLLBAR_IDLE_TIMEOUT = 1000;

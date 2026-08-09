@@ -1,9 +1,28 @@
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
 import type { ScrollingPluginSettings } from "@core/settings";
+import { SettingDefinitionPage } from "obsidian";
 
 export class FileTreeFeature implements Feature {
     public readonly id = "fileTree";
+
+    public readonly settings = {
+        name: "File tree",
+        desc: "Horizontal scrolling in the file tree",
+        type: "page",
+        items: [
+            {
+                name: "Enable",
+                desc: "Allow horizontal scrolling in the file tree and show a scrollbar.",
+                control: {
+                    type: "toggle",
+                    key: "horizontalFileTreeEnabled",
+                    defaultValue: false,
+                },
+            },
+        ],
+    } as const satisfies SettingDefinitionPage;
+
     private plugin!: ScrollingPlugin;
     private fileTreeScrollEnabled = false;
 

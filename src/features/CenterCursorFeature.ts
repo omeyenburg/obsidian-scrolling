@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Platform } from "obsidian";
+import { Editor, MarkdownView, Platform, SettingDefinitionPage } from "obsidian";
 import { syntaxTree } from "@codemirror/language";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
@@ -14,6 +14,73 @@ interface ScrollInfo {
 export class CenterCursorFeature implements Feature {
     public readonly id = "followCursor";
     private plugin!: ScrollingPlugin;
+
+    public readonly settings = {
+        name: "Centered cursor",
+        type: "page",
+        items: [
+            {
+                name: "Enable",
+                desc: "Automatically scrolls the view to keep the cursor near the center when you move it.",
+                control: {
+                    type: "toggle",
+                    key: "followCursorEnabled",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Trigger distance",
+                desc: "How far the cursor can move from the center before scrolling (%).\n0% keeps the cursor perfectly centered.",
+                control: {
+                    type: "slider",
+                    key: "followCursorRadius",
+                    defaultValue: 50,
+                    min: 0,
+                    max: 100,
+                    step: 1,
+                },
+            },
+            {
+                name: "Animation smoothness",
+                desc: "Duration of the scroll animation.",
+                control: {
+                    type: "slider",
+                    key: "followCursorSmoothness",
+                    defaultValue: 25,
+                    min: 0,
+                    max: 100,
+                    step: 1,
+                },
+            },
+            {
+                name: "Instant scroll on edit",
+                desc: "Do not scroll smoothly while editing text.",
+                control: {
+                    type: "toggle",
+                    key: "followCursorInstantEditScroll",
+                    defaultValue: true,
+                },
+            },
+            {
+                name: "Trigger on mouse interactions (Experimental)",
+                desc: "Update when the cursor is moved using the mouse.",
+                control: {
+                    type: "toggle",
+                    key: "followCursorEnableMouse",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Trigger on mouse selection (Experimental)",
+                desc: "Also update when text is selected using the mouse.",
+                control: {
+                    type: "toggle",
+                    key: "followCursorEnableSelection",
+                    defaultValue: false,
+                },
+            },
+        ],
+    } as const satisfies SettingDefinitionPage;
 
     private recentMouseUp = false;
     private animationFrame = 0;
@@ -139,9 +206,7 @@ export class CenterCursorFeature implements Feature {
         });
     }
 
-    private measureCursorPosition(
-        editor: Editor,
-    ): {
+    private measureCursorPosition(editor: Editor): {
         signedGoalDistance: number;
         goal: number;
         isTable: boolean;

@@ -1,10 +1,49 @@
-import { MarkdownView, WorkspaceLeaf, setIcon } from "obsidian";
+import { MarkdownView, SettingDefinitionPage, WorkspaceLeaf, setIcon } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
 import type { ScrollingPluginSettings } from "@core/settings";
 
 export class ScrollButtonsFeature implements Feature {
     public readonly id = "scrollButtons";
+
+public readonly settings = {
+    name: "Scroll buttons",
+    type: "page",
+    items: [
+        {
+            name: "Commands for scrolling to top/bottom",
+            desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+            control: {
+                type: "toggle",
+                key: "ribbonScrollButtonsEnabled",
+                defaultValue: false,
+            },
+        },
+        {
+            name: "Show top/bottom scroll buttons",
+            desc: "Adds buttons to scroll to the top/bottom of the file.",
+            control: {
+                type: "toggle",
+                key: "scrollButtonsEnabled",
+                defaultValue: false,
+            },
+        },
+        {
+            name: "Button position",
+            desc: "Moves the buttons in the note.",
+            control: {
+                type: "dropdown",
+                key: "scrollButtonsPosition",
+                defaultValue: "top",
+                options: {
+                    top: "Top",
+                    bottom: "Bottom",
+                },
+            },
+        },
+    ],
+} as const satisfies SettingDefinitionPage;
+
     private plugin!: ScrollingPlugin;
     private leaves: Set<WorkspaceLeaf> = new Set();
     private buttonContainers: Set<HTMLElement> = new Set();

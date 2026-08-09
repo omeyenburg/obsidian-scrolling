@@ -1,27 +1,45 @@
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
+import { SettingDefinition } from "obsidian";
+import { features } from "./feature.schema";
 
 export class FeatureRegistry {
-    private readonly plugin: ScrollingPlugin;
-    private readonly features: Map<string, Feature> = new Map();
+    private readonly features: Feature[];
 
-    constructor(plugin: ScrollingPlugin) {
-        this.plugin = plugin;
+    constructor(
+        private readonly plugin: ScrollingPlugin,
+    ) {
+        this.features = features.map(Constructor => new Constructor())
     }
 
-    public register(feature: Feature): void {
-        this.features.set(feature.id, feature);
+    // public register(feature: Feature): void {
+    //     this.features.set(feature.id, feature);
+    // }
+
+    // public get<T extends Feature>(id: string): T | undefined {
+    //     return this.features.get(id) as T | undefined;
+    // }
+
+    getSettingDefinitions() {
+        return this.features.flatMap((feature) => feature.settings);
     }
 
-    public get<T extends Feature>(id: string): T | undefined {
-        return this.features.get(id) as T | undefined;
+    getDefaultSettings() {
+        return Object.fromEntries(
+            this.features.map((feature) => [
+                feature.id,
+                feature.settings.items.flatMap(
+                    (setting) => (setting as SettingDefinition).control?.defaultValue,
+                ),
+            ]),
+        );
     }
 
     public async loadAll(): Promise<void> {
         for (const feature of this.features.values()) {
             try {
                 await feature.onload(this.plugin);
-                console.log(feature.id)
+                console.log(feature.id);
             } catch (err) {
                 console.error(`Failed to load feature "${feature.id}":`, err);
             }
@@ -36,7 +54,7 @@ export class FeatureRegistry {
                 console.error(`Failed to unload feature "${feature.id}":`, err);
             }
         }
-        this.features.clear();
+        // this.features.clear();
     }
 
     public async triggerSettingsChange(): Promise<void> {

@@ -1,4 +1,4 @@
-import { Platform } from "obsidian";
+import { Platform, SettingDefinitionPage } from "obsidian";
 
 import type { default as ScrollingPlugin } from "@core/main";
 import { clamp } from "@core/util";
@@ -16,6 +16,138 @@ function mean(data: number[]): number {
 export class MouseScrollFeature implements Feature {
     readonly id = "mouseScroll";
     private plugin!: ScrollingPlugin;
+
+    public readonly settings = {
+        name: "Mouse & Touchpad scrolling",
+        type: "page",
+        items: [
+            {
+                name: "Mode",
+                desc: "Native scroll provides simplicity and stability; Simulated scroll is configurable.",
+                control: {
+                    type: "dropdown",
+                    key: "scrollMode",
+                    defaultValue: "native",
+                    options: {
+                        disabled: "Disabled",
+                        native: "Native",
+                        simulated: "Simulated (experimental)",
+                    },
+                },
+            },
+            {
+                name: "Scroll speed multiplier",
+                desc: "Increase the scroll speed. Values below one disable smooth scrolling.",
+                control: {
+                    type: "slider",
+                    key: "nativeScrollMultiplier",
+                    defaultValue: 1,
+                    min: 0.1,
+                    max: 3,
+                    step: 0.1,
+                },
+            },
+            {
+                name: "Alt speed multiplier",
+                desc: "Speed multiplier while holding the alt key.",
+                control: {
+                    type: "slider",
+                    key: "nativeAltMultiplier",
+                    defaultValue: 1,
+                    min: 0.1,
+                    max: 3,
+                    step: 0.1,
+                },
+            },
+            {
+                name: "Disable smooth scrolling",
+                desc: "Scroll instantly without transition effect.",
+                control: {
+                    type: "toggle",
+                    key: "nativeScrollInstant",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Invert scroll direction (Experimental)",
+                desc: "Reverse the scroll direction for mouse wheel and touchpad input.",
+                control: {
+                    type: "toggle",
+                    key: "simulatedMouseInvert",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Mouse scroll speed",
+                desc: "How far the page scrolls.",
+                control: {
+                    type: "slider",
+                    key: "simulatedMouseSpeed",
+                    defaultValue: 20,
+                    min: 1,
+                    max: 100,
+                    step: 1,
+                },
+            },
+            {
+                name: "Mouse scroll smoothness",
+                desc: "Duration of the scroll animation.",
+                control: {
+                    type: "slider",
+                    key: "simulatedMouseSmoothness",
+                    defaultValue: 50,
+                    min: 0,
+                    max: 100,
+                    step: 1,
+                },
+            },
+            {
+                name: "Touchpad detection (Experimental)",
+                desc: "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
+                control: {
+                    type: "toggle",
+                    key: "simulatedTouchpadEnabled",
+                    defaultValue: true,
+                },
+            },
+            {
+                name: "Touchpad scroll speed",
+                desc: "How far the page scrolls.",
+                control: {
+                    type: "slider",
+                    key: "simulatedTouchpadSpeed",
+                    defaultValue: 20,
+                    min: 1,
+                    max: 100,
+                    step: 1,
+                },
+            },
+            {
+                name: "Touchpad scroll smoothness",
+                desc: "Duration of the scroll animation.",
+                control: {
+                    type: "slider",
+                    key: "simulatedTouchpadSmoothness",
+                    defaultValue: 50,
+                    min: 0,
+                    max: 100,
+                    step: 1,
+                },
+            },
+            {
+                name: "Touchpad friction threshold",
+                desc: "Threshold between precise and smooth scrolling.\nDefines how much finger movement is needed before scrolling decelerates and stops.",
+                control: {
+                    type: "slider",
+                    key: "simulatedTouchpadFrictionThreshold",
+                    defaultValue: 50,
+                    min: 1,
+                    max: 100,
+                    step: 1,
+                },
+            },
+        ],
+    } as const satisfies SettingDefinitionPage;
 
     private touchpadLastUse = -Infinity;
     private touchpadFriction = 0;

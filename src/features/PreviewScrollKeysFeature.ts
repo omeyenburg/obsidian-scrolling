@@ -1,10 +1,44 @@
-import { MarkdownView, Platform } from "obsidian";
+import { MarkdownView, Platform, SettingDefinitionPage } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
 
 export class PreviewScrollKeysFeature implements Feature {
     public readonly id = "previewScrollKeys";
     private plugin!: ScrollingPlugin;
+
+    public readonly settings = {
+        name: "Reading mode keybinds",
+        type: "page",
+        items: [
+            {
+                name: "Line scroll keybinds",
+                desc: "Scroll by single lines with j/k.",
+                control: {
+                    type: "toggle",
+                    key: "readingLineScrollEnabled",
+                    defaultValue: true,
+                },
+            },
+            {
+                name: "Half page scroll keybinds",
+                desc: "Scroll half pages with d/u.",
+                control: {
+                    type: "toggle",
+                    key: "readingHalfPageScrollEnabled",
+                    defaultValue: true,
+                },
+            },
+            {
+                name: "Top/bottom scroll keybinds",
+                desc: "Scroll to top/bottom with g/G.",
+                control: {
+                    type: "toggle",
+                    key: "readingTopBottomScrollEnabled",
+                    defaultValue: true,
+                },
+            },
+        ],
+    } as const satisfies SettingDefinitionPage;
 
     private goal: number | null = null;
     private scroller: Element | null = null;

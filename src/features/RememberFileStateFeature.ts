@@ -6,6 +6,7 @@ import {
     MarkdownView,
     Notice,
     Platform,
+    SettingDefinitionPage,
     TAbstractFile,
     TFile,
     WorkspaceLeaf,
@@ -30,6 +31,114 @@ class FileLeaf extends WorkspaceLeaf {
 
 export class RememberFileStateFeature implements Feature {
     readonly id = "rememberFileState";
+
+    public readonly settings = {
+        name: "Remember scroll position",
+        desc: "Automatically save your position before closing a file and restore it upon opening the file again.\nThe position will not be restored if the file is already opened in a tab of the same split.",
+        type: "page",
+        items: [
+            {
+                name: "Mode",
+                desc: "Start at the top/bottom of the file, or restore the cursor or scroll position.",
+                control: {
+                    type: "dropdown",
+                    key: "restoreScrollMode",
+                    defaultValue: "top",
+                    options: {
+                        top: "Start at top (Obsidian's default)",
+                        bottom: "Start at bottom",
+                        cursor: "Restore Cursor position",
+                        scroll: "Restore scroll position",
+                    },
+                },
+            },
+            {
+                name: "Delay after opening a note",
+                desc: "Number of milliseconds to wait before restoring position.\nUse if restoring works unreliably.",
+                control: {
+                    type: "slider",
+                    key: "restoreScrollDelay",
+                    defaultValue: 5,
+                    min: 0,
+                    max: 300,
+                    step: 5,
+                },
+            },
+            {
+                name: "Saved positions limit",
+                desc: "TODO",
+                control: {
+                    type: "text",
+                    key: "restoreScrollLimit",
+                    defaultValue: "-1",
+                    placeholder: "Unlimited",
+                },
+            },
+            {
+                name: "Keep oldest scroll positions",
+                desc: "When the limit is reached, keep the oldest saved positions instead of the most recent ones (default).",
+                control: {
+                    type: "toggle",
+                    key: "restoreScrollAge",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Enable in PDFs",
+                desc: "Enable restoring position in PDF files.",
+                control: {
+                    type: "toggle",
+                    key: "restoreScrollPdf",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Enable in Bases",
+                desc: "Enable restoring position in Bases.",
+                control: {
+                    type: "toggle",
+                    key: "restoreScrollBases",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Enable for link use",
+                desc: "Enable restoring position when clicking links to files (not headings).",
+                control: {
+                    type: "toggle",
+                    key: "restoreScrollFileLink",
+                    defaultValue: true,
+                },
+            },
+            {
+                name: "Enable only on launch",
+                desc: "Only restore position once per file per session.",
+                control: {
+                    type: "toggle",
+                    key: "restoreScrollInitialOnly",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Store positions in file",
+                desc: "Save positions inside a file to keep them after Obsidian restarts.",
+                control: {
+                    type: "toggle",
+                    key: "restoreScrollFileEnabled",
+                    defaultValue: true,
+                },
+            },
+            {
+                name: "Storage file path",
+                desc: "Where to store scrolling & cursor positions.",
+                control: {
+                    type: "text",
+                    key: "restoreScrollFilePath",
+                    defaultValue: undefined,
+                },
+            },
+        ],
+    } as const satisfies SettingDefinitionPage;
 
     private plugin!: ScrollingPlugin;
 
