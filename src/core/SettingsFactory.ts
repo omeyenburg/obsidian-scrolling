@@ -12,6 +12,7 @@ import {
     SettingTextAreaControl,
     SettingTextControl,
     SettingToggleControl,
+    SettingNumberControl,
 } from "@core/settings.schema";
 import type { Feature } from "@core/Feature";
 import ScrollingPlugin from "@core/main";
@@ -110,6 +111,8 @@ export class SettingsFactory {
                 return this.renderTextArea(fsi.control as SettingTextAreaControl, onChange);
             case "slider":
                 return this.renderSlider(fsi.control as SettingSliderControl, onChange);
+            case "number":
+                return this.renderNumber(fsi.control as SettingNumberControl, onChange);
         }
     }
 
@@ -149,6 +152,20 @@ export class SettingsFactory {
                     .onChange(onChange)
                     .setLimits(control.min, control.max, control.step)
                     .setDisplayFormat(control.displayFormat);
+            });
+        };
+    }
+
+    private renderNumber(
+        control: SettingNumberControl,
+        onChange: (value: number) => void,
+    ): (setting: Setting) => void {
+        return (setting: Setting) => {
+            setting.addText((slider) => {
+                return slider
+                    .setValue(control.displayFormat(this.plugin.settings[control.key]))
+                    .onChange((value: string) => onChange(control.storeFormat(value)))
+                    .setPlaceholder(control.placeholder)
             });
         };
     }

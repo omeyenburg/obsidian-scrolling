@@ -17,7 +17,7 @@ type SettingControl<K extends string = string> =
     | SettingDropdownControl<K>
     | SettingTextControl<K>
     | SettingTextAreaControl<K>
-    // | SettingNumberControl<K>
+    | SettingNumberControl<K>
     // | SettingFileControl<K>
     // | SettingFolderControl<K>
     // | SettingColorControl<K>
@@ -53,6 +53,16 @@ export interface SettingTextAreaControl<K extends string = string> extends Setti
     type: "textarea";
     placeholder?: string;
     rows?: number;
+}
+
+export interface SettingNumberControl<K extends string = string> extends SettingControlBase<
+    string,
+    K
+> {
+    type: "number";
+    placeholder?: string;
+    displayFormat: (value: number) => string;
+    storeFormat: (value: string) => number | null;
 }
 
 export interface SettingSliderControl<K extends string = string> extends SettingControlBase<

@@ -12,7 +12,6 @@ import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
 import { ScrollbarFeature } from "@features/ScrollbarFeature";
 
-
 type FeatureConstructor = new () => Feature;
 
 export const features = [

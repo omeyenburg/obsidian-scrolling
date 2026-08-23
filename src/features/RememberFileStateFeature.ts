@@ -62,12 +62,25 @@ export class RememberFileStateFeature implements Feature {
             },
             {
                 name: "Saved positions limit",
-                desc: "TODO",
+                desc: "Number of files to remember scroll positions for. Leave empty for unlimited.",
                 control: {
-                    type: "text",
+                    type: "number",
                     key: "restoreScrollLimit",
                     defaultValue: "-1",
                     placeholder: "Unlimited",
+                    displayFormat(value) {
+                        return value > 0 ? value.toString() : "";
+                    },
+                    storeFormat(value) {
+                        const limit = +value;
+                        if (limit.toString().contains(".")) return;
+
+                        if (limit <= 0 || isNaN(limit)) {
+                            return -1;
+                        } else {
+                            return limit;
+                        }
+                    },
                 },
             },
             {
@@ -134,7 +147,7 @@ export class RememberFileStateFeature implements Feature {
                 },
             },
         ],
-    } as const satisfies FeatureSettingsDefinition
+    } as const satisfies FeatureSettingsDefinition;
 
     private plugin!: ScrollingPlugin;
 

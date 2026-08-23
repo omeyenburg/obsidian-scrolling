@@ -1,6 +1,7 @@
 import { Plugin } from "obsidian";
 import type { Events } from "@core/events";
 import type { SettingDefinition } from "@core/settings.schema";
+import { ScrollingPluginSettings } from "./feature.schema";
 
 export interface FeatureSettingsDefinition<K extends string = string> {
     name: string;
@@ -9,7 +10,7 @@ export interface FeatureSettingsDefinition<K extends string = string> {
 }
 
 export interface ScrollingPlugin extends Plugin {
-    settings: any;
+    settings: ScrollingPluginSettings;
     events: Events;
     featureRegistery: any;
     getMainDoc(): Document;
