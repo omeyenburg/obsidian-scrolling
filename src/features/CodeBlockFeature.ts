@@ -1,9 +1,9 @@
-import { Editor, MarkdownView, SettingDefinitionPage, WorkspaceLeaf, debounce } from "obsidian";
+import { Editor, MarkdownView, WorkspaceLeaf, debounce } from "obsidian";
 import { Line } from "@codemirror/state";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
-import type { ScrollingPluginSettings } from "@core/settings";
 import { getVimCursor } from "@core/util";
+import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
 
 export class CodeBlockFeature implements Feature {
     public readonly id = "codeBlock";
@@ -12,7 +12,6 @@ export class CodeBlockFeature implements Feature {
     public readonly settings = {
         name: "Code blocks",
         desc: "Disable code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
-        type: "page",
         items: [
             {
                 name: "Enable",
@@ -24,7 +23,7 @@ export class CodeBlockFeature implements Feature {
                 },
             },
         ],
-    } as const satisfies SettingDefinitionPage;
+    } as const satisfies FeatureSettingsDefinition;
 
     private codeBlockLines: Element[] = [];
     private scrollHandlerAnimationFrame: number | null = null;

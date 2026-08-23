@@ -10,164 +10,164 @@ import {
 import type { default as ScrollingPlugin } from "@core/main";
 import { FeatureRegistry } from "./FeatureRegistry";
 
-export interface ScrollingPluginSettings {
-    /** Scroll viewport when moving the cursor or editing. */
-    followCursorEnabled: boolean;
-    /** Distance the cursor may be moved from the center. (0-100) */
-    followCursorRadius: number;
-    /** Centering animation smoothness. (0-100) */
-    followCursorSmoothness: number;
-    /** Skip scroll animation when editing. */
-    followCursorInstantEditScroll: boolean;
-    /** Trigger scroll on mouse click. */
-    followCursorEnableMouse: boolean;
-    /** Trigger scroll on mouse selection. (hidden) */
-    followCursorEnableSelection: boolean;
-
-    /** Disable code wrapping & enable horizontal code scrolling. */
-    codeBlockScrollEnabled: boolean;
-
-    /** Which position to restore. Values: scroll, cursor, top, bottom */
-    restoreScrollMode: string;
-    /** Number of scroll position entries. Use negative values to ignore the limit. */
-    restoreScrollLimit: number;
-
-    /** Choose to keep scroll positions of the oldest entries instead of most recent (default) */
-    restoreScrollAge: boolean;
-
-    /** Delay before restoring the position in ms. (0-300) */
-    restoreScrollDelay: number;
-    /** Enable scroll position in pdf files. */
-    restoreScrollPdf: boolean;
-    /** Enable scroll position in bases. */
-    restoreScrollBases: boolean;
-    /** Even restore position if Markdown link to file was used. */
-    restoreScrollFileLink: boolean;
-    /** Only restore position once per file per session. */
-    restoreScrollInitialOnly: boolean;
-    /** Store position entries on disk. */
-    restoreScrollFileEnabled: boolean;
-    /** Path to cache file. */
-    restoreScrollFilePath: string;
-
-    /** Cut off long mathjax lines & make them scrollable. */
-    mathjaxScrollEnabled: boolean;
-
-    /** Horizontal scrolling in file tree. Desktop only. */
-    horizontalFileTreeEnabled: boolean;
-
-    /** When to show the scrollbar. Hidden on MacOS. Values: hide, scroll, show */
-    scrollbarVisibility: string;
-    /** Width of scrollbars. Linux only. (0-30) */
-    scrollbarWidth: number;
-
-    /** Unit to use for line length. Values: percentage, pixels, characters */
-    lineLengthUnit: string;
-    /** Line length when using percentage unit or adaptive mode. (20-100) */
-    lineLengthPercentage: number;
-    /** Line length when using char unit. (30-200) */
-    lineLengthCharacters: number;
-    /** Line length when using pixels unit. (50-3000) */
-    lineLengthPixels: number;
-
-    /** Enable keybinds to scroll by single lines in reading mode. */
-    readingLineScrollEnabled: boolean;
-    /** Enable keybinds to scroll by half pages in reading mode. */
-    readingHalfPageScrollEnabled: boolean;
-    /** Enable keybinds to scroll to top/bottom in reading mode. */
-    readingTopBottomScrollEnabled: boolean;
-
-    /** Show ribbon buttons to scroll to top/bottom. (Mobile only) */
-    ribbonScrollButtonsEnabled: boolean;
-
-    /** Customization method for mouse/touchpad scroll. Values: disabled, native, simulated */
-    scrollMode: string;
-    /** Scroll speed multiplier. (0.1-3.0) */
-    nativeScrollMultiplier: number;
-    /** Scroll speed multiplier when holding alt. (0.1-3.0) */
-    nativeAltMultiplier: number;
-    /** Skip scroll animation. */
-    nativeScrollInstant: boolean;
-    /** Invert direction of vertical scroll. (hidden) */
-    simulatedMouseInvert: boolean;
-    /** Scroll speed multiplier. In percent. (1-100) */
-    simulatedMouseSpeed: number;
-    /** Scroll smoothness. In percent. (0-100) */
-    simulatedMouseSmoothness: number;
-    /** Enable touchpad detection. Otherwise mouse settings are always used. (hidden) */
-    simulatedTouchpadEnabled: boolean;
-    /** Scroll speed multiplier. In percent. (1-100) */
-    simulatedTouchpadSpeed: number;
-    /** Scroll smoothness. In percent. (0-100) */
-    simulatedTouchpadSmoothness: number;
-    /** Threshold between precise and smooth scrolling. In percent. (1-100) */
-    simulatedTouchpadFrictionThreshold: number;
-
-    /** Show scroll-to-top/bottom buttons */
-    scrollButtonsEnabled: boolean;
-    /** Where to show the buttons. Values: top, bottom */
-    scrollButtonsPosition: string;
-
-    /** Show experimental settings. (hidden) */
-    enableExperimentalSettings: boolean;
-}
-
-export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
-    followCursorEnabled: false,
-    followCursorRadius: 50,
-    followCursorSmoothness: 25,
-    followCursorInstantEditScroll: true,
-    followCursorEnableMouse: false,
-    followCursorEnableSelection: false,
-
-    codeBlockScrollEnabled: false,
-
-    restoreScrollMode: "top",
-    restoreScrollLimit: -1,
-    restoreScrollAge: false,
-    restoreScrollDelay: 5,
-    restoreScrollPdf: false,
-    restoreScrollBases: false,
-    restoreScrollFileLink: true,
-    restoreScrollInitialOnly: false,
-    restoreScrollFileEnabled: true,
-    restoreScrollFilePath: undefined,
-
-    mathjaxScrollEnabled: false,
-
-    horizontalFileTreeEnabled: false,
-
-    scrollbarVisibility: "show",
-    scrollbarWidth: 12,
-
-    lineLengthUnit: "pixels",
-    lineLengthPercentage: 50,
-    lineLengthCharacters: 50,
-    lineLengthPixels: 700,
-
-    readingLineScrollEnabled: true,
-    readingHalfPageScrollEnabled: true,
-    readingTopBottomScrollEnabled: true,
-
-    ribbonScrollButtonsEnabled: true,
-
-    scrollMode: "disabled",
-    nativeScrollMultiplier: 1.0,
-    nativeAltMultiplier: 1,
-    nativeScrollInstant: false,
-    simulatedMouseInvert: false,
-    simulatedMouseSpeed: 50,
-    simulatedMouseSmoothness: 75,
-    simulatedTouchpadEnabled: true,
-    simulatedTouchpadSmoothness: 75,
-    simulatedTouchpadFrictionThreshold: 20,
-    simulatedTouchpadSpeed: 50,
-
-    scrollButtonsEnabled: false,
-    scrollButtonsPosition: "bottom",
-
-    enableExperimentalSettings: false,
-};
+// export interface ScrollingPluginSettings {
+//     /** Scroll viewport when moving the cursor or editing. */
+//     followCursorEnabled: boolean;
+//     /** Distance the cursor may be moved from the center. (0-100) */
+//     followCursorRadius: number;
+//     /** Centering animation smoothness. (0-100) */
+//     followCursorSmoothness: number;
+//     /** Skip scroll animation when editing. */
+//     followCursorInstantEditScroll: boolean;
+//     /** Trigger scroll on mouse click. */
+//     followCursorEnableMouse: boolean;
+//     /** Trigger scroll on mouse selection. (hidden) */
+//     followCursorEnableSelection: boolean;
+//
+//     /** Disable code wrapping & enable horizontal code scrolling. */
+//     codeBlockScrollEnabled: boolean;
+//
+//     /** Which position to restore. Values: scroll, cursor, top, bottom */
+//     restoreScrollMode: string;
+//     /** Number of scroll position entries. Use negative values to ignore the limit. */
+//     restoreScrollLimit: number;
+//
+//     /** Choose to keep scroll positions of the oldest entries instead of most recent (default) */
+//     restoreScrollAge: boolean;
+//
+//     /** Delay before restoring the position in ms. (0-300) */
+//     restoreScrollDelay: number;
+//     /** Enable scroll position in pdf files. */
+//     restoreScrollPdf: boolean;
+//     /** Enable scroll position in bases. */
+//     restoreScrollBases: boolean;
+//     /** Even restore position if Markdown link to file was used. */
+//     restoreScrollFileLink: boolean;
+//     /** Only restore position once per file per session. */
+//     restoreScrollInitialOnly: boolean;
+//     /** Store position entries on disk. */
+//     restoreScrollFileEnabled: boolean;
+//     /** Path to cache file. */
+//     restoreScrollFilePath: string;
+//
+//     /** Cut off long mathjax lines & make them scrollable. */
+//     mathjaxScrollEnabled: boolean;
+//
+//     /** Horizontal scrolling in file tree. Desktop only. */
+//     horizontalFileTreeEnabled: boolean;
+//
+//     /** When to show the scrollbar. Hidden on MacOS. Values: hide, scroll, show */
+//     scrollbarVisibility: string;
+//     /** Width of scrollbars. Linux only. (0-30) */
+//     scrollbarWidth: number;
+//
+//     /** Unit to use for line length. Values: percentage, pixels, characters */
+//     lineLengthUnit: string;
+//     /** Line length when using percentage unit or adaptive mode. (20-100) */
+//     lineLengthPercentage: number;
+//     /** Line length when using char unit. (30-200) */
+//     lineLengthCharacters: number;
+//     /** Line length when using pixels unit. (50-3000) */
+//     lineLengthPixels: number;
+//
+//     /** Enable keybinds to scroll by single lines in reading mode. */
+//     readingLineScrollEnabled: boolean;
+//     /** Enable keybinds to scroll by half pages in reading mode. */
+//     readingHalfPageScrollEnabled: boolean;
+//     /** Enable keybinds to scroll to top/bottom in reading mode. */
+//     readingTopBottomScrollEnabled: boolean;
+//
+//     /** Show ribbon buttons to scroll to top/bottom. (Mobile only) */
+//     ribbonScrollButtonsEnabled: boolean;
+//
+//     /** Customization method for mouse/touchpad scroll. Values: disabled, native, simulated */
+//     scrollMode: string;
+//     /** Scroll speed multiplier. (0.1-3.0) */
+//     nativeScrollMultiplier: number;
+//     /** Scroll speed multiplier when holding alt. (0.1-3.0) */
+//     nativeAltMultiplier: number;
+//     /** Skip scroll animation. */
+//     nativeScrollInstant: boolean;
+//     /** Invert direction of vertical scroll. (hidden) */
+//     simulatedMouseInvert: boolean;
+//     /** Scroll speed multiplier. In percent. (1-100) */
+//     simulatedMouseSpeed: number;
+//     /** Scroll smoothness. In percent. (0-100) */
+//     simulatedMouseSmoothness: number;
+//     /** Enable touchpad detection. Otherwise mouse settings are always used. (hidden) */
+//     simulatedTouchpadEnabled: boolean;
+//     /** Scroll speed multiplier. In percent. (1-100) */
+//     simulatedTouchpadSpeed: number;
+//     /** Scroll smoothness. In percent. (0-100) */
+//     simulatedTouchpadSmoothness: number;
+//     /** Threshold between precise and smooth scrolling. In percent. (1-100) */
+//     simulatedTouchpadFrictionThreshold: number;
+//
+//     /** Show scroll-to-top/bottom buttons */
+//     scrollButtonsEnabled: boolean;
+//     /** Where to show the buttons. Values: top, bottom */
+//     scrollButtonsPosition: string;
+//
+//     /** Show experimental settings. (hidden) */
+//     enableExperimentalSettings: boolean;
+// }
+//
+// export const DEFAULT_SETTINGS: ScrollingPluginSettings = {
+//     followCursorEnabled: false,
+//     followCursorRadius: 50,
+//     followCursorSmoothness: 25,
+//     followCursorInstantEditScroll: true,
+//     followCursorEnableMouse: false,
+//     followCursorEnableSelection: false,
+//
+//     codeBlockScrollEnabled: false,
+//
+//     restoreScrollMode: "top",
+//     restoreScrollLimit: -1,
+//     restoreScrollAge: false,
+//     restoreScrollDelay: 5,
+//     restoreScrollPdf: false,
+//     restoreScrollBases: false,
+//     restoreScrollFileLink: true,
+//     restoreScrollInitialOnly: false,
+//     restoreScrollFileEnabled: true,
+//     restoreScrollFilePath: undefined,
+//
+//     mathjaxScrollEnabled: false,
+//
+//     horizontalFileTreeEnabled: false,
+//
+//     scrollbarVisibility: "show",
+//     scrollbarWidth: 12,
+//
+//     lineLengthUnit: "pixels",
+//     lineLengthPercentage: 50,
+//     lineLengthCharacters: 50,
+//     lineLengthPixels: 700,
+//
+//     readingLineScrollEnabled: true,
+//     readingHalfPageScrollEnabled: true,
+//     readingTopBottomScrollEnabled: true,
+//
+//     ribbonScrollButtonsEnabled: true,
+//
+//     scrollMode: "disabled",
+//     nativeScrollMultiplier: 1.0,
+//     nativeAltMultiplier: 1,
+//     nativeScrollInstant: false,
+//     simulatedMouseInvert: false,
+//     simulatedMouseSpeed: 50,
+//     simulatedMouseSmoothness: 75,
+//     simulatedTouchpadEnabled: true,
+//     simulatedTouchpadSmoothness: 75,
+//     simulatedTouchpadFrictionThreshold: 20,
+//     simulatedTouchpadSpeed: 50,
+//
+//     scrollButtonsEnabled: false,
+//     scrollButtonsPosition: "bottom",
+//
+//     enableExperimentalSettings: false,
+// };
 
 export class ScrollingSettingTab extends PluginSettingTab {
     readonly plugin: ScrollingPlugin;
@@ -184,7 +184,7 @@ export class ScrollingSettingTab extends PluginSettingTab {
         console.log(shape)
     }
 
-    getSettingDefinitions() {
+    getSettingDefinitions(): SettingDefinitionItem[] {
         return this.featureRegistery.getSettingDefinitions()
     }
 

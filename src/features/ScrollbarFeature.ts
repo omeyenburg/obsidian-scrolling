@@ -1,14 +1,14 @@
-import { Platform, SettingDefinitionPage } from "obsidian";
+import { Platform } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
-import type { ScrollingPluginSettings } from "@core/settings";
+import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
 
 export class ScrollbarFeature implements Feature {
     public readonly id = "scrollbar";
 
     public readonly settings = {
         name: "Scrollbars",
-        type: "page",
+        desc: "",
         items: [
             {
                 name: "Scrollbar visibility",
@@ -37,7 +37,7 @@ export class ScrollbarFeature implements Feature {
                 },
             },
         ],
-    } as const satisfies SettingDefinitionPage;
+    } as const satisfies FeatureSettingsDefinition
 
     private plugin!: ScrollingPlugin;
     private scrollTimeouts = new Map<HTMLElement, number>();

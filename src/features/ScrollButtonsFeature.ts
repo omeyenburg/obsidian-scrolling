@@ -1,48 +1,48 @@
-import { MarkdownView, SettingDefinitionPage, WorkspaceLeaf, setIcon } from "obsidian";
+import { MarkdownView, WorkspaceLeaf, setIcon } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
-import type { ScrollingPluginSettings } from "@core/settings";
+import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
 
 export class ScrollButtonsFeature implements Feature {
     public readonly id = "scrollButtons";
 
-public readonly settings = {
-    name: "Scroll buttons",
-    type: "page",
-    items: [
-        {
-            name: "Commands for scrolling to top/bottom",
-            desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
-            control: {
-                type: "toggle",
-                key: "ribbonScrollButtonsEnabled",
-                defaultValue: false,
-            },
-        },
-        {
-            name: "Show top/bottom scroll buttons",
-            desc: "Adds buttons to scroll to the top/bottom of the file.",
-            control: {
-                type: "toggle",
-                key: "scrollButtonsEnabled",
-                defaultValue: false,
-            },
-        },
-        {
-            name: "Button position",
-            desc: "Moves the buttons in the note.",
-            control: {
-                type: "dropdown",
-                key: "scrollButtonsPosition",
-                defaultValue: "top",
-                options: {
-                    top: "Top",
-                    bottom: "Bottom",
+    public readonly settings = {
+        name: "Scroll buttons",
+        desc: "",
+        items: [
+            {
+                name: "Commands for scrolling to top/bottom",
+                desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+                control: {
+                    type: "toggle",
+                    key: "ribbonScrollButtonsEnabled",
+                    defaultValue: false,
                 },
             },
-        },
-    ],
-} as const satisfies SettingDefinitionPage;
+            {
+                name: "Show top/bottom scroll buttons",
+                desc: "Adds buttons to scroll to the top/bottom of the file.",
+                control: {
+                    type: "toggle",
+                    key: "scrollButtonsEnabled",
+                    defaultValue: false,
+                },
+            },
+            {
+                name: "Button position",
+                desc: "Moves the buttons in the note.",
+                control: {
+                    type: "dropdown",
+                    key: "scrollButtonsPosition",
+                    defaultValue: "top",
+                    options: {
+                        top: "Top",
+                        bottom: "Bottom",
+                    },
+                },
+            },
+        ],
+    } as const satisfies FeatureSettingsDefinition
 
     private plugin!: ScrollingPlugin;
     private leaves: Set<WorkspaceLeaf> = new Set();
@@ -148,14 +148,16 @@ public readonly settings = {
     private clearButtons(): void {
         for (const leaf of this.leaves) {
             if (leaf.view && leaf.view.containerEl) {
-                const containers = leaf.view.containerEl.findAll(".scrolling-overlay-button-container");
+                const containers = leaf.view.containerEl.findAll(
+                    ".scrolling-overlay-button-container",
+                );
                 for (const el of containers) {
                     el.remove();
                 }
             }
         }
         this.leaves.clear();
-        
+
         for (const container of this.buttonContainers) {
             container.remove();
         }

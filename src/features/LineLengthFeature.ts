@@ -1,7 +1,7 @@
-import { Platform, SettingDefinitionItem, SettingDefinitionPage, debounce } from "obsidian";
+import { Platform, debounce } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
-import type { ScrollingPluginSettings } from "@core/settings";
+import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
 
 export class LineLengthFeature implements Feature {
     public readonly id = "lineLength";
@@ -16,7 +16,7 @@ export class LineLengthFeature implements Feature {
 
     public readonly settings = {
         name: "Line length",
-        type: "page",
+        desc: "",
         items: [
             {
                 name: "Readable line length",
@@ -78,7 +78,7 @@ export class LineLengthFeature implements Feature {
                 },
             },
         ],
-    } as const satisfies SettingDefinitionPage;
+    } as const satisfies FeatureSettingsDefinition;
 
     public onunload(): void {
         this.plugin.removeStyleProperty("--file-line-width");

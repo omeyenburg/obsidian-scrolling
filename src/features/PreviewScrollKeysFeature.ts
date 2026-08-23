@@ -1,6 +1,7 @@
-import { MarkdownView, Platform, SettingDefinitionPage } from "obsidian";
+import { MarkdownView, Platform } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
+import { FeatureSettingsDefinition } from "@core/feature.schema";
 
 export class PreviewScrollKeysFeature implements Feature {
     public readonly id = "previewScrollKeys";
@@ -8,7 +9,7 @@ export class PreviewScrollKeysFeature implements Feature {
 
     public readonly settings = {
         name: "Reading mode keybinds",
-        type: "page",
+        desc: "",
         items: [
             {
                 name: "Line scroll keybinds",
@@ -38,7 +39,7 @@ export class PreviewScrollKeysFeature implements Feature {
                 },
             },
         ],
-    } as const satisfies SettingDefinitionPage;
+    } as const satisfies FeatureSettingsDefinition
 
     private goal: number | null = null;
     private scroller: Element | null = null;

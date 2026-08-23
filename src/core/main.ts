@@ -2,7 +2,8 @@ import { Plugin } from "obsidian";
 
 import { Events } from "@core/events";
 import { FeatureRegistry } from "@core/FeatureRegistry";
-import { ScrollingSettingTab, ScrollingPluginSettings, DEFAULT_SETTINGS } from "@core/settings";
+import { ScrollingSettingTab } from "@core/settings";
+import { ScrollingPluginSettings } from "./feature.schema";
 
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
@@ -10,11 +11,12 @@ export default class ScrollingPlugin extends Plugin {
     featureRegistery!: FeatureRegistry;
 
     async onload() {
+        this.featureRegistery = new FeatureRegistry(this);
+
         await this.loadSettings();
 
         this.events = new Events(this);
 
-        this.featureRegistery = new FeatureRegistry(this);
         await this.featureRegistery.loadAll();
 
         this.addSettingTab(new ScrollingSettingTab(this, this.featureRegistery));
@@ -24,19 +26,21 @@ export default class ScrollingPlugin extends Plugin {
         // await this.restoreScroll.loadStatesFile(); // TODO: must be done
     }
 
-    onunload() {
-        this.events.unload();
-        this.featureRegistery.unloadAll();
-    }
+    // onunload() {
+    //     this.events.unload();
+    //     this.featureRegistery.unloadAll();
+    // }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-
-        for (const key in this.settings) {
-            if (!(key in DEFAULT_SETTINGS)) {
-                delete this.settings[key];
-            }
-        }
+        const defaultSettings = this.featureRegistery.getDefaultSettings();
+        console.log(defaultSettings)
+        // this.settings = Object.assign({}, defaultSettings, await this.loadData());
+        //
+        // for (const key in this.settings) {
+        //     if (!(key in defaultSettings)) {
+        //         delete this.settings[key];
+        //     }
+        // }
     }
 
     async saveSettings() {

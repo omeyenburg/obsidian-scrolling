@@ -1,6 +1,5 @@
 import type { Feature } from "@core/Feature";
-import { SettingDefinitionPage } from "obsidian";
-import { SettingDefinition } from "obsidian";
+import type { SettingDefinition } from "@core/settings.schema";
 
 import { CenterCursorFeature } from "@features/CenterCursorFeature";
 import { CodeBlockFeature } from "@features/CodeBlockFeature";
@@ -14,44 +13,28 @@ import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
 import { ScrollbarFeature } from "@features/ScrollbarFeature";
 
-// export interface FeatureSettingDefinition<
-//     K extends string = string,
-// > extends SettingDefinitionPage<K> {
-//     items?: SettingDefinition<K>[];
-// }
-
-type FeatureSettingDefinition<K extends string = string> = SettingDefinitionPage<K>;
+export interface FeatureSettingsDefinition<K extends string = string> {
+    name: string;
+    desc: string;
+    items: readonly SettingDefinition<K>[];
+    visible?: boolean | (() => boolean);
+}
 
 type FeatureConstructor = new () => Feature;
 
 export const features = [
     CenterCursorFeature,
-    // CodeBlockFeature,
-    // CommandsFeature,
-    // FileTreeFeature,
-    // LineLengthFeature,
-    // MathJaxFeature,
-    // MouseScrollFeature,
-    // PreviewScrollKeysFeature,
-    // RememberFileStateFeature,
-    // ScrollButtonsFeature,
-    // ScrollbarFeature,
-] as const satisfies FeatureConstructor[];
-
-type SettingItem = {
-    control: {
-        key: string;
-        defaultValue: unknown;
-    };
-};
-
-type ItemsOf<T> = T extends SettingItem
-    ? T
-    : T extends { items: readonly (infer I)[] }
-      ? ItemsOf<I>
-      : T extends readonly (infer I)[]
-        ? ItemsOf<I>
-        : never;
+    CodeBlockFeature,
+    CommandsFeature,
+    FileTreeFeature,
+    LineLengthFeature,
+    MathJaxFeature,
+    MouseScrollFeature,
+    PreviewScrollKeysFeature,
+    RememberFileStateFeature,
+    ScrollButtonsFeature,
+    ScrollbarFeature,
+];
 
 type ControlValue<C> = C extends { type: "toggle" }
     ? boolean
@@ -69,11 +52,6 @@ type ControlValue<C> = C extends { type: "toggle" }
 
 type InstanceOf<C> = C extends new () => infer I ? I : never;
 
-type SettingObject<F extends Feature> = {
-    [S in ItemsOf<F["settings"]> as S["control"]["key"]]:
-        ControlValue<S["control"]>;
-};
-
 type UnionToIntersection<U> = (U extends unknown ? (arg: U) => void : never) extends (
     arg: infer I,
 ) => void
@@ -85,3 +63,23 @@ type MergeFeatures<F extends readonly FeatureConstructor[]> = UnionToIntersectio
 >;
 
 export type ScrollingPluginSettings = MergeFeatures<typeof features>;
+
+type SettingItem = {
+    control: {
+        key: string;
+    };
+};
+
+type ItemsOf<T> = T extends { items: readonly (infer I)[] }
+    ? I
+    : never;
+
+type SettingObjectItem<S> = S extends SettingItem
+    ? {
+          [K in S["control"]["key"]]: ControlValue<S["control"]>;
+      }
+    : never;
+
+type SettingObject<F extends Feature> = UnionToIntersection<
+    SettingObjectItem<ItemsOf<F["settings"]>>
+>;

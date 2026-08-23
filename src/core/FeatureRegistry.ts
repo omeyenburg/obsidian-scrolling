@@ -1,15 +1,16 @@
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
-import { SettingDefinition } from "obsidian";
-import { features } from "./feature.schema";
+import { features } from "@core/feature.schema";
+import { SettingsFactory } from "@core/SettingsFactory";
+import { SettingDefinitionItem } from "obsidian";
 
 export class FeatureRegistry {
     private readonly features: Feature[];
+    private readonly settingsFactory: SettingsFactory;
 
-    constructor(
-        private readonly plugin: ScrollingPlugin,
-    ) {
-        this.features = features.map(Constructor => new Constructor())
+    constructor(private readonly plugin: ScrollingPlugin) {
+        this.features = features.map((Constructor) => new Constructor());
+        this.settingsFactory = new SettingsFactory(plugin);
     }
 
     // public register(feature: Feature): void {
@@ -20,19 +21,12 @@ export class FeatureRegistry {
     //     return this.features.get(id) as T | undefined;
     // }
 
-    getSettingDefinitions() {
-        return this.features.flatMap((feature) => feature.settings);
+    public getSettingDefinitions(): SettingDefinitionItem[] {
+        return this.settingsFactory.getSettingDefinitions(this.features);
     }
 
-    getDefaultSettings() {
-        return Object.fromEntries(
-            this.features.map((feature) => [
-                feature.id,
-                feature.settings.items.flatMap(
-                    (setting) => (setting as SettingDefinition).control?.defaultValue,
-                ),
-            ]),
-        );
+    public getDefaultSettings() {
+        return this.settingsFactory.getDefaultSettings(this.features);
     }
 
     public async loadAll(): Promise<void> {

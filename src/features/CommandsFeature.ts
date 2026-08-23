@@ -1,7 +1,7 @@
-import { Platform, SettingDefinitionPage } from "obsidian";
+import { Platform } from "obsidian";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
-import type { ScrollingPluginSettings } from "@core/settings";
+import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
 
 function scrollToTop(el: Element) {
     el.scrollTo({ top: 0 });
@@ -16,9 +16,19 @@ export class CommandsFeature implements Feature {
 
     public readonly settings = {
         name: "todo: merge into scroll buttons",
-        type: "page",
-        items: [],
-    } as const satisfies SettingDefinitionPage;
+        desc: "todo",
+        items: [
+            {
+                name: "Commands for scrolling to top/bottom",
+                desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+                control: {
+                    type: "toggle",
+                    key: "ribbonScrollButtonsEnabled",
+                    defaultValue: false,
+                },
+            }
+        ],
+    } as const satisfies FeatureSettingsDefinition;
 
     private plugin!: ScrollingPlugin;
     private scrollTopRibbon: HTMLElement | null = null;

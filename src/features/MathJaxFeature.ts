@@ -1,14 +1,13 @@
 import type { Feature } from "@core/Feature";
+import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
 import type { default as ScrollingPlugin } from "@core/main";
-import type { ScrollingPluginSettings } from "@core/settings";
-import { SettingDefinitionPage } from "obsidian";
 
 export class MathJaxFeature implements Feature {
     public readonly id = "mathJax";
 
     public readonly settings = {
         name: "Horizontal scrolling of MathJax",
-        type: "page",
+        desc: "",
         items: [
             {
                 name: "Enable",
@@ -20,7 +19,7 @@ export class MathJaxFeature implements Feature {
                 },
             },
         ],
-    } as const satisfies SettingDefinitionPage;
+    } as const satisfies FeatureSettingsDefinition
 
     private plugin!: ScrollingPlugin;
     private mathJaxEnabled = false;

@@ -1,9 +1,8 @@
-import { Platform, SettingDefinitionPage } from "obsidian";
-
+import { Platform } from "obsidian";
 import type { default as ScrollingPlugin } from "@core/main";
 import { clamp } from "@core/util";
 import { Feature } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/settings";
+import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
 
 function easeOut(t: number): number {
     return 1 - (1 - t) ** 2;
@@ -19,7 +18,7 @@ export class MouseScrollFeature implements Feature {
 
     public readonly settings = {
         name: "Mouse & Touchpad scrolling",
-        type: "page",
+        desc: "",
         items: [
             {
                 name: "Mode",
@@ -45,6 +44,10 @@ export class MouseScrollFeature implements Feature {
                     min: 0.1,
                     max: 3,
                     step: 0.1,
+                },
+                disabled() {
+                    // this.plugin.settings.
+                    return false;
                 },
             },
             {
@@ -147,7 +150,7 @@ export class MouseScrollFeature implements Feature {
                 },
             },
         ],
-    } as const satisfies SettingDefinitionPage;
+    } as const satisfies FeatureSettingsDefinition
 
     private touchpadLastUse = -Infinity;
     private touchpadFriction = 0;

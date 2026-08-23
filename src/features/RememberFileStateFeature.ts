@@ -6,7 +6,6 @@ import {
     MarkdownView,
     Notice,
     Platform,
-    SettingDefinitionPage,
     TAbstractFile,
     TFile,
     WorkspaceLeaf,
@@ -15,8 +14,8 @@ import {
 } from "obsidian";
 
 import { default as ScrollingPlugin } from "@core/main";
-import type { ScrollingPluginSettings } from "@core/settings";
 import type { Feature } from "@core/Feature";
+import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
 
 interface EphemeralState {
     timestamp: number;
@@ -35,7 +34,6 @@ export class RememberFileStateFeature implements Feature {
     public readonly settings = {
         name: "Remember scroll position",
         desc: "Automatically save your position before closing a file and restore it upon opening the file again.\nThe position will not be restored if the file is already opened in a tab of the same split.",
-        type: "page",
         items: [
             {
                 name: "Mode",
@@ -138,7 +136,7 @@ export class RememberFileStateFeature implements Feature {
                 },
             },
         ],
-    } as const satisfies SettingDefinitionPage;
+    } as const satisfies FeatureSettingsDefinition
 
     private plugin!: ScrollingPlugin;
 

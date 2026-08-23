@@ -1,9 +1,9 @@
-import { Editor, MarkdownView, Platform, SettingDefinitionPage } from "obsidian";
+import { Editor, MarkdownView, Platform } from "obsidian";
 import { syntaxTree } from "@codemirror/language";
 import type { Feature } from "@core/Feature";
 import type { default as ScrollingPlugin } from "@core/main";
-import type { ScrollingPluginSettings } from "@core/settings";
 import { getVimCursor } from "@core/util";
+import { FeatureSettingsDefinition } from "@core/feature.schema";
 
 interface ScrollInfo {
     top: number;
@@ -17,7 +17,7 @@ export class CenterCursorFeature implements Feature {
 
     public readonly settings = {
         name: "Centered cursor",
-        type: "page",
+        desc: "",
         items: [
             {
                 name: "Enable",
@@ -78,9 +78,12 @@ export class CenterCursorFeature implements Feature {
                     key: "followCursorEnableSelection",
                     defaultValue: false,
                 },
+                disabled() {
+                    return this.plugin.settings.followCursorEnableMouse === false;
+                },
             },
         ],
-    } as const satisfies SettingDefinitionPage;
+    } as const satisfies FeatureSettingsDefinition;
 
     private recentMouseUp = false;
     private animationFrame = 0;
