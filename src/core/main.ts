@@ -37,7 +37,6 @@ export default class ScrollingPlugin extends Plugin {
 
     async loadSettings() {
         const defaultSettings = this.featureRegistery.getDefaultSettings();
-        console.log(defaultSettings)
         this.settings = Object.assign({}, defaultSettings, await this.loadData());
 
         for (const key in this.settings) {

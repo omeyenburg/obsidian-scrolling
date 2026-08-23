@@ -11,7 +11,6 @@ export class LineLengthFeature implements Feature {
     public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
         this.updateLineLength();
-        console.log("loaded");
     }
 
     public readonly settings = {

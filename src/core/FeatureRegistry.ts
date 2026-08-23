@@ -29,7 +29,6 @@ export class FeatureRegistry {
         for (const feature of this.features.values()) {
             try {
                 await feature.onload(this.plugin);
-                console.log(feature.id);
             } catch (err) {
                 console.error(`Failed to load feature "${feature.id}":`, err);
             }
