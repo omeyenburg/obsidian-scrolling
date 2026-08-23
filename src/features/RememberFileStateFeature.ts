@@ -203,7 +203,6 @@ export class RememberFileStateFeature implements Feature {
     }
 
     onunload(): void {}
-    onSettingsChange?(settings: ScrollingPluginSettings): void | Promise<void> {}
 
     /**
      * Returns the number of stored file states.

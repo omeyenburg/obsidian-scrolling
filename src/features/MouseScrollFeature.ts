@@ -25,7 +25,7 @@ export class MouseScrollFeature implements Feature {
                 control: {
                     type: "dropdown",
                     key: "scrollMode",
-                    defaultValue: "native",
+                    defaultValue: "disabled",
                     options: {
                         disabled: "Disabled",
                         native: "Native",
@@ -44,9 +44,8 @@ export class MouseScrollFeature implements Feature {
                     max: 3,
                     step: 0.1,
                 },
-                disabled() {
-                    // this.plugin.settings.
-                    return false;
+                visible() {
+                    return this.plugin.settings.scrollMode === "native";
                 },
             },
             {
@@ -60,6 +59,9 @@ export class MouseScrollFeature implements Feature {
                     max: 3,
                     step: 0.1,
                 },
+                visible() {
+                    return this.plugin.settings.scrollMode === "native";
+                },
             },
             {
                 name: "Disable smooth scrolling",
@@ -69,6 +71,9 @@ export class MouseScrollFeature implements Feature {
                     key: "nativeScrollInstant",
                     defaultValue: false,
                 },
+                visible() {
+                    return this.plugin.settings.scrollMode === "native";
+                },
             },
             {
                 name: "Invert scroll direction (Experimental)",
@@ -77,6 +82,9 @@ export class MouseScrollFeature implements Feature {
                     type: "toggle",
                     key: "simulatedMouseInvert",
                     defaultValue: false,
+                },
+                visible() {
+                    return this.plugin.settings.scrollMode === "simulated";
                 },
             },
             {
@@ -90,6 +98,9 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
+                visible() {
+                    return this.plugin.settings.scrollMode === "simulated";
+                },
             },
             {
                 name: "Mouse scroll smoothness",
@@ -102,6 +113,9 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
+                visible() {
+                    return this.plugin.settings.scrollMode === "simulated";
+                },
             },
             {
                 name: "Touchpad detection (Experimental)",
@@ -110,6 +124,9 @@ export class MouseScrollFeature implements Feature {
                     type: "toggle",
                     key: "simulatedTouchpadEnabled",
                     defaultValue: true,
+                },
+                visible() {
+                    return this.plugin.settings.scrollMode === "simulated";
                 },
             },
             {
@@ -123,6 +140,9 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
+                visible() {
+                    return this.plugin.settings.scrollMode === "simulated";
+                },
             },
             {
                 name: "Touchpad scroll smoothness",
@@ -134,6 +154,9 @@ export class MouseScrollFeature implements Feature {
                     min: 0,
                     max: 100,
                     step: 1,
+                },
+                visible() {
+                    return this.plugin.settings.scrollMode === "simulated";
                 },
             },
             {
@@ -147,9 +170,12 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
+                visible() {
+                    return this.plugin.settings.scrollMode === "simulated";
+                },
             },
         ],
-    } as const satisfies FeatureSettingsDefinition
+    } as const satisfies FeatureSettingsDefinition;
 
     private touchpadLastUse = -Infinity;
     private touchpadFriction = 0;
@@ -196,7 +222,6 @@ export class MouseScrollFeature implements Feature {
     }
 
     onunload(): void {}
-    onSettingsChange(settings: ScrollingPluginSettings): void | Promise<void> {}
 
     /**
      * Reset velocity on file change.

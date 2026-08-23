@@ -1,7 +1,5 @@
 import { Platform, debounce } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/feature.schema";
-
 
 export class LineLengthFeature implements Feature {
     public readonly id = "lineLength";
@@ -24,6 +22,9 @@ export class LineLengthFeature implements Feature {
                     type: "toggle",
                     key: "readableLineLengthEnabled",
                     defaultValue: true,
+                },
+                onChange() {
+                    this.updateLineLength();
                 },
             },
             {
@@ -51,6 +52,12 @@ export class LineLengthFeature implements Feature {
                     max: 3000,
                     step: 50,
                 },
+                visible() {
+                    return this.plugin.settings.lineLengthUnit === "pixels";
+                },
+                onChange() {
+                    this.updateLineLength();
+                },
             },
             {
                 name: "Number of characters",
@@ -62,6 +69,12 @@ export class LineLengthFeature implements Feature {
                     min: 30,
                     max: 200,
                     step: 1,
+                },
+                visible() {
+                    return this.plugin.settings.lineLengthUnit === "characters";
+                },
+                onChange() {
+                    this.updateLineLength();
                 },
             },
             {
@@ -75,16 +88,18 @@ export class LineLengthFeature implements Feature {
                     max: 100,
                     step: 2,
                 },
+                visible() {
+                    return this.plugin.settings.lineLengthUnit === "percentage";
+                },
+                onChange() {
+                    this.updateLineLength();
+                },
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
 
     public onunload(): void {
         this.plugin.removeStyleProperty("--file-line-width");
-    }
-
-    public onSettingsChange(settings: ScrollingPluginSettings): void {
-        this.updateLineLength();
     }
 
     public updateLineLength = debounce(

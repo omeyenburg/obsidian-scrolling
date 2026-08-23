@@ -1,6 +1,4 @@
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/feature.schema";
-
 
 export class MathJaxFeature implements Feature {
     public readonly id = "mathJax";
@@ -17,9 +15,12 @@ export class MathJaxFeature implements Feature {
                     key: "mathjaxScrollEnabled",
                     defaultValue: false,
                 },
+                onChange() {
+                    this.updateStyle();
+                },
             },
         ],
-    } as const satisfies FeatureSettingsDefinition
+    } as const satisfies FeatureSettingsDefinition;
 
     private plugin!: ScrollingPlugin;
     private mathJaxEnabled = false;
@@ -31,10 +32,6 @@ export class MathJaxFeature implements Feature {
 
     public onunload(): void {
         this.plugin.disableStyleClass("scrolling-horizontal-mathjax");
-    }
-
-    public onSettingsChange(settings: ScrollingPluginSettings): void {
-        this.updateStyle();
     }
 
     public updateStyle(): void {

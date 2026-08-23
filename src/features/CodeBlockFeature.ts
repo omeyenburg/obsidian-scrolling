@@ -2,7 +2,6 @@ import { Editor, MarkdownView, WorkspaceLeaf, debounce } from "obsidian";
 import { Line } from "@codemirror/state";
 import { getVimCursor } from "@core/util";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/feature.schema";
 
 export class CodeBlockFeature implements Feature {
     public readonly id = "codeBlock";
@@ -19,6 +18,9 @@ export class CodeBlockFeature implements Feature {
                     type: "toggle",
                     key: "codeBlockScrollEnabled",
                     defaultValue: false,
+                },
+                onChange() {
+                    this.updateStyle();
                 },
             },
         ],
@@ -88,10 +90,6 @@ export class CodeBlockFeature implements Feature {
         }
         this.plugin.disableStyleClass("scrolling-horizontal-code-blocks");
         this.plugin.removeStyleProperty("--scrolling-extra-line-length");
-    }
-
-    public onSettingsChange(settings: ScrollingPluginSettings): void {
-        this.updateStyle();
     }
 
     public updateStyle(): void {

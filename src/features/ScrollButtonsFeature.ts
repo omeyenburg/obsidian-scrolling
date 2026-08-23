@@ -17,6 +17,9 @@ export class ScrollButtonsFeature implements Feature {
                     key: "ribbonScrollButtonsEnabled",
                     defaultValue: false,
                 },
+                onChange() {
+                    this.setup();
+                },
             },
             {
                 name: "Show top/bottom scroll buttons",
@@ -25,6 +28,9 @@ export class ScrollButtonsFeature implements Feature {
                     type: "toggle",
                     key: "scrollButtonsEnabled",
                     defaultValue: false,
+                },
+                onChange() {
+                    this.setup();
                 },
             },
             {
@@ -38,6 +44,9 @@ export class ScrollButtonsFeature implements Feature {
                         top: "Top",
                         bottom: "Bottom",
                     },
+                },
+                onChange() {
+                    this.setup();
                 },
             },
         ],
@@ -55,10 +64,6 @@ export class ScrollButtonsFeature implements Feature {
 
     public onunload(): void {
         this.cleanup();
-    }
-
-    public onSettingsChange(settings: ScrollingPluginSettings): void {
-        this.setup();
     }
 
     public setup(): void {

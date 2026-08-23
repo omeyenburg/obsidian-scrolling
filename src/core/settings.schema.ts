@@ -79,5 +79,5 @@ export interface SettingSliderControl<K extends string = string> extends Setting
 interface SettingControlBase<V, K extends string = string> {
     key: K;
     defaultValue?: V;
-    validate?: (value: V) => string | void | Promise<string | void>;
+    // validate?: (value: V) => string | void | Promise<string | void>;
 }

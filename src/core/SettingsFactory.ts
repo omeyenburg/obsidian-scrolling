@@ -134,9 +134,9 @@ export class SettingsFactory {
         return (setting: Setting) => {
             setting.addDropdown((dropdown) => {
                 return dropdown
+                    .addOptions(control.options)
                     .setValue(this.plugin.settings[control.key])
-                    .onChange(onChange)
-                    .addOptions(control.options);
+                    .onChange(onChange);
             });
         };
     }

@@ -22,6 +22,9 @@ export class ScrollbarFeature implements Feature {
                         show: "Always show scrollbar",
                     },
                 },
+                onChange() {
+                    this.updateStyle();
+                },
             },
             {
                 name: "Scrollbar thickness",
@@ -34,9 +37,12 @@ export class ScrollbarFeature implements Feature {
                     max: 30,
                     step: 1,
                 },
+                onChange() {
+                    this.updateStyle();
+                },
             },
         ],
-    } as const satisfies FeatureSettingsDefinition
+    } as const satisfies FeatureSettingsDefinition;
 
     private plugin!: ScrollingPlugin;
     private scrollTimeouts = new Map<HTMLElement, number>();
@@ -51,10 +57,6 @@ export class ScrollbarFeature implements Feature {
 
     public onunload(): void {
         this.cleanup();
-    }
-
-    public onSettingsChange(settings: ScrollingPluginSettings): void {
-        this.updateStyle();
     }
 
     private scrollHandler(event: Event): void {

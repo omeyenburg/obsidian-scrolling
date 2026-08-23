@@ -15,7 +15,7 @@ export class CenterCursorFeature implements Feature {
 
     public readonly settings = {
         name: "Centered cursor",
-        desc: "",
+        desc: "Automatically scrolls the view to keep the cursor near the center when you move it.",
         items: [
             {
                 name: "Enable",
