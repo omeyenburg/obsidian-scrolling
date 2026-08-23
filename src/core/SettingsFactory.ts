@@ -14,41 +14,19 @@ import {
     SettingToggleControl,
 } from "@core/settings.schema";
 import type { Feature } from "@core/Feature";
-import ScrollingPlugin from "./main";
-import { ScrollingPluginSettings } from "./feature.schema";
+import ScrollingPlugin from "@core/main";
+import { ScrollingPluginSettings } from "@core/feature.schema";
 
-// export const toggle = (
-//     control: Omit<SettingToggleControl<string>, "type">,
-// ): SettingToggleControl => ({
-//     type: "toggle" as const,
-//     ...control,
-// });
-//
-// export const dropdown = (
-//     control: Omit<SettingDropdownControl<string>, "type">,
-// ): SettingDropdownControl => ({
-//     type: "dropdown" as const,
-//     ...control,
-// });
-//
-// export const slider = (
-//     control: Omit<SettingSliderControl<string>, "type">,
-// ): SettingSliderControl => ({
-//     type: "slider" as const,
-//     ...control,
-// });
-//
-// export const text = (control: Omit<SettingTextControl<string>, "type">): SettingTextControl => ({
-//     type: "text" as const,
-//     ...control,
-// });
-//
-// export const textarea = (
-//     control: Omit<SettingTextAreaControl<string>, "type">,
-// ): SettingTextAreaControl => ({
-//     type: "textarea" as const,
-//     ...control,
-// });
+function bindBoolFunc(
+    func: boolean | (() => boolean),
+    feature: Feature,
+): boolean | (() => boolean) {
+    if (func instanceof Function) {
+        return func.bind(feature);
+    }
+
+    return func;
+}
 
 export class SettingsFactory {
     constructor(private readonly plugin: ScrollingPlugin) {}
@@ -58,18 +36,20 @@ export class SettingsFactory {
     }
 
     public getDefaultSettings(features: Feature[]): ScrollingPluginSettings {
-        return Object.fromEntries(
-            features.map((feature) => [
-                feature.id,
-                feature.settings.items.flatMap((setting) => setting.control?.defaultValue),
-            ]),
-        );
+        const defaults: Record<string, any> = {};
+        for (const feature of features) {
+            for (const item of feature.settings.items) {
+                if (item.control && item.control.key) {
+                    defaults[item.control.key] = item.control.defaultValue;
+                }
+            }
+        }
+        return defaults as ScrollingPluginSettings;
     }
 
     private getFeatureSettingDefinitions(feature: Feature): SettingDefinitionPage {
         const name = feature.settings.name;
         const desc = feature.settings.desc;
-        const visible = feature.settings.visible;
         const items = feature.settings.items.map((fsi) =>
             this.mapSettingDefinitionItem(fsi, feature),
         );
@@ -78,7 +58,6 @@ export class SettingsFactory {
             name,
             desc,
             items,
-            visible,
             type: "page",
         };
     }
@@ -91,8 +70,8 @@ export class SettingsFactory {
         const desc = fsi.desc;
         const aliases = fsi.aliases;
         const searchable = fsi.searchable;
-        const visible = this.bindBoolFunc(fsi.visible, feature);
-        const disabled = this.bindBoolFunc(fsi.disabled, feature);
+        const visible = bindBoolFunc(fsi.visible, feature);
+        const disabled = bindBoolFunc(fsi.disabled, feature);
         const render = this.getRenderForSetting(fsi, feature);
 
         return {
@@ -139,9 +118,7 @@ export class SettingsFactory {
         onChange: (value: boolean) => void,
     ): (setting: Setting) => void {
         return (setting: Setting) => {
-            console.log("render1");
             setting.addToggle((toggle) => {
-                console.log("render2");
                 return toggle.setValue(this.plugin.settings[control.key]).onChange(onChange);
             });
         };
@@ -202,16 +179,5 @@ export class SettingsFactory {
                     .setPlaceholder(control.placeholder);
             });
         };
-    }
-
-    private bindBoolFunc(
-        func: boolean | (() => boolean),
-        feature: Feature,
-    ): boolean | (() => boolean) {
-        if (func instanceof Function) {
-            return func.bind(feature);
-        }
-
-        return func;
     }
 }

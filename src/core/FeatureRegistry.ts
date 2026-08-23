@@ -1,8 +1,8 @@
 import type { Feature } from "@core/Feature";
-import type { default as ScrollingPlugin } from "@core/main";
 import { features } from "@core/feature.schema";
 import { SettingsFactory } from "@core/SettingsFactory";
 import { SettingDefinitionItem } from "obsidian";
+import ScrollingPlugin from "@core/main";
 
 export class FeatureRegistry {
     private readonly features: Feature[];
@@ -13,13 +13,9 @@ export class FeatureRegistry {
         this.settingsFactory = new SettingsFactory(plugin);
     }
 
-    // public register(feature: Feature): void {
-    //     this.features.set(feature.id, feature);
-    // }
-
-    // public get<T extends Feature>(id: string): T | undefined {
-    //     return this.features.get(id) as T | undefined;
-    // }
+    public get<T extends Feature>(id: string): T | undefined {
+        return this.features.find((f) => f.id === id) as T | undefined;
+    }
 
     public getSettingDefinitions(): SettingDefinitionItem[] {
         return this.settingsFactory.getSettingDefinitions(this.features);

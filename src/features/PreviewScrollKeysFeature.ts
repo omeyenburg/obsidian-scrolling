@@ -1,7 +1,5 @@
 import { MarkdownView, Platform } from "obsidian";
-import type { Feature } from "@core/Feature";
-import type { default as ScrollingPlugin } from "@core/main";
-import { FeatureSettingsDefinition } from "@core/feature.schema";
+import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 export class PreviewScrollKeysFeature implements Feature {
     public readonly id = "previewScrollKeys";

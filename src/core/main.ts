@@ -2,8 +2,9 @@ import { Plugin } from "obsidian";
 
 import { Events } from "@core/events";
 import { FeatureRegistry } from "@core/FeatureRegistry";
-import { ScrollingSettingTab } from "@core/settings";
-import { ScrollingPluginSettings } from "./feature.schema";
+import { ScrollingSettingTab } from "@core/ScrollingSettingTab";
+import { ScrollingPluginSettings } from "@core/feature.schema";
+import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
@@ -23,28 +24,32 @@ export default class ScrollingPlugin extends Plugin {
 
         this.events.postInit();
 
-        // await this.restoreScroll.loadStatesFile(); // TODO: must be done
+        const rememberFileState = this.featureRegistery.get<RememberFileStateFeature>("rememberFileState");
+        if (rememberFileState && this.settings.restoreScrollFileEnabled) {
+            await rememberFileState.loadStatesFile();
+        }
     }
 
-    // onunload() {
-    //     this.events.unload();
-    //     this.featureRegistery.unloadAll();
-    // }
+    onunload() {
+        this.featureRegistery.unloadAll();
+        this.events.unload();
+    }
 
     async loadSettings() {
         const defaultSettings = this.featureRegistery.getDefaultSettings();
         console.log(defaultSettings)
-        // this.settings = Object.assign({}, defaultSettings, await this.loadData());
-        //
-        // for (const key in this.settings) {
-        //     if (!(key in defaultSettings)) {
-        //         delete this.settings[key];
-        //     }
-        // }
+        this.settings = Object.assign({}, defaultSettings, await this.loadData());
+
+        for (const key in this.settings) {
+            if (!(key in defaultSettings)) {
+                delete (this.settings as any)[key];
+            }
+        }
     }
 
     async saveSettings() {
         await this.saveData(this.settings);
+        await this.featureRegistery.triggerSettingsChange();
     }
 
     getMainDoc(): Document {

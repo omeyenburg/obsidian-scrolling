@@ -1,7 +1,7 @@
 import { Platform, debounce } from "obsidian";
-import type { Feature } from "@core/Feature";
-import type { default as ScrollingPlugin } from "@core/main";
-import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
+import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
+import { ScrollingPluginSettings } from "@core/feature.schema";
+
 
 export class LineLengthFeature implements Feature {
     public readonly id = "lineLength";

@@ -1,5 +1,4 @@
 import type { Feature } from "@core/Feature";
-import type { SettingDefinition } from "@core/settings.schema";
 
 import { CenterCursorFeature } from "@features/CenterCursorFeature";
 import { CodeBlockFeature } from "@features/CodeBlockFeature";
@@ -13,12 +12,6 @@ import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
 import { ScrollbarFeature } from "@features/ScrollbarFeature";
 
-export interface FeatureSettingsDefinition<K extends string = string> {
-    name: string;
-    desc: string;
-    items: readonly SettingDefinition<K>[];
-    visible?: boolean | (() => boolean);
-}
 
 type FeatureConstructor = new () => Feature;
 

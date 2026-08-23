@@ -12,10 +12,8 @@ import {
     debounce,
     normalizePath,
 } from "obsidian";
-
-import { default as ScrollingPlugin } from "@core/main";
-import type { Feature } from "@core/Feature";
-import { FeatureSettingsDefinition, ScrollingPluginSettings } from "@core/feature.schema";
+import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
+import { ScrollingPluginSettings } from "@core/feature.schema";
 
 interface EphemeralState {
     timestamp: number;

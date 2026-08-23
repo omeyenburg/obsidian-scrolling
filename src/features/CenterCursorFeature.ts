@@ -1,9 +1,7 @@
 import { Editor, MarkdownView, Platform } from "obsidian";
 import { syntaxTree } from "@codemirror/language";
-import type { Feature } from "@core/Feature";
-import type { default as ScrollingPlugin } from "@core/main";
+import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 import { getVimCursor } from "@core/util";
-import { FeatureSettingsDefinition } from "@core/feature.schema";
 
 interface ScrollInfo {
     top: number;
