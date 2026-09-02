@@ -56,7 +56,7 @@ export interface SettingTextAreaControl<K extends string = string> extends Setti
 }
 
 export interface SettingNumberControl<K extends string = string> extends SettingControlBase<
-    string,
+    number,
     K
 > {
     type: "number";
@@ -73,6 +73,7 @@ export interface SettingSliderControl<K extends string = string> extends Setting
     min: number;
     max: number;
     step: number;
+    instant?: boolean;
     displayFormat?: (value: number) => string;
 }
 
