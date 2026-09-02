@@ -66,7 +66,7 @@ export class RememberFileStateFeature implements Feature {
                 control: {
                     type: "number",
                     key: "restoreScrollLimit",
-                    defaultValue: "-1",
+                    defaultValue: -1,
                     placeholder: "Unlimited",
                     displayFormat(value) {
                         return value > 0 ? value.toString() : "";
