@@ -1,0 +1,193 @@
+import type {
+    ExtraButtonComponent,
+    Setting,
+    SettingDefinition,
+    SettingDefinitionGroup,
+    SettingDefinitionItem,
+    SettingDefinitionPage,
+    TextComponent,
+} from "obsidian";
+
+import type { Feature } from "@core/Feature";
+import type { ControlParse, SettingOwner, SettingItem } from "@core/settings.schema";
+import { bindPredicate } from "@core/settings.schema";
+import type { PageLayout } from "@core/settings.layout";
+import { settingsLayout } from "@core/settings.layout";
+import type { SettingKey, SettingsStore } from "@core/SettingsStore";
+
+/**
+ * Marks every group this plugin renders, so `styles.css` can scope the handful of
+ * adjustments we need without leaking them onto other plugins' setting rows.
+ */
+export const GROUP_CLASS = "scrolling-setting-group";
+
+/**
+ * Turns feature-owned setting definitions into Obsidian's own setting definitions.
+ *
+ * There is no shadow control schema here on purpose: every control is emitted as a
+ * native `SettingDefinitionControl`, so Obsidian owns value binding, validation and
+ * row rendering. The only imperative row is a control that declares `parse`.
+ */
+export class SettingsTranslator {
+    constructor(private readonly store: SettingsStore) {}
+
+    getSettingDefinitions(features: readonly Feature[]): SettingDefinitionItem[] {
+        const byId = new Map(features.map((feature) => [feature.id, feature]));
+        return settingsLayout.map((page) => this.translatePage(page, byId));
+    }
+
+    private translatePage(
+        page: PageLayout,
+        byId: ReadonlyMap<string, Feature>,
+    ): SettingDefinitionPage {
+        const groups: SettingDefinitionGroup[] = [];
+
+        for (const id of page.features) {
+            const feature = byId.get(id);
+            if (!feature) {
+                throw new Error(`Settings layout references unregistered feature "${id}".`);
+            }
+            groups.push(...this.translateFeature(feature));
+        }
+
+        return {
+            type: "page",
+            name: page.name,
+            desc: page.desc,
+            items: groups,
+        };
+    }
+
+    private translateFeature(feature: Feature): SettingDefinitionGroup[] {
+        const { items, groups } = feature.settings;
+        const translated: SettingDefinitionGroup[] = [];
+
+        for (const group of groups ?? []) {
+            translated.push(this.translateGroup(feature, group.heading, group.items));
+        }
+
+        if (items?.length) {
+            translated.push(this.translateGroup(feature, undefined, items));
+        }
+
+        if (translated.length === 0) {
+            throw new Error(`Feature "${feature.id}" is placed in the layout but declares no settings.`);
+        }
+
+        return translated;
+    }
+
+    private translateGroup(
+        feature: Feature,
+        heading: string | undefined,
+        items: readonly SettingItem[],
+    ): SettingDefinitionGroup {
+        const keys = items.map((item) => item.control.key as SettingKey);
+
+        return {
+            type: "group",
+            cls: GROUP_CLASS,
+            heading,
+            items: items.map((item) => this.translateItem(feature, item)),
+            extraButtons: [this.resetButton(keys)],
+        };
+    }
+
+    private resetButton(keys: readonly SettingKey[]): (component: ExtraButtonComponent) => void {
+        return (button: ExtraButtonComponent): void => {
+            button
+                .setIcon("reset")
+                .setTooltip("Restore defaults")
+                .onClick(async () => {
+                    await this.store.reset(keys);
+                });
+        };
+    }
+
+    private translateItem(feature: Feature, item: SettingItem): SettingDefinition {
+        const owner = feature as unknown as SettingOwner;
+        const visible = bindPredicate(item.visible, owner);
+
+        // `parse`/`displayFormat` are ours, not Obsidian's: keep them out of the
+        // emitted control.
+        const { parse, displayFormat, disabled, ...control } = item.control;
+        const boundDisabled = bindPredicate(disabled, owner);
+
+        if (parse) {
+            return {
+                name: item.name,
+                desc: item.desc,
+                aliases: item.aliases,
+                searchable: item.searchable,
+                visible,
+                render: this.renderParsed(owner, item, parse, displayFormat),
+            };
+        }
+
+        return {
+            name: item.name,
+            desc: item.desc,
+            aliases: item.aliases,
+            searchable: item.searchable,
+            visible,
+            control: boundDisabled ? { ...control, disabled: boundDisabled } : control,
+        };
+    }
+
+    /**
+     * Escape hatch for controls that need to parse their own text field, which
+     * Obsidian's declarative `number` control does not offer.
+     *
+     * The returned cleanup unsubscribes, so nothing outlives the row — the
+     * alternative (a factory-wide subscriber set) leaks closures over dead components.
+     */
+    private renderParsed(
+        owner: SettingOwner,
+        item: SettingItem,
+        parse: ControlParse,
+        displayFormat?: (this: SettingOwner, value: number) => string,
+    ): (setting: Setting) => void | (() => void) {
+        // `parse` is only ever declared on a number control, so the correlation
+        // between this key and a `number` value holds; the cast restores it.
+        const key = item.control.key as SettingKey;
+        const current = (): number => this.store.get(key) as number;
+        const format = (value: number): string =>
+            displayFormat ? displayFormat.call(owner, value) : String(value);
+        const placeholder = "placeholder" in item.control ? item.control.placeholder : undefined;
+
+        return (setting: Setting): (() => void) => {
+            let last = current();
+            // `addText` returns the `Setting`, so the component comes from the callback.
+            let text!: TextComponent;
+
+            setting.addText((component) => {
+                text = component;
+                component
+                    .setPlaceholder(placeholder)
+                    .setValue(format(last))
+                    .onChange((raw: string) => {
+                        const value = parse.call(owner, raw);
+                        if (value === null) {
+                            // Rejected input: leave the stored value and the
+                            // field's own state alone.
+                            return;
+                        }
+                        last = value;
+                        void this.store.set(key, value);
+                    });
+            });
+
+            // Re-seed only on writes this field did not make, i.e. a group reset.
+            const unsubscribe = this.store.onUpdate(() => {
+                const next = current();
+                if (next === last) {
+                    return;
+                }
+                last = next;
+                text.setValue(format(next));
+            });
+
+            return unsubscribe;
+        };
+    }
+}

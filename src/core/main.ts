@@ -4,15 +4,17 @@ import { Events } from "@core/events";
 import { FeatureRegistry } from "@core/FeatureRegistry";
 import { ScrollingSettingTab } from "@core/ScrollingSettingTab";
 import { ScrollingPluginSettings } from "@core/feature.schema";
-import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
+import type { SettingsStore } from "@core/SettingsStore";
 
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
     events!: Events;
     featureRegistery!: FeatureRegistry;
+    settingsStore!: SettingsStore;
 
     async onload() {
         this.featureRegistery = new FeatureRegistry(this);
+        this.settingsStore = this.featureRegistery.store;
 
         await this.loadSettings();
 
@@ -20,11 +22,13 @@ export default class ScrollingPlugin extends Plugin {
 
         await this.featureRegistery.loadAll();
 
-        this.addSettingTab(new ScrollingSettingTab(this, this.featureRegistery));
+        const settingTab = new ScrollingSettingTab(this, this.featureRegistery, this.settingsStore);
+        this.settingsStore.attachTab(settingTab);
+        this.addSettingTab(settingTab);
 
         this.events.postInit();
 
-        const rememberFileState = this.featureRegistery.get<RememberFileStateFeature>("rememberFileState");
+        const rememberFileState = this.featureRegistery.get("rememberFileState");
         if (rememberFileState && this.settings.restoreScrollFileEnabled) {
             await rememberFileState.loadStatesFile();
         }
@@ -36,18 +40,17 @@ export default class ScrollingPlugin extends Plugin {
     }
 
     async loadSettings() {
-        const defaultSettings = this.featureRegistery.getDefaultSettings();
-        this.settings = Object.assign({}, defaultSettings, await this.loadData());
+        const defaultSettings = this.featureRegistery.store.buildDefaults();
+        const stored = (await this.loadData()) ?? {};
+        this.settings = Object.assign({}, defaultSettings, stored);
 
-        for (const key in this.settings) {
+        // Drop keys no longer declared by any feature.
+        const known = this.settings as Record<string, unknown>;
+        for (const key of Object.keys(known)) {
             if (!(key in defaultSettings)) {
-                delete (this.settings as any)[key];
+                delete known[key];
             }
         }
-    }
-
-    async saveSettings() {
-        await this.saveData(this.settings);
     }
 
     getMainDoc(): Document {

@@ -150,3 +150,10 @@ body.is-tablet.scrolling-overlay-buttons-top .scrolling-overlay-button-container
     top: calc(var(--view-header-height) + var(--view-header-top-offset) + var(--size-4-3));
     bottom: unset;
 }
+
+/* Setting descriptions that use `\n` for a hard line break.
+   Obsidian collapses whitespace in `.setting-item-description`, so opt back in.
+   Scoped to the groups this plugin renders to avoid affecting other plugins. */
+.scrolling-setting-group .setting-item-description {
+    white-space: pre-line;
+}

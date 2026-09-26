@@ -13,7 +13,6 @@ import {
     normalizePath,
 } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/feature.schema";
 
 interface EphemeralState {
     timestamp: number;
@@ -30,8 +29,6 @@ export class RememberFileStateFeature implements Feature {
     readonly id = "rememberFileState";
 
     public readonly settings = {
-        name: "Remember scroll position",
-        desc: "Automatically save your position before closing a file and restore it upon opening the file again.\nThe position will not be restored if the file is already opened in a tab of the same split.",
         items: [
             {
                 name: "Mode",
@@ -71,15 +68,13 @@ export class RememberFileStateFeature implements Feature {
                     displayFormat(value) {
                         return value > 0 ? value.toString() : "";
                     },
-                    storeFormat(value) {
+                    // `null` rejects the edit and keeps the stored value.
+                    parse(value) {
                         const limit = +value;
-                        if (limit.toString().contains(".")) return;
-
-                        if (limit <= 0 || isNaN(limit)) {
-                            return -1;
-                        } else {
-                            return limit;
+                        if (isNaN(limit) || limit.toString().includes(".")) {
+                            return null;
                         }
+                        return limit <= 0 ? -1 : limit;
                     },
                 },
             },
@@ -143,7 +138,6 @@ export class RememberFileStateFeature implements Feature {
                 control: {
                     type: "text",
                     key: "restoreScrollFilePath",
-                    defaultValue: undefined,
                 },
             },
         ],

@@ -6,38 +6,41 @@ export class PreviewScrollKeysFeature implements Feature {
     private plugin!: ScrollingPlugin;
 
     public readonly settings = {
-        name: "Reading mode keybinds",
-        desc: "",
-        items: [
+        groups: [
             {
-                name: "Line scroll keybinds",
-                desc: "Scroll by single lines with j/k.",
-                control: {
-                    type: "toggle",
-                    key: "readingLineScrollEnabled",
-                    defaultValue: true,
-                },
-            },
-            {
-                name: "Half page scroll keybinds",
-                desc: "Scroll half pages with d/u.",
-                control: {
-                    type: "toggle",
-                    key: "readingHalfPageScrollEnabled",
-                    defaultValue: true,
-                },
-            },
-            {
-                name: "Top/bottom scroll keybinds",
-                desc: "Scroll to top/bottom with g/G.",
-                control: {
-                    type: "toggle",
-                    key: "readingTopBottomScrollEnabled",
-                    defaultValue: true,
-                },
+                heading: "Reading mode keys",
+                items: [
+                    {
+                        name: "Line scroll keybinds",
+                        desc: "Scroll by single lines with j/k.",
+                        control: {
+                            type: "toggle",
+                            key: "readingLineScrollEnabled",
+                            defaultValue: true,
+                        },
+                    },
+                    {
+                        name: "Half page scroll keybinds",
+                        desc: "Scroll half pages with d/u.",
+                        control: {
+                            type: "toggle",
+                            key: "readingHalfPageScrollEnabled",
+                            defaultValue: true,
+                        },
+                    },
+                    {
+                        name: "Top/bottom scroll keybinds",
+                        desc: "Scroll to top/bottom with g/G.",
+                        control: {
+                            type: "toggle",
+                            key: "readingTopBottomScrollEnabled",
+                            defaultValue: true,
+                        },
+                    },
+                ],
             },
         ],
-    } as const satisfies FeatureSettingsDefinition
+    } as const satisfies FeatureSettingsDefinition;
 
     private goal: number | null = null;
     private scroller: Element | null = null;

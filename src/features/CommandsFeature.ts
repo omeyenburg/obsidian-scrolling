@@ -13,21 +13,24 @@ export class CommandsFeature implements Feature {
     public readonly id = "commands";
 
     public readonly settings = {
-        name: "todo: merge into scroll buttons",
-        desc: "todo",
-        items: [
+        groups: [
             {
-                name: "Commands for scrolling to top/bottom",
-                desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
-                control: {
-                    type: "toggle",
-                    key: "ribbonScrollButtonsEnabled",
-                    defaultValue: false,
-                },
-                onChange() {
-                    this.updateRibbonButtons()
-                },
-            }
+                heading: "Ribbon buttons",
+                items: [
+                    {
+                        name: "Commands for scrolling to top/bottom",
+                        desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+                        control: {
+                            type: "toggle",
+                            key: "ribbonScrollButtonsEnabled",
+                            defaultValue: false,
+                        },
+                        onChange() {
+                            this.updateRibbonButtons();
+                        },
+                    },
+                ],
+            },
         ],
     } as const satisfies FeatureSettingsDefinition;
 

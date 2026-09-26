@@ -4,8 +4,6 @@ export class MathJaxFeature implements Feature {
     public readonly id = "mathJax";
 
     public readonly settings = {
-        name: "Horizontal scrolling of MathJax",
-        desc: "",
         items: [
             {
                 name: "Enable",

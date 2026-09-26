@@ -1,5 +1,3 @@
-import type { Feature } from "@core/Feature";
-
 import { CenterCursorFeature } from "@features/CenterCursorFeature";
 import { CodeBlockFeature } from "@features/CodeBlockFeature";
 import { CommandsFeature } from "@features/CommandsFeature";
@@ -12,8 +10,29 @@ import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
 import { ScrollbarFeature } from "@features/ScrollbarFeature";
 
-type FeatureConstructor = new () => Feature;
+/**
+ * The only shape the derivation below needs from a feature instance.
+ *
+ * Deliberately narrower than `Feature`: constraining to the full contract would make
+ * this file depend on `Feature`, which depends on the setting callbacks, which depend
+ * on `ScrollingPluginSettings` — a cycle through the type being defined right here.
+ */
+type FeatureSettingsShape = {
+    items?: readonly SettingShape[];
+    groups?: readonly { items: readonly SettingShape[] }[];
+};
 
+type SettingShape = { control: { key: string } };
+
+type FeatureConstructor = new () => { settings: FeatureSettingsShape };
+
+/**
+ * Every feature the plugin loads.
+ *
+ * Adding an entry here is enough: its settings contribute to
+ * `ScrollingPluginSettings`, its definitions are registered with the settings
+ * store, and the layout is required to place it (see `@core/settings.layout`).
+ */
 export const features = [
     CenterCursorFeature,
     CodeBlockFeature,
@@ -54,13 +73,10 @@ type MergeFeatures<F extends readonly FeatureConstructor[]> = UnionToIntersectio
     SettingObject<InstanceOf<F[number]>>
 >;
 
+/** The flat, fully typed settings object. Every key is declared exactly once. */
 export type ScrollingPluginSettings = MergeFeatures<typeof features>;
 
-type SettingItem = {
-    control: {
-        key: string;
-    };
-};
+type SettingItem = SettingShape;
 
 type ItemsOf<T> = T extends { items?: readonly (infer I)[] } ? I : never;
 
@@ -72,6 +88,6 @@ type SettingObjectItem<S> = S extends SettingItem
       }
     : never;
 
-type SettingObject<F extends Feature> = UnionToIntersection<
+type SettingObject<F extends { settings: FeatureSettingsShape }> = UnionToIntersection<
     SettingObjectItem<ItemsOf<F["settings"]> | ItemsOf<GroupsOf<F["settings"]>>>
 >;

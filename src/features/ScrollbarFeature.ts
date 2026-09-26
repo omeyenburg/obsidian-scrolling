@@ -1,13 +1,10 @@
 import { Platform } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/feature.schema";
 
 export class ScrollbarFeature implements Feature {
     public readonly id = "scrollbar";
 
     public readonly settings = {
-        name: "Scrollbars",
-        desc: "",
         items: [
             {
                 name: "Scrollbar visibility",

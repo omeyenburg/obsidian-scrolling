@@ -1,7 +1,6 @@
 import { Platform } from "obsidian";
 import { clamp } from "@core/util";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/feature.schema";
 
 function easeOut(t: number): number {
     return 1 - (1 - t) ** 2;
@@ -16,8 +15,6 @@ export class MouseScrollFeature implements Feature {
     private plugin!: ScrollingPlugin;
 
     public readonly settings = {
-        name: "Mouse & Touchpad scrolling",
-        desc: "",
         items: [
             {
                 name: "Mode",

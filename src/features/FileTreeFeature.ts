@@ -4,8 +4,6 @@ export class FileTreeFeature implements Feature {
     public readonly id = "fileTree";
 
     public readonly settings = {
-        name: "File tree",
-        desc: "Horizontal scrolling in the file tree",
         items: [
             {
                 name: "Enable",

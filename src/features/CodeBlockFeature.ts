@@ -8,8 +8,6 @@ export class CodeBlockFeature implements Feature {
     private plugin!: ScrollingPlugin;
 
     public readonly settings = {
-        name: "Code blocks",
-        desc: "Disable code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
         items: [
             {
                 name: "Enable",

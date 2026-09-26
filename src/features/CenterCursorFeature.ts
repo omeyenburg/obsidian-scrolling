@@ -14,8 +14,6 @@ export class CenterCursorFeature implements Feature {
     private plugin!: ScrollingPlugin;
 
     public readonly settings = {
-        name: "Centered cursor",
-        desc: "Automatically scrolls the view to keep the cursor near the center when you move it.",
         items: [
             {
                 name: "Enable",
@@ -75,9 +73,9 @@ export class CenterCursorFeature implements Feature {
                     type: "toggle",
                     key: "followCursorEnableSelection",
                     defaultValue: false,
-                },
-                disabled() {
-                    return this.plugin.settings.followCursorEnableMouse === false;
+                    disabled() {
+                        return this.plugin.settings.followCursorEnableMouse === false;
+                    },
                 },
             },
         ],

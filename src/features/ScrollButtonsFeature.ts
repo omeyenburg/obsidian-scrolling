@@ -5,26 +5,7 @@ export class ScrollButtonsFeature implements Feature {
     public readonly id = "scrollButtons";
 
     public readonly settings = {
-        name: "Scroll buttons",
-        desc: "",
         groups: [
-            {
-                heading: "Commands",
-                items: [
-                    {
-                        name: "Commands for scrolling to top/bottom",
-                        desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
-                        control: {
-                            type: "toggle",
-                            key: "ribbonScrollButtonsEnabled",
-                            defaultValue: false,
-                        },
-                        onChange() {
-                            this.setup();
-                        },
-                    },
-                ],
-            },
             {
                 heading: "Scroll buttons",
                 items: [

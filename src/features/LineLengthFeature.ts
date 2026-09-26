@@ -12,8 +12,6 @@ export class LineLengthFeature implements Feature {
     }
 
     public readonly settings = {
-        name: "Line length",
-        desc: "",
         items: [
             {
                 name: "Readable line length",

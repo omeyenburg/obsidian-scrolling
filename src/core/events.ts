@@ -114,6 +114,7 @@ export class Events {
             around(Workspace.prototype, {
                 openLinkText(oldOpenLinkText) {
                     return async function (
+                        this: Workspace,
                         linktext: string,
                         sourcePath: string,
                         newLeaf?: boolean,
