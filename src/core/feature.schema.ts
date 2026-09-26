@@ -62,9 +62,9 @@ type SettingItem = {
     };
 };
 
-type ItemsOf<T> = T extends { items: readonly (infer I)[] }
-    ? I
-    : never;
+type ItemsOf<T> = T extends { items?: readonly (infer I)[] } ? I : never;
+
+type GroupsOf<T> = T extends { groups?: readonly (infer G)[] } ? G : never;
 
 type SettingObjectItem<S> = S extends SettingItem
     ? {
@@ -73,5 +73,5 @@ type SettingObjectItem<S> = S extends SettingItem
     : never;
 
 type SettingObject<F extends Feature> = UnionToIntersection<
-    SettingObjectItem<ItemsOf<F["settings"]>>
+    SettingObjectItem<ItemsOf<F["settings"]> | ItemsOf<GroupsOf<F["settings"]>>>
 >;

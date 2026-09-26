@@ -1,11 +1,12 @@
 import {
     Setting,
+    SettingDefinitionGroup,
     SettingDefinitionItem,
     SettingDefinitionPage,
     SettingDefinitionRender,
-    SettingGroup,
 } from "obsidian";
 import {
+    SettingGroup,
     SettingDefinition,
     SettingDropdownControl,
     SettingSliderControl,
@@ -60,7 +61,12 @@ export class SettingsFactory {
     public getDefaultSettings(features: Feature[]): ScrollingPluginSettings {
         const defaults: Record<string, any> = {};
         for (const feature of features) {
-            for (const item of feature.settings.items) {
+            const items = [
+                ...(feature.settings.items ?? []),
+                ...(feature.settings.groups?.flatMap((group) => group.items) ?? []),
+            ];
+
+            for (const item of items) {
                 if (item.control && item.control.key) {
                     defaults[item.control.key] = item.control.defaultValue;
                 }
@@ -72,15 +78,33 @@ export class SettingsFactory {
     private getFeatureSettingDefinitions(feature: Feature): SettingDefinitionPage {
         const name = feature.settings.name;
         const desc = feature.settings.desc;
-        const items = feature.settings.items.map((fsi) =>
+
+        const items = feature.settings.items?.map((fsi) =>
             this.mapSettingDefinitionItem(fsi, feature),
-        );
+        ) ?? [];
+
+        const groups = feature.settings.groups?.map((fsg) =>
+            this.mapSettingDefinitionGroup(fsg, feature),
+        ) ?? [];
 
         return {
             name,
             desc,
-            items,
+            items: [...items, ...groups],
             type: "page",
+        };
+    }
+
+    private mapSettingDefinitionGroup(
+        fsg: SettingGroup,
+        feature: Feature,
+    ): SettingDefinitionGroup | null {
+        const items = fsg.items.map((fsi) => this.mapSettingDefinitionItem(fsi, feature));
+
+        return {
+            type: "group",
+            heading: fsg.heading,
+            items,
         };
     }
 
@@ -111,7 +135,7 @@ export class SettingsFactory {
         fsi: SettingDefinition,
         feature: Feature,
         disabled: boolean | (() => boolean),
-    ): (setting: Setting, group: SettingGroup) => void | (() => void) {
+    ): (setting: Setting) => void | (() => void) {
         const onChange = async (value: boolean | string | number) => {
             this.plugin.settings[fsi.control.key] = value;
             fsi.onChange?.apply(feature);
@@ -154,8 +178,7 @@ export class SettingsFactory {
                 toggle.onChange(onChange);
 
                 this.addUpdateSubscriber(() => {
-                    toggle
-                        .setValue(this.plugin.settings[control.key])
+                    toggle.setValue(this.plugin.settings[control.key]);
                 });
             });
         };
@@ -175,8 +198,7 @@ export class SettingsFactory {
                 dropdown.addOptions(control.options).onChange(onChange);
 
                 this.addUpdateSubscriber(() => {
-                    dropdown
-                        .setValue(this.plugin.settings[control.key])
+                    dropdown.setValue(this.plugin.settings[control.key]);
                 });
             });
         };
@@ -200,8 +222,7 @@ export class SettingsFactory {
                     .setInstant(control.instant ?? false);
 
                 this.addUpdateSubscriber(() => {
-                    slider
-                        .setValue(this.plugin.settings[control.key])
+                    slider.setValue(this.plugin.settings[control.key]);
                 });
             });
         };
@@ -223,7 +244,7 @@ export class SettingsFactory {
                 ).setPlaceholder(control.placeholder);
 
                 this.addUpdateSubscriber(() => {
-                    text.setValue(this.plugin.settings[control.key])
+                    text.setValue(this.plugin.settings[control.key]);
                 });
             });
         };
@@ -243,7 +264,7 @@ export class SettingsFactory {
                 text.onChange(onChange).setPlaceholder(control.placeholder);
 
                 this.addUpdateSubscriber(() => {
-                    text.setValue(this.plugin.settings[control.key])
+                    text.setValue(this.plugin.settings[control.key]);
                 });
             });
         };
@@ -263,8 +284,7 @@ export class SettingsFactory {
                 textArea.onChange(onChange).setPlaceholder(control.placeholder);
 
                 this.addUpdateSubscriber(() => {
-                    textArea
-                        .setValue(this.plugin.settings[control.key])
+                    textArea.setValue(this.plugin.settings[control.key]);
                 });
             });
         };

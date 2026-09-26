@@ -1,6 +1,5 @@
 import { MarkdownView, WorkspaceLeaf, setIcon } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/feature.schema";
 
 export class ScrollButtonsFeature implements Feature {
     public readonly id = "scrollButtons";
@@ -8,49 +7,59 @@ export class ScrollButtonsFeature implements Feature {
     public readonly settings = {
         name: "Scroll buttons",
         desc: "",
-        items: [
+        groups: [
             {
-                name: "Commands for scrolling to top/bottom",
-                desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
-                control: {
-                    type: "toggle",
-                    key: "ribbonScrollButtonsEnabled",
-                    defaultValue: false,
-                },
-                onChange() {
-                    this.setup();
-                },
-            },
-            {
-                name: "Show top/bottom scroll buttons",
-                desc: "Adds buttons to scroll to the top/bottom of the file.",
-                control: {
-                    type: "toggle",
-                    key: "scrollButtonsEnabled",
-                    defaultValue: false,
-                },
-                onChange() {
-                    this.setup();
-                },
-            },
-            {
-                name: "Button position",
-                desc: "Moves the buttons in the note.",
-                control: {
-                    type: "dropdown",
-                    key: "scrollButtonsPosition",
-                    defaultValue: "top",
-                    options: {
-                        top: "Top",
-                        bottom: "Bottom",
+                heading: "Commands",
+                items: [
+                    {
+                        name: "Commands for scrolling to top/bottom",
+                        desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+                        control: {
+                            type: "toggle",
+                            key: "ribbonScrollButtonsEnabled",
+                            defaultValue: false,
+                        },
+                        onChange() {
+                            this.setup();
+                        },
                     },
-                },
-                onChange() {
-                    this.setup();
-                },
+                ],
+            },
+            {
+                heading: "Scroll buttons",
+                items: [
+                    {
+                        name: "Show top/bottom scroll buttons",
+                        desc: "Adds buttons to scroll to the top/bottom of the file.",
+                        control: {
+                            type: "toggle",
+                            key: "scrollButtonsEnabled",
+                            defaultValue: false,
+                        },
+                        onChange() {
+                            this.setup();
+                        },
+                    },
+                    {
+                        name: "Button position",
+                        desc: "Moves the buttons in the note.",
+                        control: {
+                            type: "dropdown",
+                            key: "scrollButtonsPosition",
+                            defaultValue: "top",
+                            options: {
+                                top: "Top",
+                                bottom: "Bottom",
+                            },
+                        },
+                        onChange() {
+                            this.setup();
+                        },
+                    },
+                ],
             },
         ],
-    } as const satisfies FeatureSettingsDefinition
+    } as const satisfies FeatureSettingsDefinition;
 
     private plugin!: ScrollingPlugin;
     private leaves: Set<WorkspaceLeaf> = new Set();

@@ -1,12 +1,13 @@
 import { Plugin } from "obsidian";
 import type { Events } from "@core/events";
-import type { SettingDefinition } from "@core/settings.schema";
+import type { SettingDefinition, SettingGroup } from "@core/settings.schema";
 import { ScrollingPluginSettings } from "./feature.schema";
 
-export interface FeatureSettingsDefinition<K extends string = string> {
+export interface FeatureSettingsDefinition {
     name: string;
     desc: string;
-    items: readonly SettingDefinition<K>[];
+    items?: readonly SettingDefinition[];
+    groups?: readonly SettingGroup[];
 }
 
 export interface ScrollingPlugin extends Plugin {
@@ -26,5 +27,4 @@ export interface Feature {
     readonly settings: FeatureSettingsDefinition;
     onload(plugin: ScrollingPlugin): void | Promise<void>;
     onunload(): void;
-    onSettingsChange?(settings: any): void | Promise<void>;
 }

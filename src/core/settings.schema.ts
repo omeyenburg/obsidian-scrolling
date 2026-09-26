@@ -1,3 +1,8 @@
+export interface SettingGroup {
+    heading: string;
+    items: readonly SettingDefinition[];
+}
+
 export interface SettingDefinition<K extends string = string> {
     name: string;
     desc?: string | DocumentFragment;

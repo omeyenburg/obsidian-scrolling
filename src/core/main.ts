@@ -48,7 +48,6 @@ export default class ScrollingPlugin extends Plugin {
 
     async saveSettings() {
         await this.saveData(this.settings);
-        await this.featureRegistery.triggerSettingsChange();
     }
 
     getMainDoc(): Document {

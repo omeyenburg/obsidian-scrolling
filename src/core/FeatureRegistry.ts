@@ -45,17 +45,4 @@ export class FeatureRegistry {
         }
         // this.features.clear();
     }
-
-    public async triggerSettingsChange(): Promise<void> {
-        const settings = this.plugin.settings;
-        for (const feature of this.features.values()) {
-            if (feature.onSettingsChange) {
-                try {
-                    await feature.onSettingsChange(settings);
-                } catch (err) {
-                    console.error(`Error in onSettingsChange for feature "${feature.id}":`, err);
-                }
-            }
-        }
-    }
 }

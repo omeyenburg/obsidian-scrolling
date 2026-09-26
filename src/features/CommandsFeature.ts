@@ -1,6 +1,5 @@
 import { Platform } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
-import { ScrollingPluginSettings } from "@core/feature.schema";
 
 function scrollToTop(el: Element) {
     el.scrollTo({ top: 0 });
@@ -24,6 +23,9 @@ export class CommandsFeature implements Feature {
                     type: "toggle",
                     key: "ribbonScrollButtonsEnabled",
                     defaultValue: false,
+                },
+                onChange() {
+                    this.updateRibbonButtons()
                 },
             }
         ],
@@ -53,10 +55,6 @@ export class CommandsFeature implements Feature {
 
     public onunload(): void {
         this.removeScrollRibbonButtons();
-    }
-
-    public onSettingsChange(settings: ScrollingPluginSettings): void {
-        this.updateRibbonButtons();
     }
 
     public updateRibbonButtons(): void {
