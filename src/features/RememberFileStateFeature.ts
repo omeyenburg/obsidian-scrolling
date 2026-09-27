@@ -51,18 +51,18 @@ export class RememberFileStateFeature implements Feature {
                     key: "restoreScrollLimit",
                     defaultValue: -1,
                     placeholder: "Unlimited",
-                    displayFormat(value) {
+                    displayFormat: (value): string => {
                         return value > 0 ? value.toString() : "";
                     },
                     // `null` rejects the edit and keeps the stored value.
-                    parse(value) {
+                    parse: (value): number | null => {
                         const limit = +value;
                         if (isNaN(limit) || limit.toString().includes(".")) {
                             return null;
                         }
                         return limit <= 0 ? -1 : limit;
                     },
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
@@ -74,7 +74,7 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollAge",
                     defaultValue: false,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
@@ -86,7 +86,7 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollPdf",
                     defaultValue: false,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
@@ -98,7 +98,7 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollBases",
                     defaultValue: false,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
@@ -110,7 +110,7 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollFileLink",
                     defaultValue: true,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
@@ -122,7 +122,7 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollInitialOnly",
                     defaultValue: false,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
@@ -137,7 +137,7 @@ export class RememberFileStateFeature implements Feature {
                     min: 0,
                     max: 300,
                     step: 5,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
@@ -150,7 +150,7 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollFileEnabled",
                     defaultValue: true,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
@@ -161,11 +161,11 @@ export class RememberFileStateFeature implements Feature {
                 control: {
                     type: "text",
                     key: "restoreScrollFilePath",
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.restoreScrollMode === "top";
                     },
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.restoreScrollFileEnabled;
                 },
             },

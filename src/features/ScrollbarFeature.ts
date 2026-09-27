@@ -17,7 +17,7 @@ export class ScrollbarFeature implements Feature {
                         show: "Always show scrollbar",
                     },
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateStyle();
                 },
             },
@@ -32,7 +32,7 @@ export class ScrollbarFeature implements Feature {
                     max: 30,
                     step: 1,
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateStyle();
                 },
             },

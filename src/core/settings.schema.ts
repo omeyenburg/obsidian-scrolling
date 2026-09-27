@@ -1,26 +1,21 @@
 import type { SettingControl as NativeSettingControl } from "obsidian";
 
 /**
- * The `this` available inside `visible`, `disabled` and `onChange` callbacks: the
- * feature instance that owns the definition, bound at translation time.
+ * A boolean setting state, recomputed on every render.
  *
- * Declared `any` on purpose. `ScrollingPluginSettings` is derived from the very
- * definitions these callbacks appear in, so naming the settings object here would be
- * a circular type; and the callbacks also reach feature-private members
- * (`this.setup()`), which the schema cannot name either. Declaring it explicitly
- * keeps `noImplicitThis` on without weakening anything that was previously checked.
- *
- * The write path, by contrast, *is* fully typed: see `SettingsStore.set`.
+ * Callbacks are plain functions, never `this`-typed methods. A feature's `settings`
+ * is a class field, so an arrow function in its initializer captures the instance and
+ * TypeScript checks every `this.<member>` against the real class — including private
+ * members. The cost is that a callback cannot be handed a receiver at call time; the
+ * translator and the store simply invoke these, so there is nothing to hand.
  */
-export type SettingOwner = any;
-
-export type BoolPredicate = boolean | ((this: SettingOwner) => boolean);
+export type BoolPredicate = boolean | (() => boolean);
 
 /**
  * Parses a raw text field into the value that gets stored.
  * Returning `null` rejects the edit and leaves the stored value untouched.
  */
-export type ControlParse = (this: SettingOwner, raw: string) => number | null;
+export type ControlParse = (raw: string) => number | null;
 
 /**
  * The hooks Obsidian's control schema has no slot for.
@@ -33,21 +28,10 @@ interface ControlExtras {
     /** `number` only. Presence forces the row to render imperatively. */
     parse?: ControlParse;
     /** `number` only. Renders the stored value; omitted values use `String(value)`. */
-    displayFormat?: (this: SettingOwner, value: number) => string;
-    /**
-     * Native controls declare `disabled` without a `this` type, which would leave
-     * `this` inside the callback unresolvable. Re-declared here to bind the owner;
-     * `OwnedControl` strips the native one so only this signature applies.
-     */
-    disabled?: BoolPredicate;
+    displayFormat?: (value: number) => string;
 }
 
-/** Distributes over the control union, re-declaring `disabled` to bind `this`. */
-type OwnedControl<C> = C extends unknown ? Omit<C, "disabled"> & { disabled?: BoolPredicate } : never;
-
-export type SettingControl<K extends string = string> = OwnedControl<
-    NativeSettingControl<K> & ControlExtras
->;
+export type SettingControl<K extends string = string> = NativeSettingControl<K> & ControlExtras;
 
 /** The value a control stores, derived from its `type`. */
 export type ValueOf<C> = C extends { type: "toggle" }
@@ -75,10 +59,10 @@ export interface SettingItem<C extends SettingControl = SettingControl> {
     desc?: string | DocumentFragment;
     aliases?: string[];
     searchable?: boolean | (() => boolean);
-    /** Evaluated on each render with `this` bound to the owning feature. */
+    /** Re-evaluated on each render, and in place on every write. */
     visible?: BoolPredicate;
-    /** Runs after the value is written and persisted, with `this` bound to the owner. */
-    onChange?: (this: SettingOwner, value: ValueOf<C>) => void;
+    /** Runs after the value is written and persisted. */
+    onChange?: (value: ValueOf<C>) => void;
     control: C;
 }
 
@@ -102,10 +86,13 @@ export interface FeatureSettingsDefinition {
     groups?: readonly SettingGroup[];
 }
 
-export function bindPredicate(
-    predicate: BoolPredicate | undefined,
-    owner: SettingOwner,
-): (() => boolean) | undefined {
+/**
+ * Normalises a predicate into a re-callable thunk, or `undefined` if there was none.
+ *
+ * A boolean is already constant, so it becomes a thunk for free; a function is
+ * returned as-is, since the callbacks are `this`-free and close over their feature.
+ */
+export function bindPredicate(predicate: BoolPredicate | undefined): (() => boolean) | undefined {
     if (predicate === undefined) {
         return undefined;
     }
@@ -114,7 +101,7 @@ export function bindPredicate(
         return () => predicate;
     }
 
-    return () => predicate.call(owner);
+    return predicate;
 }
 
 /** Every item of a feature, whether declared as loose items or inside groups. */

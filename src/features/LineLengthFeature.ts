@@ -20,7 +20,7 @@ export class LineLengthFeature implements Feature {
                     key: "readableLineLengthEnabled",
                     defaultValue: true,
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateLineLength();
                 },
             },
@@ -36,7 +36,7 @@ export class LineLengthFeature implements Feature {
                         characters: "Characters (ch)",
                         percentage: "Percentage (%)",
                     },
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.readableLineLengthEnabled === false;
                     },
                 },
@@ -51,14 +51,14 @@ export class LineLengthFeature implements Feature {
                     min: 400,
                     max: 3000,
                     step: 50,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.readableLineLengthEnabled === false;
                     },
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.lineLengthUnit === "pixels";
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateLineLength();
                 },
             },
@@ -72,14 +72,14 @@ export class LineLengthFeature implements Feature {
                     min: 30,
                     max: 200,
                     step: 1,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.readableLineLengthEnabled === false;
                     },
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.lineLengthUnit === "characters";
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateLineLength();
                 },
             },
@@ -93,14 +93,14 @@ export class LineLengthFeature implements Feature {
                     min: 20,
                     max: 100,
                     step: 2,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.readableLineLengthEnabled === false;
                     },
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.lineLengthUnit === "percentage";
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateLineLength();
                 },
             },

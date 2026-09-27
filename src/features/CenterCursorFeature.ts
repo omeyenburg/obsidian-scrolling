@@ -33,7 +33,7 @@ export class CenterCursorFeature implements Feature {
                     min: 0,
                     max: 100,
                     step: 1,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.followCursorEnabled === false;
                     },
                 },
@@ -48,7 +48,7 @@ export class CenterCursorFeature implements Feature {
                     min: 0,
                     max: 100,
                     step: 1,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.followCursorEnabled === false;
                     },
                 },
@@ -60,7 +60,7 @@ export class CenterCursorFeature implements Feature {
                     type: "toggle",
                     key: "followCursorInstantEditScroll",
                     defaultValue: true,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.followCursorEnabled === false;
                     },
                 },
@@ -72,7 +72,7 @@ export class CenterCursorFeature implements Feature {
                     type: "toggle",
                     key: "followCursorEnableMouse",
                     defaultValue: false,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.followCursorEnabled === false;
                     },
                 },
@@ -84,11 +84,11 @@ export class CenterCursorFeature implements Feature {
                     type: "toggle",
                     key: "followCursorEnableSelection",
                     defaultValue: false,
-                    disabled() {
+                    disabled: (): boolean => {
                         return this.plugin.settings.followCursorEnabled === false;
                     },
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.followCursorEnableMouse === true;
                 },
             },

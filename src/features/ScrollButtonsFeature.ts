@@ -15,7 +15,7 @@ export class ScrollButtonsFeature implements Feature {
                             key: "scrollButtonsEnabled",
                             defaultValue: false,
                         },
-                        onChange() {
+                        onChange: (): void => {
                             this.setup();
                         },
                     },
@@ -30,11 +30,11 @@ export class ScrollButtonsFeature implements Feature {
                                 top: "Top",
                                 bottom: "Bottom",
                             },
-                            disabled() {
+                            disabled: (): boolean => {
                                 return this.plugin.settings.scrollButtonsEnabled === false;
                             }
                         },
-                        onChange() {
+                        onChange: (): void => {
                             this.setup();
                         },
                     },

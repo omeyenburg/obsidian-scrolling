@@ -8,7 +8,7 @@ import type {
 } from "obsidian";
 
 import type { Feature } from "@core/Feature";
-import type { ControlParse, SettingOwner, SettingItem } from "@core/settings.schema";
+import type { ControlParse, SettingItem } from "@core/settings.schema";
 import { bindPredicate } from "@core/settings.schema";
 import type { AnyFeatureConstructor, PageLayout } from "@core/settings.layout";
 import { settingsLayout } from "@core/settings.layout";
@@ -65,11 +65,11 @@ export class SettingsTranslator {
         const translated: SettingDefinitionGroup[] = [];
 
         for (const group of groups ?? []) {
-            translated.push(this.translateGroup(feature, group.heading, group.items));
+            translated.push(this.translateGroup(group.heading, group.items));
         }
 
         if (items?.length) {
-            translated.push(this.translateGroup(feature, undefined, items));
+            translated.push(this.translateGroup(undefined, items));
         }
 
         if (translated.length === 0) {
@@ -82,7 +82,6 @@ export class SettingsTranslator {
     }
 
     private translateGroup(
-        feature: Feature,
         heading: string | undefined,
         items: readonly SettingItem[],
     ): SettingDefinitionGroup {
@@ -90,18 +89,17 @@ export class SettingsTranslator {
             type: "group",
             cls: GROUP_CLASS,
             heading,
-            items: items.map((item) => this.translateItem(feature, item)),
+            items: items.map((item) => this.translateItem(item)),
         };
     }
 
-    private translateItem(feature: Feature, item: SettingItem): SettingDefinition {
-        const owner = feature as unknown as SettingOwner;
-        const visible = bindPredicate(item.visible, owner);
+    private translateItem(item: SettingItem): SettingDefinition {
+        const visible = bindPredicate(item.visible);
 
         // `parse`/`displayFormat` are ours, not Obsidian's: keep them out of the
         // emitted control.
         const { parse, displayFormat, disabled, ...control } = item.control;
-        const boundDisabled = bindPredicate(disabled, owner);
+        const boundDisabled = bindPredicate(disabled);
 
         if (parse) {
             // `SettingDefinitionRender` has no `disabled` slot, so the predicate is
@@ -112,7 +110,7 @@ export class SettingsTranslator {
                 aliases: item.aliases,
                 searchable: item.searchable,
                 visible,
-                render: this.renderParsed(owner, item, parse, boundDisabled, displayFormat),
+                render: this.renderParsed(item, parse, boundDisabled, displayFormat),
             };
         }
 
@@ -134,18 +132,17 @@ export class SettingsTranslator {
      * alternative (a factory-wide subscriber set) leaks closures over dead components.
      */
     private renderParsed(
-        owner: SettingOwner,
         item: SettingItem,
         parse: ControlParse,
         disabled: (() => boolean) | undefined,
-        displayFormat?: (this: SettingOwner, value: number) => string,
+        displayFormat?: (value: number) => string,
     ): (setting: Setting) => void | (() => void) {
         // `parse` is only ever declared on a number control, so the correlation
         // between this key and a `number` value holds; the cast restores it.
         const key = item.control.key as SettingKey;
         const current = (): number => this.store.get(key) as number;
         const format = (value: number): string =>
-            displayFormat ? displayFormat.call(owner, value) : String(value);
+            displayFormat ? displayFormat(value) : String(value);
         const placeholder = "placeholder" in item.control ? item.control.placeholder : undefined;
 
         return (setting: Setting): (() => void) => {
@@ -159,7 +156,7 @@ export class SettingsTranslator {
                     .setPlaceholder(placeholder)
                     .setValue(format(last))
                     .onChange((raw: string) => {
-                        const value = parse.call(owner, raw);
+                        const value = parse(raw);
                         if (value === null) {
                             // Rejected input: leave the stored value and the
                             // field's own state alone.

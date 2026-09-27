@@ -40,7 +40,7 @@ export class MouseScrollFeature implements Feature {
                     max: 3,
                     step: 0.1,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "native";
                 },
             },
@@ -55,7 +55,7 @@ export class MouseScrollFeature implements Feature {
                     max: 3,
                     step: 0.1,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "native";
                 },
             },
@@ -67,7 +67,7 @@ export class MouseScrollFeature implements Feature {
                     key: "nativeScrollInstant",
                     defaultValue: false,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "native";
                 },
             },
@@ -79,7 +79,7 @@ export class MouseScrollFeature implements Feature {
                     key: "simulatedMouseInvert",
                     defaultValue: false,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "simulated";
                 },
             },
@@ -94,7 +94,7 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "simulated";
                 },
             },
@@ -109,7 +109,7 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "simulated";
                 },
             },
@@ -121,7 +121,7 @@ export class MouseScrollFeature implements Feature {
                     key: "simulatedTouchpadEnabled",
                     defaultValue: true,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "simulated";
                 },
             },
@@ -136,7 +136,7 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "simulated";
                 },
             },
@@ -151,7 +151,7 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "simulated";
                 },
             },
@@ -166,7 +166,7 @@ export class MouseScrollFeature implements Feature {
                     max: 100,
                     step: 1,
                 },
-                visible() {
+                visible: (): boolean => {
                     return this.plugin.settings.scrollMode === "simulated";
                 },
             },

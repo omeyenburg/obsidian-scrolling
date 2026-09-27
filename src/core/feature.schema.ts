@@ -1,20 +1,6 @@
 import type { AnyFeatureConstructor } from "@core/settings.layout";
 import { settingsLayout } from "@core/settings.layout";
-import type { FeatureSettingsShape } from "@core/settings.schema";
-
-type ControlValue<C> = C extends { type: "toggle" }
-    ? boolean
-    : C extends { type: "text" }
-      ? string
-      : C extends { type: "textarea" }
-        ? string
-        : C extends { type: "number" }
-          ? number
-          : C extends { type: "slider" }
-            ? number
-            : C extends { type: "dropdown"; options: Record<string, any> }
-              ? keyof C["options"]
-              : unknown;
+import type { FeatureSettingsShape, ValueOf } from "@core/settings.schema";
 
 type InstanceOf<C> = C extends new () => infer I ? I : never;
 
@@ -44,7 +30,7 @@ type GroupsOf<T> = T extends { groups?: readonly (infer G)[] } ? G : never;
 
 type SettingObjectItem<S> = S extends SettingItem
     ? {
-          [K in S["control"]["key"]]: ControlValue<S["control"]>;
+          [K in S["control"]["key"]]: ValueOf<S["control"]>;
       }
     : never;
 

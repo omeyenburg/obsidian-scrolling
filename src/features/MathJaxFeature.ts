@@ -11,7 +11,7 @@ export class MathJaxFeature implements Feature {
                     key: "mathjaxScrollEnabled",
                     defaultValue: false,
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateStyle();
                 },
             },

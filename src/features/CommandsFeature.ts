@@ -1,4 +1,5 @@
-import { Platform } from "obsidian";
+import type { MarkdownView } from "obsidian";
+
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 function scrollToTop(el: Element) {
@@ -23,7 +24,7 @@ export class CommandsFeature implements Feature {
                             key: "ribbonScrollButtonsEnabled",
                             defaultValue: false,
                         },
-                        onChange() {
+                        onChange: (): void => {
                             this.updateRibbonButtons();
                         },
                     },
@@ -105,14 +106,19 @@ export class CommandsFeature implements Feature {
                 case "image":
                     scroller = view.contentEl.getElementsByClassName("view-content")[0];
                     break;
-                case "markdown":
-                    if ((view as any).getMode() === "source") {
-                        scroller = (view as any).editor.cm.scrollDOM;
+                case "markdown": {
+                    // `getViewType()` is not a discriminant, so the switch cannot
+                    // narrow `FileView`; the "markdown" branch is the one that is
+                    // guaranteed to be a `MarkdownView`.
+                    const markdown = view as MarkdownView;
+                    if (markdown.getMode() === "source") {
+                        scroller = markdown.editor.cm.scrollDOM;
                     } else {
                         scroller =
                             view.contentEl.getElementsByClassName("markdown-preview-view")[0];
                     }
                     break;
+                }
                 default:
                     return;
             }

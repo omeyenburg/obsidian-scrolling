@@ -11,7 +11,7 @@ export class FileTreeFeature implements Feature {
                     key: "horizontalFileTreeEnabled",
                     defaultValue: false,
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateStyle();
                 },
             },

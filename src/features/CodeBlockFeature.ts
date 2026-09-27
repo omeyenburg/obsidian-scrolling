@@ -17,7 +17,7 @@ export class CodeBlockFeature implements Feature {
                     key: "codeBlockScrollEnabled",
                     defaultValue: false,
                 },
-                onChange() {
+                onChange: (): void => {
                     this.updateStyle();
                 },
             },

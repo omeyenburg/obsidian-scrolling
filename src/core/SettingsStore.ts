@@ -1,6 +1,6 @@
 import type { Feature, ScrollingPlugin } from "@core/Feature";
 import type { ScrollingPluginSettings } from "@core/feature.schema";
-import { itemsOf, type SettingOwner } from "@core/settings.schema";
+import { itemsOf } from "@core/settings.schema";
 
 export type SettingKey = keyof ScrollingPluginSettings;
 
@@ -30,8 +30,6 @@ export class SettingsStore {
      * therefore before the features' `onload`.
      */
     register(feature: Feature): void {
-        const owner = feature as unknown as SettingOwner;
-
         for (const item of itemsOf(feature.settings)) {
             // `control.key` is `string` in the schema; the map is keyed by real keys.
             const key = item.control.key as SettingKey;
@@ -48,7 +46,13 @@ export class SettingsStore {
 
             if (item.onChange) {
                 const onChange = item.onChange;
-                this.handlers.set(key, (value) => onChange.call(owner, value));
+                // `onChange` is typed against its own control, but a `Map` erases the
+                // key/value correlation, so the stored value arrives as `unknown`.
+                // `set` is the typed entry point and checks the value against the key
+                // before it gets here; this is the same erasure `buildDefaults` notes.
+                this.handlers.set(key, (value) =>
+                    onChange(value as Parameters<typeof onChange>[0]),
+                );
             }
         }
     }
