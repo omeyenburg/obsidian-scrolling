@@ -4,7 +4,6 @@ import { QuickCommandsFeature } from "@features/QuickCommandsFeature";
 import { FileTreeFeature } from "@features/FileTreeFeature";
 import { LineLengthFeature } from "@features/LineLengthFeature";
 import { MathJaxFeature } from "@features/MathJaxFeature";
-import { MouseScrollFeature } from "@features/MouseScrollFeature";
 import { ReadingModeShortcutsFeature } from "@features/ReadingModeShortcutsFeature";
 import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
@@ -85,11 +84,6 @@ export const settingsLayout = [
         name: "MathJax",
         desc: "",
         features: [MathJaxFeature],
-    },
-    {
-        name: "Mouse scroll behaviour",
-        desc: "",
-        features: [MouseScrollFeature],
     },
 ] as const satisfies readonly PageLayout[];
 

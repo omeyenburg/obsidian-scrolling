@@ -11,13 +11,37 @@ import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
 
+import { ScrollGestureAnalyzer } from "@core/ScrollGestureAnalyzer";
 import type { default as ScrollingPlugin } from "@core/main";
+
+/**
+ * Checks whether a given element is scrolled to the top.
+ * @param el The element to check.
+ * @returns True if the element's scrollTop is 0.
+ */
+function isScrolledToTop(el: HTMLElement): boolean {
+    return el.scrollTop == 0;
+}
+
+/**
+ * Checks whether a given element is scrolled to the bottom.
+ * @param el The element to check.
+ * @returns True if the element's scroll position is at or past the bottom.
+ */
+function isScrolledToBottom(el: HTMLElement): boolean {
+    return Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
+}
 
 export class Events {
     private readonly plugin: ScrollingPlugin;
 
+    public readonly scrollAnalyzer = new ScrollGestureAnalyzer();
+
     private lastTouchX = 0;
     private lastTouchY = 0;
+
+    private lastWheelEventTime = 0;
+    private lastWheelScrollElement: HTMLElement | null = null;
 
     /**
      * Indicates whether Obsidian is opening a link right now.
@@ -35,6 +59,7 @@ export class Events {
         new Set();
     private wheelCancellingHandlers: { callback: (event: Event) => boolean; priority: number }[] =
         [];
+    private wheelExtendedHandlers: Set<(event: Event, el: HTMLElement) => void> = new Set();
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -250,6 +275,17 @@ export class Events {
     }
 
     /**
+     * Registers a callback to run on a wheel event along the y-axis, with the
+     * element that would actually scroll. The callback will not run on horizontal
+     * movement, and is skipped entirely if a cancelling handler claims the event
+     * first, so a feature that owns a region of the UI can opt out of it.
+     * @param callback Receives the wheel event and the resolved scrollable element.
+     */
+    public onWheelExtended(callback: (event: Event, el: HTMLElement) => void): void {
+        this.wheelExtendedHandlers.add(callback);
+    }
+
+    /**
      * Handles touchstart events to record the initial touch position.
      * @param event The TouchEvent from the DOM.
      */
@@ -343,7 +379,8 @@ export class Events {
     }
 
     /**
-     * Handles wheel events on desktop, invoking cancelling wheel callbacks.
+     * Handles wheel events on desktop, invoking cancelling and extended wheel callbacks.
+     * Traverses DOM to find the actual scrollable element and respects scroll bounds.
      * @param event The WheelEvent from the DOM.
      */
     private wheelHandler(event: WheelEvent): void {
@@ -356,6 +393,61 @@ export class Events {
                 event.preventDefault();
                 return;
             }
+        }
+
+        if (!event.deltaY) return;
+
+        let el: HTMLElement | null = event.target as HTMLElement;
+
+        const now = performance.now();
+        const deltaTime = now - this.lastWheelEventTime;
+        this.lastWheelEventTime = now;
+
+        const isStart = this.scrollAnalyzer.analyzeDelay(deltaTime);
+
+        // Attempt to use cached scroller
+        if (
+            !isStart &&
+            this.lastWheelScrollElement &&
+            (el === this.lastWheelScrollElement || this.lastWheelScrollElement.contains(el)) &&
+            ((event.deltaY < 0 && !isScrolledToTop(this.lastWheelScrollElement)) ||
+                (event.deltaY > 0 && !isScrolledToBottom(this.lastWheelScrollElement)))
+        ) {
+            for (const callback of this.wheelExtendedHandlers) {
+                callback(event, this.lastWheelScrollElement);
+            }
+
+            return;
+        }
+
+        // Traverse DOM to find actual scrollable element
+        while (el && el != activeDocument.body) {
+            const { overflowY } = getComputedStyle(el);
+            if (
+                (overflowY === "auto" || overflowY === "scroll") &&
+                el.scrollHeight > el.clientHeight
+            ) {
+                // Handle nested scroll containers
+                if (isStart) {
+                    if (event.deltaY < 0 && isScrolledToTop(el)) {
+                        el = el.parentElement;
+                        continue;
+                    }
+                    if (event.deltaY > 0 && isScrolledToBottom(el)) {
+                        el = el.parentElement;
+                        continue;
+                    }
+                }
+
+                for (const callback of this.wheelExtendedHandlers) {
+                    callback(event, el);
+                }
+
+                this.lastWheelScrollElement = el;
+                return;
+            }
+
+            el = el.parentElement;
         }
     }
 }
