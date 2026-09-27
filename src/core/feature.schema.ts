@@ -24,9 +24,7 @@ export type ScrollingPluginSettings = MergeFeatures<
 
 type SettingItem = { control: { key: string } };
 
-type ItemsOf<T> = T extends { items?: readonly (infer I)[] } ? I : never;
-
-type GroupsOf<T> = T extends { groups?: readonly (infer G)[] } ? G : never;
+type ItemsOf<T> = T extends { items: readonly (infer I)[] } ? I : never;
 
 type SettingObjectItem<S> = S extends SettingItem
     ? {
@@ -35,5 +33,5 @@ type SettingObjectItem<S> = S extends SettingItem
     : never;
 
 type SettingObject<F extends { settings: FeatureSettingsShape }> = UnionToIntersection<
-    SettingObjectItem<ItemsOf<F["settings"]> | ItemsOf<GroupsOf<F["settings"]>>>
+    SettingObjectItem<ItemsOf<F["settings"]>>
 >;

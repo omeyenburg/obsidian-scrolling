@@ -8,7 +8,7 @@ import type {
 } from "obsidian";
 
 import type { Feature } from "@core/Feature";
-import type { ControlParse, SettingItem } from "@core/settings.schema";
+import type { ControlParse, FeatureSettingsDefinition, SettingItem } from "@core/settings.schema";
 import { bindPredicate } from "@core/settings.schema";
 import type { AnyFeatureConstructor, PageLayout } from "@core/settings.layout";
 import { settingsLayout } from "@core/settings.layout";
@@ -19,6 +19,17 @@ import type { SettingKey, SettingsStore } from "@core/SettingsStore";
  * adjustments we need without leaking them onto other plugins' setting rows.
  */
 export const GROUP_CLASS = "scrolling-setting-group";
+
+/**
+ * A translated group, with `visible` narrowed to the thunk `bindPredicate` returns.
+ *
+ * The native type also permits a constant boolean, but nothing here ever produces
+ * one, so declaring it precisely is what lets a page derive its own visibility by
+ * calling each group's predicate.
+ */
+type TranslatedGroup = Omit<SettingDefinitionGroup, "visible"> & {
+    visible?: () => boolean;
+};
 
 /**
  * Turns feature-owned setting definitions into Obsidian's own setting definitions.
@@ -40,56 +51,47 @@ export class SettingsTranslator {
         page: PageLayout<AnyFeatureConstructor>,
         byConstructor: ReadonlyMap<AnyFeatureConstructor, Feature>,
     ): SettingDefinitionPage {
-        const groups: SettingDefinitionGroup[] = [];
-
-        for (const Constructor of page.features) {
+        const groups = page.features.map((Constructor) => {
             const feature = byConstructor.get(Constructor);
             if (!feature) {
                 throw new Error(
                     `Settings layout references unregistered feature "${Constructor.name}".`,
                 );
             }
-            groups.push(...this.translateFeature(feature));
-        }
+            return this.translateFeature(feature);
+        });
 
         return {
             type: "page",
             name: page.name,
             desc: page.desc,
             items: groups,
+            // A page is offered whenever at least one of its features is. Derived here
+            // rather than declared in the layout, so a feature that is inert on a
+            // platform hides itself and takes its page with it. This stays a live
+            // thunk delegating to the group thunks, not a one-off filter, so a page is
+            // never dropped permanently.
+            visible: (): boolean =>
+                groups.some((group) => group.visible === undefined || group.visible()),
         };
     }
 
-    private translateFeature(feature: Feature): SettingDefinitionGroup[] {
-        const { items, groups } = feature.settings;
-        const translated: SettingDefinitionGroup[] = [];
+    /** A feature is one group, so this wraps rather than maps. */
+    private translateFeature(feature: Feature): TranslatedGroup {
+        const settings: FeatureSettingsDefinition = feature.settings;
 
-        for (const group of groups ?? []) {
-            translated.push(this.translateGroup(group.heading, group.items));
-        }
-
-        if (items?.length) {
-            translated.push(this.translateGroup(undefined, items));
-        }
-
-        if (translated.length === 0) {
+        if (settings.items.length === 0) {
             throw new Error(
                 `Feature "${feature.constructor.name}" is placed in the layout but declares no settings.`,
             );
         }
 
-        return translated;
-    }
-
-    private translateGroup(
-        heading: string | undefined,
-        items: readonly SettingItem[],
-    ): SettingDefinitionGroup {
         return {
             type: "group",
             cls: GROUP_CLASS,
-            heading,
-            items: items.map((item) => this.translateItem(item)),
+            heading: settings.heading,
+            visible: bindPredicate(settings.visible),
+            items: settings.items.map((item) => this.translateItem(item)),
         };
     }
 

@@ -19,6 +19,7 @@ export class FileTreeFeature implements Feature {
     } as const satisfies FeatureSettingsDefinition;
 
     private plugin!: ScrollingPlugin;
+
     private fileTreeScrollEnabled = false;
 
     public onload(plugin: ScrollingPlugin): void {

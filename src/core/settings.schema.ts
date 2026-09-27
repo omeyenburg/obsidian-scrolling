@@ -66,13 +66,6 @@ export interface SettingItem<C extends SettingControl = SettingControl> {
     control: C;
 }
 
-export interface SettingGroup {
-    /** Stable id, for referring to this group from a layout. */
-    id?: string;
-    heading: string;
-    items: readonly SettingItem[];
-}
-
 /**
  * A feature's contribution to the settings UI.
  *
@@ -80,10 +73,19 @@ export interface SettingGroup {
  * so that unrelated features can share a page.
  */
 export interface FeatureSettingsDefinition {
-    /** Rendered as an unheaded group. Use for features that own a whole page. */
-    items?: readonly SettingItem[];
-    /** Rendered as headed groups. Use for features sharing a page with others. */
-    groups?: readonly SettingGroup[];
+    /** Omitted for a group that needs no heading — e.g. a feature's only group. */
+    heading?: string;
+    /**
+     * Re-evaluated on each render, and in place on every write.
+     *
+     * Declaring it on the whole group is how a feature hides itself on a platform
+     * where its runtime is inert: the page it sits on derives its own visibility
+     * from this, so a feature gated here takes its page with it. Note that the
+     * native group has `visible` but no `disabled`, so rows that should grey out
+     * rather than disappear must keep item-level `disabled`.
+     */
+    visible?: BoolPredicate;
+    items: readonly SettingItem[];
 }
 
 /**
@@ -104,11 +106,6 @@ export function bindPredicate(predicate: BoolPredicate | undefined): (() => bool
     return predicate;
 }
 
-/** Every item of a feature, whether declared as loose items or inside groups. */
-export function itemsOf(settings: FeatureSettingsDefinition): readonly SettingItem[] {
-    return [...(settings.items ?? []), ...(settings.groups?.flatMap((g) => g.items) ?? [])];
-}
-
 /**
  * The only shape the settings derivation needs from a feature instance.
  *
@@ -117,11 +114,8 @@ export function itemsOf(settings: FeatureSettingsDefinition): readonly SettingIt
  * depend on `ScrollingPluginSettings` — a cycle through the type being derived.
  */
 export type FeatureSettingsShape = {
-    items?: readonly SettingShape[];
-    groups?: readonly { items: readonly SettingShape[] }[];
+    items: readonly { control: { key: string } }[];
 };
-
-type SettingShape = { control: { key: string } };
 
 /**
  * A feature class, structurally.

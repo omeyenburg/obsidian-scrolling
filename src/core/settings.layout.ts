@@ -16,9 +16,12 @@ export interface PageLayout<F extends FeatureConstructor = FeatureConstructor> {
     name: string;
     desc?: string;
     /**
-     * Features contributing a group to this page, in render order. A feature's
-     * `groups` each become a headed group; a feature's `items` become one
-     * unheaded group. This is what lets unrelated features share a page.
+     * Features contributing a group to this page, in render order. Each feature is
+     * exactly one group, so this is what lets unrelated features share a page.
+     *
+     * The page declares no visibility of its own: it is shown whenever at least one
+     * of these features is, which a feature hides itself by gating its own group.
+     * Gating is therefore never declared here — see `FeatureSettingsDefinition.visible`.
      */
     features: readonly F[];
 }
@@ -34,6 +37,13 @@ export interface PageLayout<F extends FeatureConstructor = FeatureConstructor> {
  *
  * Order matters twice over: it is the order of the pages in the settings sidebar, and
  * the order features are constructed and loaded.
+ *
+ * Whether a page appears is deliberately not a decision of this file. It follows from
+ * the features: a page whose every feature is gated away disappears, one with at least
+ * one ungated feature stays. A feature that is inert on a platform — mouse scroll
+ * behaviour, say — therefore declares that on itself, where the reason is visible.
+ * Hiding is presentational throughout: a gated feature still registers its settings,
+ * so no value is ever reset by it being hidden.
  */
 export const settingsLayout = [
     {

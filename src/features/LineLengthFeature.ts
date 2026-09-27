@@ -2,15 +2,8 @@ import { Platform, debounce } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 export class LineLengthFeature implements Feature {
-    private plugin!: ScrollingPlugin;
-    private readonly UPDATE_INTERVAL = 30;
-
-    public onload(plugin: ScrollingPlugin): void {
-        this.plugin = plugin;
-        this.updateLineLength();
-    }
-
     public readonly settings = {
+        visible: (): boolean => !Platform.isMobile,
         items: [
             {
                 name: "Readable line length",
@@ -107,6 +100,15 @@ export class LineLengthFeature implements Feature {
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
+
+    private plugin!: ScrollingPlugin;
+
+    private readonly UPDATE_INTERVAL = 30;
+
+    public onload(plugin: ScrollingPlugin): void {
+        this.plugin = plugin;
+        this.updateLineLength();
+    }
 
     public onunload(): void {
         this.plugin.removeStyleProperty("--file-line-width");

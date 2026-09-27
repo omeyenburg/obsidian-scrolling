@@ -10,8 +10,6 @@ interface ScrollInfo {
 }
 
 export class CenterCursorFeature implements Feature {
-    private plugin!: ScrollingPlugin;
-
     public readonly settings = {
         items: [
             {
@@ -94,6 +92,8 @@ export class CenterCursorFeature implements Feature {
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
+
+    private plugin!: ScrollingPlugin;
 
     private recentMouseUp = false;
     private animationFrame = 0;

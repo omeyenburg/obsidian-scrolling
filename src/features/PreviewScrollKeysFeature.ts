@@ -2,44 +2,41 @@ import { MarkdownView, Platform } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 export class PreviewScrollKeysFeature implements Feature {
-    private plugin!: ScrollingPlugin;
-
     public readonly settings = {
-        groups: [
+        heading: "Reading mode shortcuts",
+        visible: (): boolean => !Platform.isMobile,
+        items: [
             {
-                heading: "Reading mode shortcuts",
-                items: [
-                    {
-                        name: "Single line scroll shortcuts",
-                        desc: "Scroll by single lines with j/k.",
-                        control: {
-                            type: "toggle",
-                            key: "readingLineScrollEnabled",
-                            defaultValue: true,
-                        },
-                    },
-                    {
-                        name: "Half page scroll shortcuts",
-                        desc: "Scroll half pages with d/u.",
-                        control: {
-                            type: "toggle",
-                            key: "readingHalfPageScrollEnabled",
-                            defaultValue: true,
-                        },
-                    },
-                    {
-                        name: "Top/bottom scroll shortcuts",
-                        desc: "Scroll to top/bottom with g/G.",
-                        control: {
-                            type: "toggle",
-                            key: "readingTopBottomScrollEnabled",
-                            defaultValue: true,
-                        },
-                    },
-                ],
+                name: "Single line scroll shortcuts",
+                desc: "Scroll by single lines with j/k.",
+                control: {
+                    type: "toggle",
+                    key: "readingLineScrollEnabled",
+                    defaultValue: true,
+                },
+            },
+            {
+                name: "Half page scroll shortcuts",
+                desc: "Scroll half pages with d/u.",
+                control: {
+                    type: "toggle",
+                    key: "readingHalfPageScrollEnabled",
+                    defaultValue: true,
+                },
+            },
+            {
+                name: "Top/bottom scroll shortcuts",
+                desc: "Scroll to top/bottom with g/G.",
+                control: {
+                    type: "toggle",
+                    key: "readingTopBottomScrollEnabled",
+                    defaultValue: true,
+                },
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
+
+    private plugin!: ScrollingPlugin;
 
     private goal: number | null = null;
     private scroller: Element | null = null;

@@ -1,6 +1,5 @@
 import type { Feature, ScrollingPlugin } from "@core/Feature";
 import type { ScrollingPluginSettings } from "@core/feature.schema";
-import { itemsOf } from "@core/settings.schema";
 
 export type SettingKey = keyof ScrollingPluginSettings;
 
@@ -30,7 +29,7 @@ export class SettingsStore {
      * therefore before the features' `onload`.
      */
     register(feature: Feature): void {
-        for (const item of itemsOf(feature.settings)) {
+        for (const item of feature.settings.items) {
             // `control.key` is `string` in the schema; the map is keyed by real keys.
             const key = item.control.key as SettingKey;
 

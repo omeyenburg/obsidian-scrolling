@@ -11,9 +11,8 @@ function mean(data: number[]): number {
 }
 
 export class MouseScrollFeature implements Feature {
-    private plugin!: ScrollingPlugin;
-
     public readonly settings = {
+        visible: (): boolean => !Platform.isMobile,
         items: [
             {
                 name: "Mode",
@@ -172,6 +171,8 @@ export class MouseScrollFeature implements Feature {
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
+
+    private plugin!: ScrollingPlugin;
 
     private touchpadLastUse = -Infinity;
     private touchpadFriction = 0;

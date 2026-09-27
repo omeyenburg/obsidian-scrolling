@@ -4,8 +4,6 @@ import { getVimCursor } from "@core/util";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 export class CodeBlockFeature implements Feature {
-    private plugin!: ScrollingPlugin;
-
     public readonly settings = {
         items: [
             {
@@ -23,6 +21,8 @@ export class CodeBlockFeature implements Feature {
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
+
+    private plugin!: ScrollingPlugin;
 
     private codeBlockLines: Element[] = [];
     private scrollHandlerAnimationFrame: number | null = null;

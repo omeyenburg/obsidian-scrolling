@@ -12,28 +12,25 @@ function scrollToBottom(el: Element) {
 
 export class CommandsFeature implements Feature {
     public readonly settings = {
-        groups: [
+        heading: "Ribbon buttons",
+        items: [
             {
-                heading: "Ribbon buttons",
-                items: [
-                    {
-                        name: "Commands for scrolling to top/bottom",
-                        desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload on mobile.",
-                        control: {
-                            type: "toggle",
-                            key: "ribbonScrollButtonsEnabled",
-                            defaultValue: false,
-                        },
-                        onChange: (): void => {
-                            this.updateRibbonButtons();
-                        },
-                    },
-                ],
+                name: "Commands for scrolling to top/bottom",
+                desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload on mobile.",
+                control: {
+                    type: "toggle",
+                    key: "ribbonScrollButtonsEnabled",
+                    defaultValue: false,
+                },
+                onChange: (): void => {
+                    this.updateRibbonButtons();
+                },
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
 
     private plugin!: ScrollingPlugin;
+
     private scrollTopRibbon: HTMLElement | null = null;
     private scrollBottomRibbon: HTMLElement | null = null;
 

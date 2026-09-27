@@ -3,42 +3,38 @@ import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/
 
 export class ScrollButtonsFeature implements Feature {
     public readonly settings = {
-        groups: [
+        heading: "Scroll buttons",
+        items: [
             {
-                heading: "Scroll buttons",
-                items: [
-                    {
-                        name: "Show top/bottom scroll buttons",
-                        desc: "Adds buttons to scroll to the top/bottom of the file.",
-                        control: {
-                            type: "toggle",
-                            key: "scrollButtonsEnabled",
-                            defaultValue: false,
-                        },
-                        onChange: (): void => {
-                            this.setup();
-                        },
+                name: "Show top/bottom scroll buttons",
+                desc: "Adds buttons to scroll to the top/bottom of the file.",
+                control: {
+                    type: "toggle",
+                    key: "scrollButtonsEnabled",
+                    defaultValue: false,
+                },
+                onChange: (): void => {
+                    this.setup();
+                },
+            },
+            {
+                name: "Button position",
+                desc: "Moves the buttons in the note.",
+                control: {
+                    type: "dropdown",
+                    key: "scrollButtonsPosition",
+                    defaultValue: "top",
+                    options: {
+                        top: "Top",
+                        bottom: "Bottom",
                     },
-                    {
-                        name: "Button position",
-                        desc: "Moves the buttons in the note.",
-                        control: {
-                            type: "dropdown",
-                            key: "scrollButtonsPosition",
-                            defaultValue: "top",
-                            options: {
-                                top: "Top",
-                                bottom: "Bottom",
-                            },
-                            disabled: (): boolean => {
-                                return this.plugin.settings.scrollButtonsEnabled === false;
-                            }
-                        },
-                        onChange: (): void => {
-                            this.setup();
-                        },
-                    },
-                ],
+                    disabled: (): boolean => {
+                        return this.plugin.settings.scrollButtonsEnabled === false;
+                    }
+                },
+                onChange: (): void => {
+                    this.setup();
+                },
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
