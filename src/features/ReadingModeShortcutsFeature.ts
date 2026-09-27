@@ -1,7 +1,7 @@
 import { MarkdownView, Platform } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
-export class PreviewScrollKeysFeature implements Feature {
+export class ReadingModeShortcutsFeature implements Feature {
     public readonly settings = {
         heading: "Reading mode shortcuts",
         visible: (): boolean => !Platform.isMobile,

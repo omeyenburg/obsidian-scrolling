@@ -10,13 +10,13 @@ function scrollToBottom(el: Element) {
     el.scrollTo({ top: 1000000000 });
 }
 
-export class CommandsFeature implements Feature {
+export class QuickCommandsFeature implements Feature {
     public readonly settings = {
-        heading: "Ribbon buttons",
+        heading: "Quick commands",
         items: [
             {
-                name: "Commands for scrolling to top/bottom",
-                desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload on mobile.",
+                name: "Quick commands for scrolling to top/bottom",
+                desc: "Adds buttons to the quick commands for scrolling to the top/bottom of the file.\nRequires a reload on mobile.",
                 control: {
                     type: "toggle",
                     key: "ribbonScrollButtonsEnabled",

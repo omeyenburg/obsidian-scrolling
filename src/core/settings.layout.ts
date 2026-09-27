@@ -1,11 +1,11 @@
-import { CenterCursorFeature } from "@features/CenterCursorFeature";
+import { CenteredCursorFeature } from "@features/CenteredCursorFeature";
 import { CodeBlockFeature } from "@features/CodeBlockFeature";
-import { CommandsFeature } from "@features/CommandsFeature";
+import { QuickCommandsFeature } from "@features/QuickCommandsFeature";
 import { FileTreeFeature } from "@features/FileTreeFeature";
 import { LineLengthFeature } from "@features/LineLengthFeature";
 import { MathJaxFeature } from "@features/MathJaxFeature";
 import { MouseScrollFeature } from "@features/MouseScrollFeature";
-import { PreviewScrollKeysFeature } from "@features/PreviewScrollKeysFeature";
+import { ReadingModeShortcutsFeature } from "@features/ReadingModeShortcutsFeature";
 import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
 import { ScrollbarFeature } from "@features/ScrollbarFeature";
@@ -49,7 +49,7 @@ export const settingsLayout = [
     {
         name: "Centered cursor",
         desc: "",
-        features: [CenterCursorFeature],
+        features: [CenteredCursorFeature],
     },
     {
         name: "Code block wrapping",
@@ -64,7 +64,7 @@ export const settingsLayout = [
     {
         name: "Scroll buttons & shortcuts",
         desc: "",
-        features: [ScrollButtonsFeature, CommandsFeature, PreviewScrollKeysFeature],
+        features: [ScrollButtonsFeature, QuickCommandsFeature, ReadingModeShortcutsFeature],
     },
     {
         name: "Scrollbar appearance",

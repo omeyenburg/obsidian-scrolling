@@ -9,7 +9,7 @@ interface ScrollInfo {
     height: number;
 }
 
-export class CenterCursorFeature implements Feature {
+export class CenteredCursorFeature implements Feature {
     public readonly settings = {
         items: [
             {
