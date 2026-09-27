@@ -273,7 +273,7 @@ export class RememberFileStateFeature implements Feature {
                 this.ephemeralStates = {};
             }
         } catch {
-            console.error("Failed to load scroll positions file:", filePath);
+            console.warn("Failed to load scroll positions file:", filePath);
             this.ephemeralStates = {};
         }
     }
