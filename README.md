@@ -5,15 +5,16 @@ A plugin to improve and extend scrolling and navigation in [Obsidian](https://ob
 Quick overview:
 
 - **Centered Cursor**: Keep cursor centered while editing
-- **Code Wrapping**: Disable code wrapping & allow horizontal scrolling
 - **Remember Scroll Position**: Auto-save and restore scroll/cursor position
-- **Image Zooming**: Scroll to zoom images with Ctrl key (pre Obsidian 1.13)
-- **MathJax**: Allow horizontal scrolling of long inline MathJax
-- **File Tree**: Allow horizontal scrolling in the file tree
-- **Line Length**: Customize maximum line width for readability
-- **Scrollbars**: Hide, show, or auto-show scrollbars
-- **Reading Mode Keybinds**: Vim-like navigation in reading mode
-- **Mouse & Touchpad Scrolling**: Customize mouse & touchpad scroll speed
+- **Horizontal Scrolling**
+    - **Code Wrapping**: Prevent code wrapping
+    - **MathJax**: Sideways crolling of long inline MathJax
+    - **File Tree**: Sideways scrolling in the file tree
+- **Scroll buttons & Shortcuts**
+    - **Scroll buttons & Quick commands**: Adds buttons for navigating to the top and bottom of the note
+    - **Shortcuts for Reading Mode**: Vim-like navigation shortcuts in reading mode
+- **Scrollbar appearance**: Always hide or show scrollbars, or dynamically show during scroll
+- **Line Length**: Change maximum line width for readability
 
 All features are **optional** and **fully configurable** in plugin settings.
 
@@ -42,13 +43,6 @@ All features are **optional** and **fully configurable** in plugin settings.
 - Works for Markdown files, PDF files, and canvases
 
 <img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/restorescroll.webp" alt="Restore scroll preview" style="max-width: 640px; width: 100%; height: auto;">
-
-### Image Zooming
-
-- Hover over an image, hold Ctrl and scroll to zoom in where your mouse points
-- Desktop only, pre Obsidian 1.13 only
-
-<img src="https://raw.githubusercontent.com/omeyenburg/obsidian-scrolling/refs/heads/master/preview/imagezoom.webp" alt="Image zoom preview" style="max-width: 640px; width: 100%; height: auto;">
 
 ### Horizontal Scrolling of Inline MathJax
 
@@ -85,11 +79,6 @@ Enable Vim-like keybinds in reading mode:
 - **u** - Scroll up half a page
 - **G** - Jump to bottom
 - **g** - Jump to top
-
-### Mouse & Touchpad Scrolling
-
-- Adjust scroll speed and smoothness for mouse and touchpad
-- Desktop only
 
 ## Installation
 
