@@ -241,13 +241,11 @@ export class Events {
 
     /**
      * Registers a callback for mouseup events.
-     * Desktop only; does nothing on mobile.
+     * Also works and fires on mobile.
      * @param callback Receives the MouseEvent.
      */
     public onMouseUp(callback: (ev: MouseEvent) => void): void {
-        if (Platform.isDesktop) {
-            this.plugin.registerDomEvent(this.plugin.getMainDoc(), "mouseup", callback, { passive: true });
-        }
+        this.plugin.registerDomEvent(this.plugin.getMainDoc(), "mouseup", callback, { passive: true });
     }
 
     /**
