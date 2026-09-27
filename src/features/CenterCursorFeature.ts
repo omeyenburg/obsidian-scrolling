@@ -73,9 +73,9 @@ export class CenterCursorFeature implements Feature {
                     type: "toggle",
                     key: "followCursorEnableSelection",
                     defaultValue: false,
-                    disabled() {
-                        return this.plugin.settings.followCursorEnableMouse === false;
-                    },
+                },
+                visible() {
+                    return this.plugin.settings.followCursorEnableMouse === true;
                 },
             },
         ],

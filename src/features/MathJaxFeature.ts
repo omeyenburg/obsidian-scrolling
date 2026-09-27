@@ -6,8 +6,8 @@ export class MathJaxFeature implements Feature {
     public readonly settings = {
         items: [
             {
-                name: "Enable",
-                desc: "Allow horizontal scrolling of inline MathJax without scrolling the entire viewport.",
+                name: "Horizontal scrolling",
+                desc: "Allow horizontal scrolling of long inline MathJax blocks without scrolling the entire viewport.",
                 control: {
                     type: "toggle",
                     key: "mathjaxScrollEnabled",

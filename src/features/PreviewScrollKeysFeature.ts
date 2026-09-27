@@ -11,7 +11,7 @@ export class PreviewScrollKeysFeature implements Feature {
                 heading: "Reading mode shortcuts",
                 items: [
                     {
-                        name: "Line scroll keybinds",
+                        name: "Single line scroll shortcuts",
                         desc: "Scroll by single lines with j/k.",
                         control: {
                             type: "toggle",
@@ -20,7 +20,7 @@ export class PreviewScrollKeysFeature implements Feature {
                         },
                     },
                     {
-                        name: "Half page scroll keybinds",
+                        name: "Half page scroll shortcuts",
                         desc: "Scroll half pages with d/u.",
                         control: {
                             type: "toggle",
@@ -29,7 +29,7 @@ export class PreviewScrollKeysFeature implements Feature {
                         },
                     },
                     {
-                        name: "Top/bottom scroll keybinds",
+                        name: "Top/bottom scroll shortcuts",
                         desc: "Scroll to top/bottom with g/G.",
                         control: {
                             type: "toggle",

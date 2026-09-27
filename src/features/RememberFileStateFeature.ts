@@ -46,18 +46,6 @@ export class RememberFileStateFeature implements Feature {
                 },
             },
             {
-                name: "Delay after opening a note",
-                desc: "Number of milliseconds to wait before restoring position.\nUse if restoring works unreliably.",
-                control: {
-                    type: "slider",
-                    key: "restoreScrollDelay",
-                    defaultValue: 5,
-                    min: 0,
-                    max: 300,
-                    step: 5,
-                },
-            },
-            {
                 name: "Saved positions limit",
                 desc: "Number of files to remember scroll positions for. Leave empty for unlimited.",
                 control: {
@@ -76,6 +64,9 @@ export class RememberFileStateFeature implements Feature {
                         }
                         return limit <= 0 ? -1 : limit;
                     },
+                    disabled() {
+                        return this.plugin.settings.restoreScrollMode === "top";
+                    },
                 },
             },
             {
@@ -85,6 +76,9 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollAge",
                     defaultValue: false,
+                    disabled() {
+                        return this.plugin.settings.restoreScrollMode === "top";
+                    },
                 },
             },
             {
@@ -94,6 +88,9 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollPdf",
                     defaultValue: false,
+                    disabled() {
+                        return this.plugin.settings.restoreScrollMode === "top";
+                    },
                 },
             },
             {
@@ -103,6 +100,9 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollBases",
                     defaultValue: false,
+                    disabled() {
+                        return this.plugin.settings.restoreScrollMode === "top";
+                    },
                 },
             },
             {
@@ -112,6 +112,9 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollFileLink",
                     defaultValue: true,
+                    disabled() {
+                        return this.plugin.settings.restoreScrollMode === "top";
+                    },
                 },
             },
             {
@@ -121,6 +124,24 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollInitialOnly",
                     defaultValue: false,
+                    disabled() {
+                        return this.plugin.settings.restoreScrollMode === "top";
+                    },
+                },
+            },
+            {
+                name: "Delay after opening a note",
+                desc: "Number of milliseconds to wait before restoring position.\nUse if restoring works unreliably.",
+                control: {
+                    type: "slider",
+                    key: "restoreScrollDelay",
+                    defaultValue: 5,
+                    min: 0,
+                    max: 300,
+                    step: 5,
+                    disabled() {
+                        return this.plugin.settings.restoreScrollMode === "top";
+                    },
                 },
             },
             {
@@ -130,6 +151,9 @@ export class RememberFileStateFeature implements Feature {
                     type: "toggle",
                     key: "restoreScrollFileEnabled",
                     defaultValue: true,
+                    disabled() {
+                        return this.plugin.settings.restoreScrollMode === "top";
+                    },
                 },
             },
             {
@@ -138,6 +162,12 @@ export class RememberFileStateFeature implements Feature {
                 control: {
                     type: "text",
                     key: "restoreScrollFilePath",
+                    disabled() {
+                        return (
+                            this.plugin.settings.restoreScrollMode === "top" ||
+                            !this.plugin.settings.restoreScrollFileEnabled
+                        );
+                    },
                 },
             },
         ],

@@ -6,8 +6,8 @@ export class FileTreeFeature implements Feature {
     public readonly settings = {
         items: [
             {
-                name: "Enable",
-                desc: "Allow horizontal scrolling in the file tree and show a scrollbar.",
+                name: "Horizontal scrolling",
+                desc: "Allow horizontal scrolling in the file tree instead of cutting off long file names.",
                 control: {
                     type: "toggle",
                     key: "horizontalFileTreeEnabled",

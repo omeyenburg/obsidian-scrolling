@@ -10,8 +10,9 @@ export class CodeBlockFeature implements Feature {
     public readonly settings = {
         items: [
             {
-                name: "Enable",
+                name: "Prevent code wrapping",
                 desc: "Disable code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
+                aliases: ["Horizontal scrolling"],
                 control: {
                     type: "toggle",
                     key: "codeBlockScrollEnabled",
