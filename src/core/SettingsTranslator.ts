@@ -99,13 +99,15 @@ export class SettingsTranslator {
         const boundDisabled = bindPredicate(disabled, owner);
 
         if (parse) {
+            // `SettingDefinitionRender` has no `disabled` slot, so the predicate is
+            // applied to the `Setting` inside `render` instead of being dropped.
             return {
                 name: item.name,
                 desc: item.desc,
                 aliases: item.aliases,
                 searchable: item.searchable,
                 visible,
-                render: this.renderParsed(owner, item, parse, displayFormat),
+                render: this.renderParsed(owner, item, parse, boundDisabled, displayFormat),
             };
         }
 
@@ -130,6 +132,7 @@ export class SettingsTranslator {
         owner: SettingOwner,
         item: SettingItem,
         parse: ControlParse,
+        disabled: (() => boolean) | undefined,
         displayFormat?: (this: SettingOwner, value: number) => string,
     ): (setting: Setting) => void | (() => void) {
         // `parse` is only ever declared on a number control, so the correlation
@@ -162,8 +165,22 @@ export class SettingsTranslator {
                     });
             });
 
-            // Re-seed only on writes this field did not make, i.e. a group reset.
+            // Unlike the old factory, which had to defer this by a tick because the
+            // control was attached after the decision was made, `addText` has already
+            // registered its component by now — so applying it here is enough.
+            const applyDisabled = (): void => {
+                const off = disabled ? disabled() : false;
+                text.setDisabled(off);
+                setting.setDisabled(off);
+            };
+            applyDisabled();
+
             const unsubscribe = this.store.onUpdate(() => {
+                // Every commit re-evaluates, so a write to the gating setting greys
+                // this row out without needing a re-render.
+                applyDisabled();
+
+                // Re-seed only on writes this field did not make, i.e. a group reset.
                 const next = current();
                 if (next === last) {
                     return;

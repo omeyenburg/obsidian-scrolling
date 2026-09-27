@@ -147,6 +147,7 @@ export class RememberFileStateFeature implements Feature {
             {
                 name: "Store positions in file",
                 desc: "Save positions inside a file to keep them after Obsidian restarts.",
+                aliases: ["Storage file path"],
                 control: {
                     type: "toggle",
                     key: "restoreScrollFileEnabled",
@@ -158,16 +159,16 @@ export class RememberFileStateFeature implements Feature {
             },
             {
                 name: "Storage file path",
-                desc: "Where to store scrolling & cursor positions.",
+                desc: "File for persistent storage of scrolling positions across sessions.",
                 control: {
                     type: "text",
                     key: "restoreScrollFilePath",
                     disabled() {
-                        return (
-                            this.plugin.settings.restoreScrollMode === "top" ||
-                            !this.plugin.settings.restoreScrollFileEnabled
-                        );
+                        return this.plugin.settings.restoreScrollMode === "top";
                     },
+                },
+                visible() {
+                    return this.plugin.settings.restoreScrollFileEnabled;
                 },
             },
         ],
