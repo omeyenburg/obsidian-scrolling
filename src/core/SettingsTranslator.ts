@@ -1,5 +1,4 @@
 import type {
-    ExtraButtonComponent,
     Setting,
     SettingDefinition,
     SettingDefinitionGroup,
@@ -82,25 +81,11 @@ export class SettingsTranslator {
         heading: string | undefined,
         items: readonly SettingItem[],
     ): SettingDefinitionGroup {
-        const keys = items.map((item) => item.control.key as SettingKey);
-
         return {
             type: "group",
             cls: GROUP_CLASS,
             heading,
             items: items.map((item) => this.translateItem(feature, item)),
-            extraButtons: [this.resetButton(keys)],
-        };
-    }
-
-    private resetButton(keys: readonly SettingKey[]): (component: ExtraButtonComponent) => void {
-        return (button: ExtraButtonComponent): void => {
-            button
-                .setIcon("reset")
-                .setTooltip("Restore defaults")
-                .onClick(async () => {
-                    await this.store.reset(keys);
-                });
         };
     }
 

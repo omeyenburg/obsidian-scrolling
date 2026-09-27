@@ -25,48 +25,48 @@ export interface PageLayout {
 export const settingsLayout = [
     {
         name: "Centered cursor",
-        desc: "Automatically scrolls the view to keep the cursor near the center when you move it.",
+        desc: "",
         features: ["followCursor"],
     },
     {
-        name: "Mouse & Touchpad scrolling",
+        name: "Code block wrapping",
         desc: "",
-        features: ["mouseScroll"],
+        features: ["codeBlock"],
     },
     {
-        name: "Scroll buttons & keys",
-        desc: "Buttons and keybinds for jumping to the top and bottom of a note.",
-        features: ["commands", "scrollButtons", "previewScrollKeys"],
-    },
-    {
-        name: "Remember scroll position",
-        desc: "Automatically save your position before closing a file and restore it upon opening the file again.",
+        name: "Remember file state",
+        desc: "",
         features: ["rememberFileState"],
     },
     {
-        name: "Line length",
-        desc: "Limit maximum line length. Less content fits on screen, but long blocks of text are more readable.",
-        features: ["lineLength"],
+        name: "Scroll buttons & shortcuts",
+        desc: "",
+        features: ["scrollButtons", "commands", "previewScrollKeys"],
     },
     {
-        name: "Scrollbars",
+        name: "Scrollbar appearance",
         desc: "",
         features: ["scrollbar"],
     },
     {
+        name: "Line length",
+        desc: "",
+        features: ["lineLength"],
+    },
+    {
         name: "File tree",
-        desc: "Horizontal scrolling in the file tree",
+        desc: "",
         features: ["fileTree"],
     },
     {
-        name: "Code blocks",
-        desc: "Disable code wrapping & allow horizontal scrolling of code blocks in source and preview mode.",
-        features: ["codeBlock"],
-    },
-    {
-        name: "Horizontal scrolling of MathJax",
+        name: "MathJax",
         desc: "",
         features: ["mathJax"],
+    },
+    {
+        name: "Mouse scroll behaviour",
+        desc: "",
+        features: ["mouseScroll"],
     },
 ] as const satisfies readonly PageLayout[];
 

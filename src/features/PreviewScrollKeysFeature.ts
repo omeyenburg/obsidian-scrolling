@@ -8,7 +8,7 @@ export class PreviewScrollKeysFeature implements Feature {
     public readonly settings = {
         groups: [
             {
-                heading: "Reading mode keys",
+                heading: "Reading mode shortcuts",
                 items: [
                     {
                         name: "Line scroll keybinds",

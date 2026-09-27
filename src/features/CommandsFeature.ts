@@ -19,7 +19,7 @@ export class CommandsFeature implements Feature {
                 items: [
                     {
                         name: "Commands for scrolling to top/bottom",
-                        desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload.",
+                        desc: "Adds buttons to the ribbon bar for scrolling to the top/bottom of the file.\nMay require reload on mobile.",
                         control: {
                             type: "toggle",
                             key: "ribbonScrollButtonsEnabled",
@@ -61,8 +61,6 @@ export class CommandsFeature implements Feature {
     }
 
     public updateRibbonButtons(): void {
-        if (Platform.isDesktop) return;
-
         if (this.plugin.settings.ribbonScrollButtonsEnabled) {
             this.addScrollRibbonButtons();
         } else {
