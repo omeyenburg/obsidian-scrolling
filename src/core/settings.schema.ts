@@ -70,9 +70,19 @@ export interface CustomRenderContext {
     isDisabled: () => boolean;
 }
 
+/**
+ * A row's description text.
+ *
+ * A thunk is for descriptions that report state rather than explain a control, e.g.
+ * "currently 12 files are stored". It is resolved when the row is built and again
+ * whenever the store commits, so it tracks the settings rather than scroll or note
+ * activity between them — the same freshness the old imperative menu had.
+ */
+export type SettingDesc = string | DocumentFragment | (() => string | DocumentFragment);
+
 export interface SettingItem<C extends SettingControl = SettingControl> {
     name: string;
-    desc?: string | DocumentFragment;
+    desc?: SettingDesc;
     aliases?: string[];
     searchable?: boolean | (() => boolean);
     /** Re-evaluated on each render, and in place on every write. */
@@ -136,6 +146,18 @@ export function bindPredicate(predicate: BoolPredicate | undefined): (() => bool
     }
 
     return predicate;
+}
+
+/**
+ * Resolves a description to the text Obsidian renders.
+ *
+ * A thunk is called every time the description is needed, so a caller that can
+ * re-apply the result later — an imperative row rebuilding its own description —
+ * gets a fresh reading each time, and one that cannot still renders something
+ * truthful.
+ */
+export function resolveDesc(desc: SettingDesc | undefined): string | DocumentFragment | undefined {
+    return typeof desc === "function" ? desc() : desc;
 }
 
 /**

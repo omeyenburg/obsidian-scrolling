@@ -48,7 +48,14 @@ export class RememberFileStateFeature implements Feature {
             },
             {
                 name: "Saved positions limit",
-                desc: "Number of files to remember scroll positions for. Leave empty for unlimited.",
+                desc: (): string => {
+                    const count = this.getNumEphemeralStates();
+                    return (
+                        `Number of files to remember scroll positions for. ` +
+                        `Leave empty for unlimited.\n` +
+                        `Currently positions for ${count} file${count === 1 ? "" : "s"} are stored.`
+                    );
+                },
                 control: {
                     type: "number",
                     key: "restoreScrollLimit",
@@ -196,7 +203,7 @@ export class RememberFileStateFeature implements Feature {
     private readonly STORE_INTERVAL = 97;
     private readonly FILE_WRITE_INTERVAL = 293;
 
-    onload(plugin: ScrollingPlugin) {
+    async onload(plugin: ScrollingPlugin): Promise<void> {
         this.plugin = plugin;
 
         if (plugin.settings.restoreScrollFilePath === undefined) {
@@ -228,6 +235,13 @@ export class RememberFileStateFeature implements Feature {
         plugin.events.onFileRename(this.fileRenameHandler.bind(this));
         plugin.events.onLayoutReady(this.layoutReadyHandler.bind(this));
         plugin.events.onLayoutReady(this.cursorUpdateHandler.bind(this));
+
+        // Read the positions file here rather than from the plugin, so this feature
+        // owns its whole startup. `FeatureRegistry.loadAll` awaits `onload`, so the
+        // states are in memory before the feature returns. Deliberately not gated on
+        // `restoreScrollFileEnabled`: having storage turned off should not discard the
+        // file, or re-enabling it later would start from an empty table.
+        await this.loadStatesFile();
     }
 
     onunload(): void {}
@@ -241,8 +255,10 @@ export class RememberFileStateFeature implements Feature {
     }
 
     /**
-     * Updates the state file path.
-     * Loads the state file on disk asynchronously.
+     * Reads the state file on disk into memory.
+     *
+     * Returns without touching the in-memory states when there is no file to read,
+     * so a missing file cannot discard positions this session has already recorded.
      */
     public async loadStatesFile(): Promise<void> {
         const exists = await this.checkStatesFileLoadPath();
@@ -256,8 +272,8 @@ export class RememberFileStateFeature implements Feature {
             } else {
                 this.ephemeralStates = {};
             }
-        } catch (error) {
-            console.error("Failed to load scroll positions file:", error);
+        } catch {
+            console.error("Failed to load scroll positions file:", filePath);
             this.ephemeralStates = {};
         }
     }
@@ -666,9 +682,9 @@ export class RememberFileStateFeature implements Feature {
         try {
             const data = JSON.stringify(this.ephemeralStates);
             await this.plugin.app.vault.adapter.write(filePath, data);
-        } catch (error) {
+        } catch {
             new Notice("Failed to write scroll positions file. Disabling disk storage.");
-            console.error("Failed to write scroll positions file:", error);
+            console.error("Failed to write scroll positions file:", filePath);
             await this.plugin.settingsStore.set("restoreScrollFileEnabled", false);
         }
     }

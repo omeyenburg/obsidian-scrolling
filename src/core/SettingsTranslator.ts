@@ -9,7 +9,7 @@ import type {
 
 import type { Feature } from "@core/Feature";
 import type { ControlParse, FeatureSettingsDefinition, SettingItem } from "@core/settings.schema";
-import { bindPredicate } from "@core/settings.schema";
+import { bindPredicate, resolveDesc } from "@core/settings.schema";
 import type { AnyFeatureConstructor, PageLayout } from "@core/settings.layout";
 import { settingsLayout } from "@core/settings.layout";
 import type { SettingKey, SettingsStore } from "@core/SettingsStore";
@@ -107,7 +107,7 @@ export class SettingsTranslator {
 
             return {
                 name: item.name,
-                desc: item.desc,
+                desc: resolveDesc(item.desc),
                 aliases: item.aliases,
                 searchable: item.searchable,
                 visible,
@@ -131,7 +131,7 @@ export class SettingsTranslator {
             // applied to the `Setting` inside `render` instead of being dropped.
             return {
                 name: item.name,
-                desc: item.desc,
+                desc: resolveDesc(item.desc),
                 aliases: item.aliases,
                 searchable: item.searchable,
                 visible,
@@ -141,7 +141,7 @@ export class SettingsTranslator {
 
         return {
             name: item.name,
-            desc: item.desc,
+            desc: resolveDesc(item.desc),
             aliases: item.aliases,
             searchable: item.searchable,
             visible,
@@ -192,6 +192,19 @@ export class SettingsTranslator {
                     });
             });
 
+            const onBlur = (): void => {
+                // A rejected edit is left in the field while the user is still typing
+                // in it, so the field and the stored value can disagree. Restoring the
+                // last accepted value on blur both re-syncs them and means an input the
+                // parser refuses cannot wedge: the next keystroke starts from a value
+                // that parses again.
+                const shown = text.getValue();
+                if (shown !== format(last)) {
+                    text.setValue(format(last));
+                }
+            };
+            text.inputEl.addEventListener("blur", onBlur);
+
             // Unlike the old factory, which had to defer this by a tick because the
             // control was attached after the decision was made, `addText` has already
             // registered its component by now — so applying it here is enough.
@@ -202,12 +215,25 @@ export class SettingsTranslator {
             };
             applyDisabled();
 
+            // A thunk description reports state, and this row is already imperative, so
+            // it can be re-read on every commit instead of only when the tab is opened.
+            const isLiveDesc = typeof item.desc === "function";
+            const applyDesc = (): void => {
+                if (isLiveDesc) {
+                    setting.setDesc(resolveDesc(item.desc));
+                }
+            };
+            applyDesc();
+
             const unsubscribe = this.store.onUpdate(() => {
                 // Every commit re-evaluates, so a write to the gating setting greys
                 // this row out without needing a re-render.
                 applyDisabled();
+                applyDesc();
 
-                // Re-seed only on writes this field did not make, i.e. a group reset.
+                // Re-seed only on writes this field did not make, i.e. a write from
+                // elsewhere in the plugin such as a command or a feature correcting
+                // its own setting after a failure.
                 const next = current();
                 if (next === last) {
                     return;
@@ -216,7 +242,10 @@ export class SettingsTranslator {
                 text.setValue(format(next));
             });
 
-            return unsubscribe;
+            return () => {
+                unsubscribe();
+                text.inputEl.removeEventListener("blur", onBlur);
+            };
         };
     }
 }

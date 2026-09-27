@@ -1,18 +1,36 @@
 import { Platform } from "obsidian";
-import { clamp } from "@core/util";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
-function easeOut(t: number): number {
-    return 1 - (1 - t) ** 2;
-}
-
+/**
+ * Settings for the mouse wheel, with no runtime behind them.
+ *
+ * The engine that used to live here was unreachable: it was registered by calling
+ * `events.onWheelExtended`, and the only thing that did so was `followscroll.ts`,
+ * which commit 1d28b14 deleted. Nothing has subscribed to `onWheelExtended` before
+ * or since, so neither the native nor the simulated path ran — every setting below
+ * was stored, surfaced in this menu, and then never read.
+ *
+ * The native keys are kept so that a value chosen in the meantime survives a future
+ * engine, and so removing the dead code is not a config-breaking change for anyone
+ * who set them. The simulated keys are gone, because their behaviour lived entirely
+ * in the deleted code and no prefix of it can be reinstated from the settings alone.
+ *
+ * Restoring behaviour means re-registering an extended-wheel event and porting the
+ * heuristics across; it is not a matter of re-enabling anything in here.
+ */
 export class MouseScrollFeature implements Feature {
+    private plugin!: ScrollingPlugin;
+
     public readonly settings = {
         visible: (): boolean => !Platform.isMobile,
         items: [
             {
                 name: "Mode",
-                desc: "Native scroll provides simplicity and stability; Simulated scroll is configurable.",
+                desc: [
+                    "Native scroll provides simplicity and stability; Simulated scroll is configurable.",
+                    "Nothing is applied to the wheel yet: the engine behind this menu is",
+                    "currently unwired, so this setting is recorded and otherwise inert.",
+                ].join(" "),
                 control: {
                     type: "dropdown",
                     key: "scrollMode",
@@ -66,432 +84,12 @@ export class MouseScrollFeature implements Feature {
                     return this.plugin.settings.scrollMode === "native";
                 },
             },
-            {
-                name: "Invert scroll direction (Experimental)",
-                desc: "Reverse the scroll direction for mouse wheel and touchpad input.",
-                control: {
-                    type: "toggle",
-                    key: "simulatedMouseInvert",
-                    defaultValue: false,
-                },
-                visible: (): boolean => {
-                    return this.plugin.settings.scrollMode === "simulated";
-                },
-            },
-            {
-                name: "Mouse scroll speed",
-                desc: "How far the page scrolls.",
-                control: {
-                    type: "slider",
-                    key: "simulatedMouseSpeed",
-                    defaultValue: 50,
-                    min: 1,
-                    max: 100,
-                    step: 1,
-                },
-                visible: (): boolean => {
-                    return this.plugin.settings.scrollMode === "simulated";
-                },
-            },
-            {
-                name: "Mouse scroll smoothness",
-                desc: "Duration of the scroll animation.",
-                control: {
-                    type: "slider",
-                    key: "simulatedMouseSmoothness",
-                    defaultValue: 75,
-                    min: 0,
-                    max: 100,
-                    step: 1,
-                },
-                visible: (): boolean => {
-                    return this.plugin.settings.scrollMode === "simulated";
-                },
-            },
-            {
-                name: "Touchpad detection (Experimental)",
-                desc: "Detect touchpad input and apply dedicated scrolling behavior.\nDetection works reliably on most devices but may occasionally misidentify input type.",
-                control: {
-                    type: "toggle",
-                    key: "simulatedTouchpadEnabled",
-                    defaultValue: true,
-                },
-                visible: (): boolean => {
-                    return this.plugin.settings.scrollMode === "simulated";
-                },
-            },
-            {
-                name: "Touchpad scroll speed",
-                desc: "How far the page scrolls.",
-                control: {
-                    type: "slider",
-                    key: "simulatedTouchpadSpeed",
-                    defaultValue: 50,
-                    min: 1,
-                    max: 100,
-                    step: 1,
-                },
-                visible: (): boolean => {
-                    return this.plugin.settings.scrollMode === "simulated";
-                },
-            },
-            {
-                name: "Touchpad scroll smoothness",
-                desc: "Duration of the scroll animation.",
-                control: {
-                    type: "slider",
-                    key: "simulatedTouchpadSmoothness",
-                    defaultValue: 75,
-                    min: 0,
-                    max: 100,
-                    step: 1,
-                },
-                visible: (): boolean => {
-                    return this.plugin.settings.scrollMode === "simulated";
-                },
-            },
-            {
-                name: "Touchpad friction threshold",
-                desc: "Threshold between precise and smooth scrolling.\nDefines how much finger movement is needed before scrolling decelerates and stops.",
-                control: {
-                    type: "slider",
-                    key: "simulatedTouchpadFrictionThreshold",
-                    defaultValue: 20,
-                    min: 1,
-                    max: 100,
-                    step: 1,
-                },
-                visible: (): boolean => {
-                    return this.plugin.settings.scrollMode === "simulated";
-                },
-            },
         ],
     } as const satisfies FeatureSettingsDefinition;
 
-    private plugin!: ScrollingPlugin;
-
-    private touchpadLastUse = -Infinity;
-    private touchpadFriction = 0;
-    private touchpadVelocity = 0;
-    private touchpadLastAnimation = 0;
-    private touchpadScrolling = false;
-    private touchpadAnimationFrame = 0;
-    private mouseLastUse = 0;
-    private mouseTarget: number;
-    private mouseAnimationFrame: number;
-    private readonly MAX_FRICTION = 0.98;
-    private readonly MIN_VELOCITY = 0.01;
-    private readonly TOUCHPAD_GRACE_PERIOD = 50;
-
-    private intervalSum: number | null = null;
-    private readonly MAX_INTENSITY_INTERVAL = 600;
-    private readonly INTENSITY_SMOOTHING = 0.3;
-
-    private currentEl: HTMLElement | null = null;
-    private readonly DEFAULT_FRAME_TIME = 16.67;
-
-    onload(plugin: ScrollingPlugin) {
+    public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
-
-        plugin.register(() => {
-            window.cancelAnimationFrame(this.mouseAnimationFrame);
-            window.cancelAnimationFrame(this.touchpadAnimationFrame);
-        });
-
-        plugin.events.onLeafChange(this.leafChangeHandler.bind(this));
     }
 
     onunload(): void {}
-
-    /**
-     * Reset velocity on file change.
-     */
-    private leafChangeHandler() {
-        this.touchpadVelocity = 0;
-
-        // Only cancel animation frame if one is currently running
-        if (this.mouseAnimationFrame) {
-            window.cancelAnimationFrame(this.mouseAnimationFrame);
-        }
-    }
-
-    /**
-     * On wheel event.
-     * Desktop only, does nothing on mobile.
-     */
-    public wheelHandler(event: WheelEvent, el: HTMLElement, deltaTime: number, isStart: boolean) {
-        if (Platform.isMobile) return;
-
-        if (this.plugin.settings.scrollMode === "native") {
-            this.applyNativeScroll(event, el);
-        } else if (this.plugin.settings.scrollMode === "simulated") {
-            this.applySimulatedScroll(event, el, deltaTime, isStart);
-        }
-    }
-
-    private applyNativeScroll(event: WheelEvent, el: HTMLElement) {
-        const increasePercent = event.altKey
-            ? this.plugin.settings.nativeAltMultiplier
-            : this.plugin.settings.nativeScrollMultiplier;
-
-        // Also run this if increasePercent is below 1
-        // Cannot actually slow down, we need to scroll ourselves
-        if (this.plugin.settings.nativeScrollInstant || increasePercent < 1) {
-            event.preventDefault();
-            el.scrollBy({
-                top: event.deltaY * increasePercent,
-                behavior: "instant",
-            });
-        } else {
-            el.scrollBy(null, event.deltaY * (increasePercent - 1));
-        }
-    }
-
-    private applySimulatedScroll(
-        event: WheelEvent,
-        el: HTMLElement,
-        deltaTime: number,
-        isStart: boolean,
-    ) {
-        // Approximate line height as 16px.
-        const deltaY = event.deltaMode == event.DOM_DELTA_LINE ? event.deltaY * 16 : event.deltaY;
-
-        if (
-            this.plugin.settings.simulatedTouchpadEnabled &&
-            this.isTouchpad(event, deltaTime, isStart)
-        ) {
-            this.startTouchpadScroll(el, deltaY);
-        } else {
-            this.startMouseScroll(el, deltaY);
-        }
-
-        event.preventDefault();
-    }
-
-    /**
-     * Really good approximation of the default scrolling in Obsidian.
-     * Defaults: smoothness=150, speed=1
-     */
-    private startMouseScroll(el: HTMLElement, deltaY: number): void {
-        if (!el) return;
-        // Only cancel animation frame if one is currently running
-        if (this.mouseAnimationFrame) {
-            window.cancelAnimationFrame(this.mouseAnimationFrame);
-        }
-
-        const smoothness = this.plugin.settings.simulatedMouseSmoothness * 2;
-        const speed = this.plugin.settings.simulatedMouseSpeed / 50;
-        const invert = this.plugin.settings.simulatedMouseInvert ? -1 : 1;
-
-        const startTime = performance.now();
-        if (this.mouseTarget && this.mouseLastUse && startTime - this.mouseLastUse < smoothness) {
-            el.scrollTop = this.mouseTarget;
-        }
-        this.mouseLastUse = startTime;
-
-        const start = el.scrollTop;
-        const changeY = deltaY * speed * invert;
-        this.mouseTarget = start + changeY;
-
-        this.animateMouseScroll(el, start, startTime, smoothness, changeY);
-    }
-
-    private animateMouseScroll(
-        el: HTMLElement,
-        start: number,
-        startTime: number,
-        smoothness: number,
-        changeY: number,
-    ) {
-        const now = performance.now();
-        let t = Math.min(1, (now - startTime) / smoothness);
-        t = easeOut(t);
-
-        el.scrollTop = start + changeY * t;
-
-        if (t < 1) {
-            this.mouseAnimationFrame = window.requestAnimationFrame(() =>
-                this.animateMouseScroll(el, start, startTime, smoothness, changeY),
-            );
-        } else {
-            el.scrollTop = start + changeY;
-            this.mouseAnimationFrame = 0;
-        }
-    }
-
-    /**
-     * Begin a scroll animation (assumes touchpad).
-     * Similar to touchpad scrolling in obsidian.
-     * Defaults: smoothness=0.75, speed=0.25, frictionThreshold=20
-     */
-    private startTouchpadScroll(el: HTMLElement, deltaY: number): void {
-        if (el !== this.currentEl) {
-            // Only cancel animation frame if one is currently running
-            if (this.touchpadAnimationFrame) {
-                window.cancelAnimationFrame(this.touchpadAnimationFrame);
-            }
-            window.requestAnimationFrame(
-                this.decoupledTouchpadScroll.bind(
-                    this,
-                    this.currentEl,
-                    this.touchpadVelocity,
-                    this.touchpadFriction,
-                ),
-            );
-
-            this.currentEl = el;
-            this.touchpadScrolling = false;
-            this.touchpadVelocity = 0;
-            this.touchpadLastAnimation = 0;
-        }
-
-        const smoothness = this.plugin.settings.simulatedTouchpadSmoothness / 100;
-        const speed = this.plugin.settings.simulatedTouchpadSpeed / 200 / this.DEFAULT_FRAME_TIME;
-        const frictionThreshold = this.plugin.settings.simulatedTouchpadFrictionThreshold;
-        const invert = this.plugin.settings.simulatedMouseInvert ? -1 : 1;
-
-        this.touchpadVelocity += deltaY * speed * invert;
-
-        this.touchpadFriction =
-            Math.min(1, (Math.abs(deltaY) / frictionThreshold) ** 3) * smoothness;
-
-        if (!this.touchpadScrolling || Math.abs(this.touchpadVelocity) < this.MIN_VELOCITY) {
-            this.touchpadScrolling = true;
-            this.animateTouchpadScroll(el);
-        }
-    }
-
-    /**
-     * Primary touchpad animation.
-     * Scrolls the file viewport over multiple frames.
-     * Calls itself recursively.
-     */
-    private animateTouchpadScroll(el: HTMLElement) {
-        if (Math.abs(this.touchpadVelocity) > this.MIN_VELOCITY) {
-            const now = performance.now();
-            const deltaTime = clamp(now - this.touchpadLastAnimation, 8, 60);
-            this.touchpadLastAnimation = now;
-
-            const dest = el.scrollTop + this.touchpadVelocity * deltaTime;
-            el.scrollTop = dest;
-
-            this.touchpadVelocity *= this.touchpadFriction;
-            this.touchpadFriction = clamp(this.touchpadFriction + 0.05, 0, this.MAX_FRICTION);
-
-            this.touchpadAnimationFrame = window.requestAnimationFrame(() =>
-                this.animateTouchpadScroll(el),
-            );
-        } else {
-            this.touchpadScrolling = false;
-            this.touchpadVelocity = 0;
-            this.touchpadLastAnimation = 0;
-            this.touchpadAnimationFrame = 0;
-        }
-    }
-
-    /**
-     * Secondary touchpad animation.
-     * Runs when a different element is scrolled.
-     * Continues the scroll animation without relying on the class state.
-     */
-    private decoupledTouchpadScroll(el: HTMLElement, velocity: number, friction: number) {
-        if (Math.abs(velocity) > this.MIN_VELOCITY) {
-            el.scrollTop = el.scrollTop + velocity * this.DEFAULT_FRAME_TIME;
-            velocity *= friction;
-            friction = clamp(friction + 0.05, 0, this.MAX_FRICTION);
-            window.setTimeout(
-                () => this.decoupledTouchpadScroll(el, velocity, friction),
-                this.DEFAULT_FRAME_TIME,
-            );
-        }
-    }
-
-    /**
-     * Heuristically determines whether the current wheel event
-     * came from a touchpad rather than a traditional mouse wheel.
-     * Updates `touchpadLastUse` internally to support grace period detection.
-     */
-    private isTouchpad(
-        event: WheelEvent & { wheelDeltaY?: number },
-        deltaTime: number,
-        isStart: boolean,
-    ): boolean {
-        if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) {
-            this.touchpadLastUse = 0;
-            return false;
-        }
-
-        const now = performance.now();
-
-        // Movement on both axes
-        if (event.deltaX !== 0 && event.deltaY !== 0) {
-            this.touchpadLastUse = now;
-            return true;
-        }
-
-        // Grace period
-        if (now - this.touchpadLastUse < this.TOUCHPAD_GRACE_PERIOD) {
-            this.touchpadLastUse = now;
-            return true;
-        }
-
-        let mouseScore = this.getIntensity(deltaTime, event.deltaY);
-        const scroll = this.plugin.events.scrollAnalyzer;
-
-        if (isStart) {
-            mouseScore += 0.1;
-        } else if (scroll.isSlowPaced) {
-            mouseScore += 0.2;
-        }
-
-        if (scroll.hasSmallGestures) {
-            mouseScore += 0.1;
-        }
-
-        // Common mouse deltas
-        if (event.wheelDeltaY) {
-            if (event.wheelDeltaY % 120 === 0 || event.wheelDeltaY % 164 === 0) {
-                mouseScore += 0.7;
-            }
-        }
-
-        if (Platform.isMacOS) {
-            mouseScore -= 0.1;
-
-            // On MacOS touchpad seems to report integer values for some reason
-            if (event.deltaY % 1 != 0 && Math.abs(event.deltaY) > 5) {
-                mouseScore += 0.3;
-            }
-        }
-
-        // Wheel deltas over 100
-        mouseScore += Math.max(0, Math.abs(event.deltaY / 200) - 0.5);
-
-        if (mouseScore < 1.2) {
-            if (mouseScore < 0.7) this.touchpadLastUse = now;
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Calculates an "intensity" score for a wheel event based on delta magnitude
-     * and event spacing.
-     * Intensity is later used as part of the mouse vs. touchpad classification.
-     */
-    private getIntensity(deltaTime: number, deltaY: number): number {
-        if (deltaTime < this.MAX_INTENSITY_INTERVAL && this.intervalSum !== null) {
-            // modified EWMA (exponential weighted moving average)
-            this.intervalSum =
-                this.intervalSum * (1 - this.INTENSITY_SMOOTHING) +
-                deltaTime * this.INTENSITY_SMOOTHING * Math.max(Math.pow(deltaY, 2));
-        } else {
-            this.intervalSum = Math.max(Math.pow(deltaY, 2), 1);
-        }
-
-        // Normalize (approx.)
-        const intensity = Math.log2(this.intervalSum) / 20;
-        return intensity;
-    }
 }

@@ -14,14 +14,14 @@ import type { SettingKey, SettingsStore } from "@core/SettingsStore";
 export class ScrollingSettingTab extends PluginSettingTab {
     constructor(
         plugin: ScrollingPlugin,
-        private readonly featureRegistery: FeatureRegistry,
+        private readonly featureRegistry: FeatureRegistry,
         private readonly store: SettingsStore,
     ) {
         super(plugin.app, plugin);
     }
 
     getSettingDefinitions(): SettingDefinitionItem[] {
-        return this.featureRegistery.getSettingDefinitions();
+        return this.featureRegistry.getSettingDefinitions();
     }
 
     getControlValue(key: string): unknown {

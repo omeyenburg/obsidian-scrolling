@@ -11,41 +11,13 @@ import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
 
-import { ScrollGestureAnalyzer } from "@core/ScrollGestureAnalyzer";
 import type { default as ScrollingPlugin } from "@core/main";
-
-/**
- * Checks whether a given element is scrolled to the top.
- * @param el The element to check.
- * @returns True if the element's scrollTop is 0.
- */
-function isScrolledToTop(el: HTMLElement): boolean {
-    return el.scrollTop == 0;
-}
-
-/**
- * Checks whether a given element is scrolled to the bottom.
- * @param el The element to check.
- * @returns True if the element's scroll position is at or past the bottom.
- */
-function isScrolledToBottom(el: HTMLElement): boolean {
-    return Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
-}
 
 export class Events {
     private readonly plugin: ScrollingPlugin;
 
-    /**
-     * Wheel event timing statistics. `Events` is the only caller of
-     * `analyzeDelay`; features read the derived averages from here.
-     */
-    public readonly scrollAnalyzer = new ScrollGestureAnalyzer();
-
     private lastTouchX = 0;
     private lastTouchY = 0;
-
-    private lastWheelEventTime = 0;
-    private lastWheelScrollElement: HTMLElement | null;
 
     /**
      * Indicates whether Obsidian is opening a link right now.
@@ -58,17 +30,11 @@ export class Events {
     private cursorUpdateHandlers: Set<
         (editor: Editor, docChanged: boolean, vimModeChanged: boolean) => void
     > = new Set();
-    private geometryChangeHandlers: Set<(editor: Editor) => void> = new Set();
     private resizeHandlers: Set<() => void> = new Set();
     private touchHandlers: Set<(event: TouchEvent, deltaX: number, deltaY: number) => void> =
         new Set();
     private wheelCancellingHandlers: { callback: (event: Event) => boolean; priority: number }[] =
         [];
-    private wheelExtendedHandlers: Set<
-        (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => void
-    > = new Set();
-
-    private unloadCallbacks: Set<() => void> = new Set();
 
     constructor(plugin: ScrollingPlugin) {
         this.plugin = plugin;
@@ -151,25 +117,10 @@ export class Events {
     }
 
     /**
-     * Called on plugin unload.
-     */
-    public unload(): void {
-        this.unloadCallbacks.forEach((callback) => callback());
-    }
-
-    /**
      * Skip next view update.
      */
     public skipNextViewUpdate() {
         this.shouldSkipNextViewUpdate = true;
-    }
-
-    /**
-     * Registers a callback for plugin unload.
-     * @param callback Called with the plugin is unloaded.
-     */
-    public onUnload(callback: () => void): void {
-        this.unloadCallbacks.add(callback);
     }
 
     /**
@@ -204,14 +155,6 @@ export class Events {
      */
     public onFileRename(callback: (file: TAbstractFile, oldPath: string) => void): void {
         this.plugin.registerEvent(this.plugin.app.vault.on("rename", callback));
-    }
-
-    /**
-     * Registers a callback for geometry changes in the editor, e.g., resizing or layout updates.
-     * @param callback Receives the editor where the geometry change occurred.
-     */
-    public onGeometryChange(callback: (editor: Editor) => void): void {
-        this.geometryChangeHandlers.add(callback);
     }
 
     /**
@@ -307,17 +250,6 @@ export class Events {
     }
 
     /**
-     * Registers a callback to run on a wheel event along the y-axis.
-     * The callback will not run on horizontal movement.
-     * The callback might be blocked by a cancelling wheel handler.
-     */
-    public onWheelExtended(
-        callback: (event: Event, el: HTMLElement, deltaTime: number, isStart: boolean) => void,
-    ): void {
-        this.wheelExtendedHandlers.add(callback);
-    }
-
-    /**
      * Handles touchstart events to record the initial touch position.
      * @param event The TouchEvent from the DOM.
      */
@@ -346,7 +278,7 @@ export class Events {
     }
 
     /**
-     * Handles updates from CodeMirror views, triggering cursor or geometry change callbacks.
+     * Handles updates from CodeMirror views, triggering cursor update callbacks.
      * @param update The ViewUpdate provided by CodeMirror.
      */
     private viewUpdateHandler(update: ViewUpdate): void {
@@ -379,10 +311,6 @@ export class Events {
 
         // Only proceed if its a cursor or edit event
         if (!update.selectionSet && !update.docChanged) {
-            // Handle geometry events
-            for (const callback of this.geometryChangeHandlers) {
-                callback(editor);
-            }
             return;
         }
 
@@ -415,8 +343,7 @@ export class Events {
     }
 
     /**
-     * Handles wheel events on desktop, invoking cancelling and extended wheel callbacks.
-     * Traverses DOM to find the actual scrollable element and respects scroll bounds.
+     * Handles wheel events on desktop, invoking cancelling wheel callbacks.
      * @param event The WheelEvent from the DOM.
      */
     private wheelHandler(event: WheelEvent): void {
@@ -429,61 +356,6 @@ export class Events {
                 event.preventDefault();
                 return;
             }
-        }
-
-        if (!event.deltaY) return;
-
-        let el: HTMLElement | null = event.target as HTMLElement;
-
-        const now = performance.now();
-        const deltaTime = now - this.lastWheelEventTime;
-        this.lastWheelEventTime = now;
-
-        const isStart = this.scrollAnalyzer.analyzeDelay(deltaTime);
-
-        // Attempt to use cached scroller
-        if (
-            !isStart &&
-            this.lastWheelScrollElement &&
-            (el === this.lastWheelScrollElement || this.lastWheelScrollElement.contains(el)) &&
-            ((event.deltaY < 0 && !isScrolledToTop(this.lastWheelScrollElement)) ||
-                (event.deltaY > 0 && !isScrolledToBottom(this.lastWheelScrollElement)))
-        ) {
-            for (const callback of this.wheelExtendedHandlers) {
-                callback(event, this.lastWheelScrollElement, deltaTime, isStart);
-            }
-
-            return;
-        }
-
-        // Traverse DOM to find actual scrollable element
-        while (el && el != activeDocument.body) {
-            const { overflowY } = getComputedStyle(el);
-            if (
-                (overflowY === "auto" || overflowY === "scroll") &&
-                el.scrollHeight > el.clientHeight
-            ) {
-                // Handle nested scroll containers
-                if (isStart) {
-                    if (event.deltaY < 0 && isScrolledToTop(el)) {
-                        el = el.parentElement;
-                        continue;
-                    }
-                    if (event.deltaY > 0 && isScrolledToBottom(el)) {
-                        el = el.parentElement;
-                        continue;
-                    }
-                }
-
-                for (const callback of this.wheelExtendedHandlers) {
-                    callback(event, el, deltaTime, isStart);
-                }
-
-                this.lastWheelScrollElement = el;
-                return;
-            }
-
-            el = el.parentElement;
         }
     }
 }

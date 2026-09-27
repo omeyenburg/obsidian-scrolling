@@ -146,7 +146,7 @@ export class SettingsStore {
         }
 
         this.savePending = true;
-        this.saveDebouncer.run();
+        this.saveDebouncer();
 
         // Re-evaluate `visible`/`disabled`. Never `update()`: the definitions are
         // static, so a full re-render would only interrupt running animations.

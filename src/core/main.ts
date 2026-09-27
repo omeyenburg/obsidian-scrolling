@@ -1,4 +1,3 @@
-import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 import { Plugin } from "obsidian";
 
 import { Events } from "@core/events";
@@ -10,38 +9,32 @@ import type { SettingsStore } from "@core/SettingsStore";
 export default class ScrollingPlugin extends Plugin {
     settings: ScrollingPluginSettings;
     events!: Events;
-    featureRegistery!: FeatureRegistry;
+    featureRegistry!: FeatureRegistry;
     settingsStore!: SettingsStore;
 
     async onload() {
-        this.featureRegistery = new FeatureRegistry(this);
-        this.settingsStore = this.featureRegistery.store;
+        this.featureRegistry = new FeatureRegistry(this);
+        this.settingsStore = this.featureRegistry.store;
 
         await this.loadSettings();
 
         this.events = new Events(this);
 
-        await this.featureRegistery.loadAll();
+        await this.featureRegistry.loadAll();
 
-        const settingTab = new ScrollingSettingTab(this, this.featureRegistery, this.settingsStore);
+        const settingTab = new ScrollingSettingTab(this, this.featureRegistry, this.settingsStore);
         this.settingsStore.attachTab(settingTab);
         this.addSettingTab(settingTab);
 
         this.events.postInit();
-
-        const rememberFileState = this.featureRegistery.get(RememberFileStateFeature);
-        if (rememberFileState) {
-            await rememberFileState.loadStatesFile();
-        }
     }
 
     onunload() {
-        this.featureRegistery.unloadAll();
-        this.events.unload();
+        this.featureRegistry.unloadAll();
     }
 
     async loadSettings() {
-        const defaultSettings = this.featureRegistery.store.buildDefaults();
+        const defaultSettings = this.featureRegistry.store.buildDefaults();
         const stored = (await this.loadData()) ?? {};
         this.settings = Object.assign({}, defaultSettings, stored);
 
