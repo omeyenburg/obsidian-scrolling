@@ -18,7 +18,6 @@ export interface ScrollingPlugin extends Plugin {
 }
 
 export interface Feature {
-    readonly id: string;
     readonly settings: FeatureSettingsDefinition;
     onload(plugin: ScrollingPlugin): void | Promise<void>;
     onunload(): void;

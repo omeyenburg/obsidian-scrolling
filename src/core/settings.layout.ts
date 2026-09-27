@@ -1,11 +1,18 @@
-import { features } from "@core/feature.schema";
+import { CenterCursorFeature } from "@features/CenterCursorFeature";
+import { CodeBlockFeature } from "@features/CodeBlockFeature";
+import { CommandsFeature } from "@features/CommandsFeature";
+import { FileTreeFeature } from "@features/FileTreeFeature";
+import { LineLengthFeature } from "@features/LineLengthFeature";
+import { MathJaxFeature } from "@features/MathJaxFeature";
+import { MouseScrollFeature } from "@features/MouseScrollFeature";
+import { PreviewScrollKeysFeature } from "@features/PreviewScrollKeysFeature";
+import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
+import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
+import { ScrollbarFeature } from "@features/ScrollbarFeature";
 
-type AnyFeature = InstanceType<(typeof features)[number]>;
+import type { FeatureConstructor } from "@core/settings.schema";
 
-/** Union of the `id`s declared by registered features. */
-export type FeatureId = AnyFeature["id"];
-
-export interface PageLayout {
+export interface PageLayout<F extends FeatureConstructor = FeatureConstructor> {
     name: string;
     desc?: string;
     /**
@@ -13,72 +20,68 @@ export interface PageLayout {
      * `groups` each become a headed group; a feature's `items` become one
      * unheaded group. This is what lets unrelated features share a page.
      */
-    features: readonly FeatureId[];
+    features: readonly F[];
 }
 
 /**
- * The single source of truth for where settings appear.
+ * The single source of truth for the plugin's features: which ones exist, and where
+ * each one's settings appear.
  *
- * Features declare *what* their settings are; this decides *where* they show up.
- * Order of the pages below is the order in the settings sidebar.
+ * A feature's class is all that is declared here — it contributes its own setting
+ * definitions from `@core/settings.schema`. Adding a feature therefore means creating
+ * the class and adding it to one page below; nothing else needs to list it, and there
+ * is no way to register one without placing it.
+ *
+ * Order matters twice over: it is the order of the pages in the settings sidebar, and
+ * the order features are constructed and loaded.
  */
 export const settingsLayout = [
     {
         name: "Centered cursor",
         desc: "",
-        features: ["followCursor"],
+        features: [CenterCursorFeature],
     },
     {
         name: "Code block wrapping",
         desc: "",
-        features: ["codeBlock"],
+        features: [CodeBlockFeature],
     },
     {
         name: "Remember file state",
         desc: "",
-        features: ["rememberFileState"],
+        features: [RememberFileStateFeature],
     },
     {
         name: "Scroll buttons & shortcuts",
         desc: "",
-        features: ["scrollButtons", "commands", "previewScrollKeys"],
+        features: [ScrollButtonsFeature, CommandsFeature, PreviewScrollKeysFeature],
     },
     {
         name: "Scrollbar appearance",
         desc: "",
-        features: ["scrollbar"],
+        features: [ScrollbarFeature],
     },
     {
         name: "Line length",
         desc: "",
-        features: ["lineLength"],
+        features: [LineLengthFeature],
     },
     {
         name: "File tree",
         desc: "",
-        features: ["fileTree"],
+        features: [FileTreeFeature],
     },
     {
         name: "MathJax",
         desc: "",
-        features: ["mathJax"],
+        features: [MathJaxFeature],
     },
     {
         name: "Mouse scroll behaviour",
         desc: "",
-        features: ["mouseScroll"],
+        features: [MouseScrollFeature],
     },
 ] as const satisfies readonly PageLayout[];
 
-type PlacedFeatureId = (typeof settingsLayout)[number]["features"][number];
-
-/**
- * Compile-time: every registered feature appears in the layout above.
- *
- * Exported so the assignment below is never treated as dead code — the value is
- * what forces TypeScript to evaluate the check.
- */
-type UnplacedFeatures = Exclude<FeatureId, PlacedFeatureId>;
-export const _everyFeatureIsPlaced: UnplacedFeatures extends never
-    ? true
-    : ["Feature missing from settingsLayout:", UnplacedFeatures] = true;
+/** Every feature class named anywhere in the layout, flattened. */
+export type AnyFeatureConstructor = (typeof settingsLayout)[number]["features"][number];

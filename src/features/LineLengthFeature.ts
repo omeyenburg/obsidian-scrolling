@@ -2,7 +2,6 @@ import { Platform, debounce } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 export class LineLengthFeature implements Feature {
-    public readonly id = "lineLength";
     private plugin!: ScrollingPlugin;
     private readonly UPDATE_INTERVAL = 30;
 
@@ -37,6 +36,9 @@ export class LineLengthFeature implements Feature {
                         characters: "Characters (ch)",
                         percentage: "Percentage (%)",
                     },
+                    disabled() {
+                        return this.plugin.settings.readableLineLengthEnabled === false;
+                    },
                 },
             },
             {
@@ -49,6 +51,9 @@ export class LineLengthFeature implements Feature {
                     min: 400,
                     max: 3000,
                     step: 50,
+                    disabled() {
+                        return this.plugin.settings.readableLineLengthEnabled === false;
+                    },
                 },
                 visible() {
                     return this.plugin.settings.lineLengthUnit === "pixels";
@@ -67,6 +72,9 @@ export class LineLengthFeature implements Feature {
                     min: 30,
                     max: 200,
                     step: 1,
+                    disabled() {
+                        return this.plugin.settings.readableLineLengthEnabled === false;
+                    },
                 },
                 visible() {
                     return this.plugin.settings.lineLengthUnit === "characters";
@@ -85,6 +93,9 @@ export class LineLengthFeature implements Feature {
                     min: 20,
                     max: 100,
                     step: 2,
+                    disabled() {
+                        return this.plugin.settings.readableLineLengthEnabled === false;
+                    },
                 },
                 visible() {
                     return this.plugin.settings.lineLengthUnit === "percentage";

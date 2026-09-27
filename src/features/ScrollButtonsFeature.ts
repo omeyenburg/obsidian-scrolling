@@ -2,8 +2,6 @@ import { MarkdownView, WorkspaceLeaf, setIcon } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 export class ScrollButtonsFeature implements Feature {
-    public readonly id = "scrollButtons";
-
     public readonly settings = {
         groups: [
             {
@@ -32,6 +30,9 @@ export class ScrollButtonsFeature implements Feature {
                                 top: "Top",
                                 bottom: "Bottom",
                             },
+                            disabled() {
+                                return this.plugin.settings.scrollButtonsEnabled === false;
+                            }
                         },
                         onChange() {
                             this.setup();

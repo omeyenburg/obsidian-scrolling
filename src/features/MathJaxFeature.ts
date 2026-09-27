@@ -1,8 +1,6 @@
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 export class MathJaxFeature implements Feature {
-    public readonly id = "mathJax";
-
     public readonly settings = {
         items: [
             {

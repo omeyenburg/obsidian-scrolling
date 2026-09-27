@@ -26,8 +26,6 @@ class FileLeaf extends WorkspaceLeaf {
 }
 
 export class RememberFileStateFeature implements Feature {
-    readonly id = "rememberFileState";
-
     public readonly settings = {
         items: [
             {

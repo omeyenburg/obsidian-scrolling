@@ -1,3 +1,4 @@
+import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
 import { Plugin } from "obsidian";
 
 import { Events } from "@core/events";
@@ -28,7 +29,7 @@ export default class ScrollingPlugin extends Plugin {
 
         this.events.postInit();
 
-        const rememberFileState = this.featureRegistery.get("rememberFileState");
+        const rememberFileState = this.featureRegistery.get(RememberFileStateFeature);
         if (rememberFileState && this.settings.restoreScrollFileEnabled) {
             await rememberFileState.loadStatesFile();
         }

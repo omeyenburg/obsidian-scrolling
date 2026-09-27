@@ -11,7 +11,6 @@ function mean(data: number[]): number {
 }
 
 export class MouseScrollFeature implements Feature {
-    readonly id = "mouseScroll";
     private plugin!: ScrollingPlugin;
 
     public readonly settings = {

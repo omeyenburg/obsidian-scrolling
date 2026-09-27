@@ -10,8 +10,6 @@ function scrollToBottom(el: Element) {
 }
 
 export class CommandsFeature implements Feature {
-    public readonly id = "commands";
-
     public readonly settings = {
         groups: [
             {

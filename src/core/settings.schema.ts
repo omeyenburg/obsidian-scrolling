@@ -121,3 +121,25 @@ export function bindPredicate(
 export function itemsOf(settings: FeatureSettingsDefinition): readonly SettingItem[] {
     return [...(settings.items ?? []), ...(settings.groups?.flatMap((g) => g.items) ?? [])];
 }
+
+/**
+ * The only shape the settings derivation needs from a feature instance.
+ *
+ * Deliberately narrower than `Feature`: constraining to the full contract would make
+ * the derivation depend on `Feature`, which depends on the setting callbacks, which
+ * depend on `ScrollingPluginSettings` — a cycle through the type being derived.
+ */
+export type FeatureSettingsShape = {
+    items?: readonly SettingShape[];
+    groups?: readonly { items: readonly SettingShape[] }[];
+};
+
+type SettingShape = { control: { key: string } };
+
+/**
+ * A feature class, structurally.
+ *
+ * `@core/settings.layout` needs this to check the layout it declares, so it cannot be
+ * derived from the layout's own contents without referring to itself.
+ */
+export type FeatureConstructor = new () => { settings: FeatureSettingsShape };

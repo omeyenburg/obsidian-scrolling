@@ -10,7 +10,6 @@ interface ScrollInfo {
 }
 
 export class CenterCursorFeature implements Feature {
-    public readonly id = "followCursor";
     private plugin!: ScrollingPlugin;
 
     public readonly settings = {
@@ -34,6 +33,9 @@ export class CenterCursorFeature implements Feature {
                     min: 0,
                     max: 100,
                     step: 1,
+                    disabled() {
+                        return this.plugin.settings.followCursorEnabled === false;
+                    },
                 },
             },
             {
@@ -46,6 +48,9 @@ export class CenterCursorFeature implements Feature {
                     min: 0,
                     max: 100,
                     step: 1,
+                    disabled() {
+                        return this.plugin.settings.followCursorEnabled === false;
+                    },
                 },
             },
             {
@@ -55,6 +60,9 @@ export class CenterCursorFeature implements Feature {
                     type: "toggle",
                     key: "followCursorInstantEditScroll",
                     defaultValue: true,
+                    disabled() {
+                        return this.plugin.settings.followCursorEnabled === false;
+                    },
                 },
             },
             {
@@ -64,6 +72,9 @@ export class CenterCursorFeature implements Feature {
                     type: "toggle",
                     key: "followCursorEnableMouse",
                     defaultValue: false,
+                    disabled() {
+                        return this.plugin.settings.followCursorEnabled === false;
+                    },
                 },
             },
             {
@@ -73,6 +84,9 @@ export class CenterCursorFeature implements Feature {
                     type: "toggle",
                     key: "followCursorEnableSelection",
                     defaultValue: false,
+                    disabled() {
+                        return this.plugin.settings.followCursorEnabled === false;
+                    },
                 },
                 visible() {
                     return this.plugin.settings.followCursorEnableMouse === true;

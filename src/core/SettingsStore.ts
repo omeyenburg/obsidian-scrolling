@@ -38,7 +38,7 @@ export class SettingsStore {
 
             if (this.defaults.has(key)) {
                 console.error(
-                    `Duplicate setting key "${key}" declared by feature "${feature.id}". ` +
+                    `Duplicate setting key "${key}" declared by feature "${feature.constructor.name}". ` +
                         `Keeping the first declaration.`,
                 );
                 continue;

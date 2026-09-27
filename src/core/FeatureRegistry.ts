@@ -1,19 +1,49 @@
 import type { SettingDefinitionItem } from "obsidian";
 
-import type { Feature, ScrollingPlugin } from "@core/Feature";
-import { features } from "@core/feature.schema";
+import type { ScrollingPlugin } from "@core/Feature";
 import { SettingsStore } from "@core/SettingsStore";
 import { SettingsTranslator } from "@core/SettingsTranslator";
+import type { AnyFeatureConstructor } from "@core/settings.layout";
+import { settingsLayout } from "@core/settings.layout";
 
-type AnyFeature = InstanceType<(typeof features)[number]>;
+type AnyFeature = InstanceType<AnyFeatureConstructor>;
+
+/**
+ * Every feature class the layout names, flattened, in layout order.
+ *
+ * The explicit return type is load-bearing: `flatMap` over a `readonly` tuple infers
+ * the *first* page's feature type instead of the union of all of them.
+ */
+const constructors: readonly AnyFeatureConstructor[] = settingsLayout.flatMap(
+    (page): AnyFeatureConstructor[] => [...page.features],
+);
 
 export class FeatureRegistry {
     private readonly features: readonly AnyFeature[];
+    private readonly byConstructor: ReadonlyMap<AnyFeatureConstructor, AnyFeature>;
     private readonly settingsStore: SettingsStore;
     private readonly translator: SettingsTranslator;
 
     constructor(private readonly plugin: ScrollingPlugin) {
-        this.features = features.map((Constructor) => new Constructor());
+        const seen = new Set<AnyFeatureConstructor>();
+        const duplicate = constructors.find((Constructor) => {
+            if (seen.has(Constructor)) {
+                return true;
+            }
+            seen.add(Constructor);
+            return false;
+        });
+        if (duplicate) {
+            throw new Error(
+                `The settings layout places "${duplicate.name}" on more than one page; ` +
+                    "each feature belongs to exactly one page.",
+            );
+        }
+
+        this.features = constructors.map((Constructor) => new Constructor());
+        this.byConstructor = new Map(
+            constructors.map((Constructor, i) => [Constructor, this.features[i]]),
+        );
         this.settingsStore = new SettingsStore(plugin);
         this.translator = new SettingsTranslator(this.settingsStore);
 
@@ -28,15 +58,13 @@ export class FeatureRegistry {
         return this.settingsStore;
     }
 
-    /** The feature declaring `id`, narrowed to that feature's own type. */
-    get<K extends AnyFeature["id"]>(id: K): Extract<AnyFeature, { id: K }> | undefined {
-        return this.features.find((feature) => feature.id === id) as
-            | Extract<AnyFeature, { id: K }>
-            | undefined;
+    /** The instance of `Constructor`, narrowed to that feature's own type. */
+    get<C extends AnyFeatureConstructor>(Constructor: C): InstanceType<C> | undefined {
+        return this.byConstructor.get(Constructor) as InstanceType<C> | undefined;
     }
 
     getSettingDefinitions(): SettingDefinitionItem[] {
-        return this.translator.getSettingDefinitions(this.features as readonly Feature[]);
+        return this.translator.getSettingDefinitions(this.byConstructor);
     }
 
     async loadAll(): Promise<void> {
@@ -46,7 +74,7 @@ export class FeatureRegistry {
                 // way, so normalise it into a real promise first.
                 await Promise.resolve(feature.onload(this.plugin));
             } catch (err) {
-                console.error(`Failed to load feature "${feature.id}":`, err);
+                console.error(`Failed to load feature "${feature.constructor.name}":`, err);
             }
         }
     }
@@ -56,7 +84,7 @@ export class FeatureRegistry {
             try {
                 feature.onunload();
             } catch (err) {
-                console.error(`Failed to unload feature "${feature.id}":`, err);
+                console.error(`Failed to unload feature "${feature.constructor.name}":`, err);
             }
         }
     }

@@ -1,51 +1,6 @@
-import { CenterCursorFeature } from "@features/CenterCursorFeature";
-import { CodeBlockFeature } from "@features/CodeBlockFeature";
-import { CommandsFeature } from "@features/CommandsFeature";
-import { FileTreeFeature } from "@features/FileTreeFeature";
-import { LineLengthFeature } from "@features/LineLengthFeature";
-import { MathJaxFeature } from "@features/MathJaxFeature";
-import { MouseScrollFeature } from "@features/MouseScrollFeature";
-import { PreviewScrollKeysFeature } from "@features/PreviewScrollKeysFeature";
-import { RememberFileStateFeature } from "@features/RememberFileStateFeature";
-import { ScrollButtonsFeature } from "@features/ScrollButtonsFeature";
-import { ScrollbarFeature } from "@features/ScrollbarFeature";
-
-/**
- * The only shape the derivation below needs from a feature instance.
- *
- * Deliberately narrower than `Feature`: constraining to the full contract would make
- * this file depend on `Feature`, which depends on the setting callbacks, which depend
- * on `ScrollingPluginSettings` — a cycle through the type being defined right here.
- */
-type FeatureSettingsShape = {
-    items?: readonly SettingShape[];
-    groups?: readonly { items: readonly SettingShape[] }[];
-};
-
-type SettingShape = { control: { key: string } };
-
-type FeatureConstructor = new () => { settings: FeatureSettingsShape };
-
-/**
- * Every feature the plugin loads.
- *
- * Adding an entry here is enough: its settings contribute to
- * `ScrollingPluginSettings`, its definitions are registered with the settings
- * store, and the layout is required to place it (see `@core/settings.layout`).
- */
-export const features = [
-    CenterCursorFeature,
-    CodeBlockFeature,
-    CommandsFeature,
-    FileTreeFeature,
-    LineLengthFeature,
-    MathJaxFeature,
-    MouseScrollFeature,
-    PreviewScrollKeysFeature,
-    RememberFileStateFeature,
-    ScrollButtonsFeature,
-    ScrollbarFeature,
-];
+import type { AnyFeatureConstructor } from "@core/settings.layout";
+import { settingsLayout } from "@core/settings.layout";
+import type { FeatureSettingsShape } from "@core/settings.schema";
 
 type ControlValue<C> = C extends { type: "toggle" }
     ? boolean
@@ -69,14 +24,19 @@ type UnionToIntersection<U> = (U extends unknown ? (arg: U) => void : never) ext
     ? I
     : never;
 
-type MergeFeatures<F extends readonly FeatureConstructor[]> = UnionToIntersection<
+type MergeFeatures<F extends readonly AnyFeatureConstructor[]> = UnionToIntersection<
     SettingObject<InstanceOf<F[number]>>
 >;
 
-/** The flat, fully typed settings object. Every key is declared exactly once. */
-export type ScrollingPluginSettings = MergeFeatures<typeof features>;
+/**
+ * The flat, fully typed settings object, derived from the features the settings
+ * layout names. Every key is declared exactly once.
+ */
+export type ScrollingPluginSettings = MergeFeatures<
+    (typeof settingsLayout)[number]["features"][number][]
+>;
 
-type SettingItem = SettingShape;
+type SettingItem = { control: { key: string } };
 
 type ItemsOf<T> = T extends { items?: readonly (infer I)[] } ? I : never;
 

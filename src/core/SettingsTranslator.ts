@@ -10,7 +10,7 @@ import type {
 import type { Feature } from "@core/Feature";
 import type { ControlParse, SettingOwner, SettingItem } from "@core/settings.schema";
 import { bindPredicate } from "@core/settings.schema";
-import type { PageLayout } from "@core/settings.layout";
+import type { AnyFeatureConstructor, PageLayout } from "@core/settings.layout";
 import { settingsLayout } from "@core/settings.layout";
 import type { SettingKey, SettingsStore } from "@core/SettingsStore";
 
@@ -30,21 +30,24 @@ export const GROUP_CLASS = "scrolling-setting-group";
 export class SettingsTranslator {
     constructor(private readonly store: SettingsStore) {}
 
-    getSettingDefinitions(features: readonly Feature[]): SettingDefinitionItem[] {
-        const byId = new Map(features.map((feature) => [feature.id, feature]));
-        return settingsLayout.map((page) => this.translatePage(page, byId));
+    getSettingDefinitions(
+        byConstructor: ReadonlyMap<AnyFeatureConstructor, Feature>,
+    ): SettingDefinitionItem[] {
+        return settingsLayout.map((page) => this.translatePage(page, byConstructor));
     }
 
     private translatePage(
-        page: PageLayout,
-        byId: ReadonlyMap<string, Feature>,
+        page: PageLayout<AnyFeatureConstructor>,
+        byConstructor: ReadonlyMap<AnyFeatureConstructor, Feature>,
     ): SettingDefinitionPage {
         const groups: SettingDefinitionGroup[] = [];
 
-        for (const id of page.features) {
-            const feature = byId.get(id);
+        for (const Constructor of page.features) {
+            const feature = byConstructor.get(Constructor);
             if (!feature) {
-                throw new Error(`Settings layout references unregistered feature "${id}".`);
+                throw new Error(
+                    `Settings layout references unregistered feature "${Constructor.name}".`,
+                );
             }
             groups.push(...this.translateFeature(feature));
         }
@@ -70,7 +73,9 @@ export class SettingsTranslator {
         }
 
         if (translated.length === 0) {
-            throw new Error(`Feature "${feature.id}" is placed in the layout but declares no settings.`);
+            throw new Error(
+                `Feature "${feature.constructor.name}" is placed in the layout but declares no settings.`,
+            );
         }
 
         return translated;

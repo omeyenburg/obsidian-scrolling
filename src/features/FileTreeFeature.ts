@@ -1,8 +1,6 @@
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
 
 export class FileTreeFeature implements Feature {
-    public readonly id = "fileTree";
-
     public readonly settings = {
         items: [
             {
