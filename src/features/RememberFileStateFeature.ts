@@ -11,8 +11,11 @@ import {
     WorkspaceLeaf,
     debounce,
     normalizePath,
+    setIcon,
 } from "obsidian";
+import type { Setting, TextComponent } from "obsidian";
 import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/Feature";
+import type { CustomRenderContext } from "@core/settings.schema";
 
 interface EphemeralState {
     timestamp: number;
@@ -168,6 +171,8 @@ export class RememberFileStateFeature implements Feature {
                 visible: (): boolean => {
                     return this.plugin.settings.restoreScrollFileEnabled;
                 },
+                render: (setting, ctx): (() => void) =>
+                    this.renderStatesFilePathRow(setting, ctx),
             },
         ],
     } as const satisfies FeatureSettingsDefinition;
@@ -195,7 +200,7 @@ export class RememberFileStateFeature implements Feature {
         this.plugin = plugin;
 
         if (plugin.settings.restoreScrollFilePath === undefined) {
-            plugin.settings.restoreScrollFilePath = this.getDefaultStateFilePath();
+            void plugin.settingsStore.set("restoreScrollFilePath", this.getDefaultStateFilePath());
         }
 
         // True when plugin is reloaded.
@@ -309,6 +314,80 @@ export class RememberFileStateFeature implements Feature {
 
         new Notice(`Renamed storage file to: ${newNormalizedPath}`);
         return newNormalizedPath;
+    }
+
+    /**
+     * Renders the storage path row, which stages edits until they are confirmed.
+     *
+     * Confirming renames the existing positions file first, so a path change can
+     * never orphan the file the user already has. The stored value only moves
+     * once the rename succeeded, which is why this row builds its own DOM
+     * instead of using the declarative text control.
+     * @param setting The row to build the control in.
+     * @param ctx Store access for reading and committing the path.
+     * @returns A cleanup that detaches the listeners this row added.
+     */
+    private renderStatesFilePathRow(setting: Setting, ctx: CustomRenderContext): () => void {
+        // `null` means "no pending change", which is distinct from a staged empty string.
+        let staged: string | null = null;
+        let text!: TextComponent;
+
+        // `ctx.current()` is untyped because the context erases the key/value
+        // correlation; this row is a text control, so anything else means no path.
+        const stored = (): string => {
+            const value = ctx.current();
+            return typeof value === "string" ? value : "";
+        };
+
+        const confirm = async (): Promise<void> => {
+            if (ctx.isDisabled() || staged === null) return;
+
+            const newPath = await this.renameStatesFile(staged);
+            if (newPath === undefined) return;
+
+            staged = null;
+            text.setValue(newPath);
+            ctx.commit(newPath);
+        };
+
+        const discard = (): void => {
+            if (staged === null) return;
+
+            staged = null;
+            text.setValue(stored());
+        };
+
+        setting.addText((component) => {
+            text = component;
+            component.setValue(stored()).onChange((raw: string) => {
+                staged = raw;
+            });
+        });
+
+        const onKeydown = (event: KeyboardEvent): void => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                void confirm();
+            }
+        };
+        text.inputEl.addEventListener("keydown", onKeydown);
+
+        const discardButton = setting.controlEl.createDiv({
+            cls: "clickable-icon extra-setting-button",
+        });
+        discardButton.setAttr("aria-label", "Discard path change");
+        setIcon(discardButton, "reset");
+        discardButton.onclick = discard;
+
+        const confirmButton = setting.controlEl.createEl("button", { text: "Confirm" });
+        confirmButton.onclick = (): void => void confirm();
+        confirmButton.disabled = ctx.isDisabled();
+
+        return () => {
+            text.inputEl.removeEventListener("keydown", onKeydown);
+            discardButton.onclick = null;
+            confirmButton.onclick = null;
+        };
     }
 
     /**
@@ -568,7 +647,7 @@ export class RememberFileStateFeature implements Feature {
         // Check default path
         let default_path = this.getDefaultStateFilePath();
         if (await this.directoryOfFileExists(default_path)) {
-            this.plugin.settings.restoreScrollFilePath = default_path;
+            await this.plugin.settingsStore.set("restoreScrollFilePath", default_path);
             return;
         }
     }
@@ -590,7 +669,7 @@ export class RememberFileStateFeature implements Feature {
         } catch (error) {
             new Notice("Failed to write scroll positions file. Disabling disk storage.");
             console.error("Failed to write scroll positions file:", error);
-            this.plugin.settings.restoreScrollFileEnabled = false;
+            await this.plugin.settingsStore.set("restoreScrollFileEnabled", false);
         }
     }
 
@@ -606,7 +685,7 @@ export class RememberFileStateFeature implements Feature {
         // Check default path
         let default_path = this.getDefaultStateFilePath();
         if (await this.directoryOfFileExists(default_path)) {
-            this.plugin.settings.restoreScrollFilePath = default_path;
+            await this.plugin.settingsStore.set("restoreScrollFilePath", default_path);
             return true;
         }
 

@@ -13,8 +13,8 @@ export class LineLengthFeature implements Feature {
                     key: "readableLineLengthEnabled",
                     defaultValue: true,
                 },
-                onChange: (): void => {
-                    this.updateObsidianReadableLineLength();
+                onChange: (enabled): void => {
+                    this.setObsidianReadableLineLength(enabled === true);
                     this.updateLineLength();
                 },
             },
@@ -31,8 +31,11 @@ export class LineLengthFeature implements Feature {
                         percentage: "Percentage (%)",
                     },
                     disabled: (): boolean => {
-                        return this.plugin.settings.readableLineLengthEnabled === false;
+                        return !this.getObsidianReadableLineLength();
                     },
+                },
+                onChange: (): void => {
+                    this.updateLineLength();
                 },
             },
             {
@@ -41,12 +44,12 @@ export class LineLengthFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "lineLengthPixels",
-                    defaultValue: 800,
+                    defaultValue: 700,
                     min: 400,
                     max: 3000,
                     step: 50,
                     disabled: (): boolean => {
-                        return this.plugin.settings.readableLineLengthEnabled === false;
+                        return !this.getObsidianReadableLineLength();
                     },
                 },
                 visible: (): boolean => {
@@ -62,12 +65,12 @@ export class LineLengthFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "lineLengthCharacters",
-                    defaultValue: 80,
+                    defaultValue: 50,
                     min: 30,
                     max: 200,
                     step: 1,
                     disabled: (): boolean => {
-                        return this.plugin.settings.readableLineLengthEnabled === false;
+                        return !this.getObsidianReadableLineLength();
                     },
                 },
                 visible: (): boolean => {
@@ -83,12 +86,12 @@ export class LineLengthFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "lineLengthPercentage",
-                    defaultValue: 80,
+                    defaultValue: 50,
                     min: 20,
                     max: 100,
                     step: 2,
                     disabled: (): boolean => {
-                        return this.plugin.settings.readableLineLengthEnabled === false;
+                        return !this.getObsidianReadableLineLength();
                     },
                 },
                 visible: (): boolean => {
@@ -107,6 +110,16 @@ export class LineLengthFeature implements Feature {
 
     public onload(plugin: ScrollingPlugin): void {
         this.plugin = plugin;
+
+        // The vault owns this preference, so the row that displays it starts from the
+        // vault's value instead of from our default. Without this a user who turned
+        // readable line length off in Obsidian would see the toggle on, and the length
+        // controls enabled, while the runtime correctly did nothing.
+        const inVault = this.getObsidianReadableLineLength();
+        if (plugin.settings.readableLineLengthEnabled !== inVault) {
+            void plugin.settingsStore.set("readableLineLengthEnabled", inVault);
+        }
+
         this.updateLineLength();
     }
 
@@ -140,8 +153,7 @@ export class LineLengthFeature implements Feature {
         false,
     );
 
-    private updateObsidianReadableLineLength(): void {
-        const enabled = this.plugin.settings.readableLineLengthEnabled;
+    private setObsidianReadableLineLength(enabled: boolean): void {
         this.plugin.app.vault.setConfig("readableLineLength", enabled);
     }
 

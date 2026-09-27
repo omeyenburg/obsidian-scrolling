@@ -30,7 +30,7 @@ export default class ScrollingPlugin extends Plugin {
         this.events.postInit();
 
         const rememberFileState = this.featureRegistery.get(RememberFileStateFeature);
-        if (rememberFileState && this.settings.restoreScrollFileEnabled) {
+        if (rememberFileState) {
             await rememberFileState.loadStatesFile();
         }
     }

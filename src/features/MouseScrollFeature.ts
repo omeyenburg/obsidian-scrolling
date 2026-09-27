@@ -6,10 +6,6 @@ function easeOut(t: number): number {
     return 1 - (1 - t) ** 2;
 }
 
-function mean(data: number[]): number {
-    return data.reduce((a, b) => a + b, 0) / data.length;
-}
-
 export class MouseScrollFeature implements Feature {
     public readonly settings = {
         visible: (): boolean => !Platform.isMobile,
@@ -88,7 +84,7 @@ export class MouseScrollFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "simulatedMouseSpeed",
-                    defaultValue: 20,
+                    defaultValue: 50,
                     min: 1,
                     max: 100,
                     step: 1,
@@ -103,7 +99,7 @@ export class MouseScrollFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "simulatedMouseSmoothness",
-                    defaultValue: 50,
+                    defaultValue: 75,
                     min: 0,
                     max: 100,
                     step: 1,
@@ -130,7 +126,7 @@ export class MouseScrollFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "simulatedTouchpadSpeed",
-                    defaultValue: 20,
+                    defaultValue: 50,
                     min: 1,
                     max: 100,
                     step: 1,
@@ -145,7 +141,7 @@ export class MouseScrollFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "simulatedTouchpadSmoothness",
-                    defaultValue: 50,
+                    defaultValue: 75,
                     min: 0,
                     max: 100,
                     step: 1,
@@ -160,7 +156,7 @@ export class MouseScrollFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "simulatedTouchpadFrictionThreshold",
-                    defaultValue: 50,
+                    defaultValue: 20,
                     min: 1,
                     max: 100,
                     step: 1,
@@ -187,22 +183,9 @@ export class MouseScrollFeature implements Feature {
     private readonly MIN_VELOCITY = 0.01;
     private readonly TOUCHPAD_GRACE_PERIOD = 50;
 
-    private readonly MIN_START_THRESHOLD = 200;
-    private readonly MAX_START_THRESHOLD = 500;
-
     private intervalSum: number | null = null;
     private readonly MAX_INTENSITY_INTERVAL = 600;
     private readonly INTENSITY_SMOOTHING = 0.3;
-
-    private delays: number[] = [];
-    private avgDelay = 10;
-    private readonly WHEEL_DELAY_THRESHOLD = 10;
-    private readonly MAX_DELAY_SAMPLES = 50;
-
-    private batchSizes: number[] = [];
-    private avgBatchSize = 20;
-    private readonly BATCH_SIZE_THRESHOLD = 20;
-    private readonly MAX_BATCH_SIZE_SAMPLES = 3;
 
     private currentEl: HTMLElement | null = null;
     private readonly DEFAULT_FRAME_TIME = 16.67;
@@ -453,14 +436,15 @@ export class MouseScrollFeature implements Feature {
         }
 
         let mouseScore = this.getIntensity(deltaTime, event.deltaY);
+        const scroll = this.plugin.events.scrollAnalyzer;
 
         if (isStart) {
             mouseScore += 0.1;
-        } else if (this.avgDelay > this.WHEEL_DELAY_THRESHOLD) {
+        } else if (scroll.isSlowPaced) {
             mouseScore += 0.2;
         }
 
-        if (this.avgBatchSize < this.BATCH_SIZE_THRESHOLD) {
+        if (scroll.hasSmallGestures) {
             mouseScore += 0.1;
         }
 
@@ -489,47 +473,6 @@ export class MouseScrollFeature implements Feature {
         }
 
         return false;
-    }
-
-    /**
-     * Determines whether the current wheel event marks the start of a new scroll batch.
-     * Longer pauses between scrolls are more likely to signal a new batch.
-     */
-    private getIsStart(deltaTime: number): boolean {
-        const threshold = Math.min(
-            this.MIN_START_THRESHOLD + this.avgDelay,
-            this.MAX_START_THRESHOLD,
-        );
-
-        return deltaTime > threshold;
-    }
-
-    /**
-     * Updates rolling statistics about scroll event timing and batch sizes.
-     * This feeds into touchpad/mouse detection heuristics.
-     */
-    public analyzeDelay(deltaTime: number): boolean {
-        const isStart = this.getIsStart(deltaTime);
-        if (isStart) {
-            this.batchSizes.push(this.delays.length);
-            if (this.batchSizes.length > this.MAX_BATCH_SIZE_SAMPLES) {
-                this.batchSizes.shift();
-            }
-            this.avgBatchSize = mean(this.batchSizes);
-
-            this.delays = [];
-            this.avgDelay = this.WHEEL_DELAY_THRESHOLD;
-            return true;
-        }
-
-        // Store delay
-        this.delays.push(deltaTime);
-        if (this.delays.length > this.MAX_DELAY_SAMPLES) {
-            this.delays.shift(); // drop oldest
-        }
-
-        this.avgDelay = mean(this.delays);
-        return isStart;
     }
 
     /**

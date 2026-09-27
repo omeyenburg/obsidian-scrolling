@@ -1,7 +1,11 @@
+import { Debouncer, debounce } from "obsidian";
 import type { Feature, ScrollingPlugin } from "@core/Feature";
 import type { ScrollingPluginSettings } from "@core/feature.schema";
 
 export type SettingKey = keyof ScrollingPluginSettings;
+
+/** How long the vault write waits for further edits before actually running. */
+const SAVE_DEBOUNCE_MS = 500;
 
 /** The part of the setting tab the store needs. Avoids depending on the concrete class. */
 export interface Refreshable {
@@ -12,15 +16,22 @@ export interface Refreshable {
 /**
  * Owns the one and only write path for plugin settings.
  *
- * Everything that changes a setting — the settings UI, a group reset button, a
- * future command — goes through `set`/`reset`, so persistence, `onChange`
- * handlers and the in-place DOM refresh cannot be forgotten at a call site.
+ * Everything that changes a setting — the settings UI, a future command, a
+ * feature reacting to a failure — goes through `set`, so persistence,
+ * `onChange` handlers and the in-place DOM refresh cannot be forgotten at a call
+ * site. Assigning to `plugin.settings` directly bypasses all three, so nothing
+ * outside this class may do it.
+ *
+ * Writes reach the vault on a short debounce rather than one save per edit, which
+ * keeps dragging a slider from writing the whole settings object on every frame.
  */
 export class SettingsStore {
     private readonly handlers = new Map<SettingKey, (value: unknown) => void>();
     private readonly defaults = new Map<SettingKey, unknown>();
     private readonly subscribers = new Set<() => void>();
     private refresh: (() => void) | undefined;
+    private saveDebouncer: Debouncer<[], void> | undefined;
+    private savePending = false;
 
     constructor(private readonly plugin: ScrollingPlugin) {}
 
@@ -60,11 +71,7 @@ export class SettingsStore {
         this.refresh = () => tab.refreshDomState();
     }
 
-    /** Every key declared by any feature, in declaration order. */
-    keys(): SettingKey[] {
-        return [...this.defaults.keys()];
-    }
-
+    /** The value every setting falls back to, in declaration order. */
     buildDefaults(): ScrollingPluginSettings {
         const defaults: Record<string, unknown> = {};
         for (const [key, value] of this.defaults) {
@@ -79,27 +86,15 @@ export class SettingsStore {
         return this.plugin.settings[key];
     }
 
+    /**
+     * Applies a value, then runs its `onChange` handler.
+     *
+     * The generic ties the value to the key at compile time only: nothing here
+     * validates it at runtime, so callers must pass what the control produced.
+     */
     async set<K extends SettingKey>(key: K, value: ScrollingPluginSettings[K]): Promise<void> {
         this.apply(key, value);
-        await this.commit();
-    }
-
-    /** Restores every listed key that declares a default. One save, one refresh. */
-    async reset(keys: readonly SettingKey[]): Promise<void> {
-        let changed = false;
-
-        for (const key of keys) {
-            const value = this.defaults.get(key);
-            if (value === undefined) {
-                continue;
-            }
-            this.apply(key, value);
-            changed = true;
-        }
-
-        if (changed) {
-            await this.commit();
-        }
+        this.commit();
     }
 
     /**
@@ -115,9 +110,6 @@ export class SettingsStore {
     }
 
     private apply(key: SettingKey, value: unknown): void {
-        // `set` is the typed public entry point and checks the value against the key.
-        // This private path exists for `reset`, which reads defaults out of a `Map`
-        // that has lost the key/value correlation.
         this.plugin.settings[key] = value as never;
 
         const handler = this.handlers.get(key);
@@ -133,8 +125,28 @@ export class SettingsStore {
         }
     }
 
-    private async commit(): Promise<void> {
-        await this.plugin.saveData(this.plugin.settings);
+    /**
+     * Schedules the vault write and re-evaluates the UI in place.
+     *
+     * The refresh and the subscribers run immediately: they only read the in-memory
+     * value, which `apply` has already updated. Only the write is deferred, and
+     * `flush` forces it out on unload.
+     */
+    private commit(): void {
+        if (!this.saveDebouncer) {
+            this.saveDebouncer = debounce(
+                () => {
+                    this.savePending = false;
+                    void this.plugin.saveData(this.plugin.settings);
+                },
+                SAVE_DEBOUNCE_MS,
+                true,
+            );
+            this.plugin.register(() => this.flush());
+        }
+
+        this.savePending = true;
+        this.saveDebouncer.run();
 
         // Re-evaluate `visible`/`disabled`. Never `update()`: the definitions are
         // static, so a full re-render would only interrupt running animations.
@@ -147,5 +159,19 @@ export class SettingsStore {
                 console.error("Settings update subscriber threw:", err);
             }
         }
+    }
+
+    /**
+     * Writes a debounced change out now instead of waiting it out.
+     *
+     * Registered on unload: without this, an edit made in the last few hundred
+     * milliseconds before quitting would be dropped rather than saved.
+     */
+    private flush(): void {
+        if (!this.savePending) return;
+
+        this.saveDebouncer?.cancel();
+        this.savePending = false;
+        void this.plugin.saveData(this.plugin.settings);
     }
 }

@@ -11,6 +11,7 @@ import { EditorView, ViewUpdate } from "@codemirror/view";
 import { Transaction } from "@codemirror/state";
 import { around } from "monkey-around";
 
+import { ScrollGestureAnalyzer } from "@core/ScrollGestureAnalyzer";
 import type { default as ScrollingPlugin } from "@core/main";
 
 /**
@@ -33,6 +34,12 @@ function isScrolledToBottom(el: HTMLElement): boolean {
 
 export class Events {
     private readonly plugin: ScrollingPlugin;
+
+    /**
+     * Wheel event timing statistics. `Events` is the only caller of
+     * `analyzeDelay`; features read the derived averages from here.
+     */
+    public readonly scrollAnalyzer = new ScrollGestureAnalyzer();
 
     private lastTouchX = 0;
     private lastTouchY = 0;
@@ -432,8 +439,7 @@ export class Events {
         const deltaTime = now - this.lastWheelEventTime;
         this.lastWheelEventTime = now;
 
-        // const isStart = this.plugin.mouseScroll.analyzeDelay(deltaTime); // TODO: use
-        const isStart = true;
+        const isStart = this.scrollAnalyzer.analyzeDelay(deltaTime);
 
         // Attempt to use cached scroller
         if (
@@ -470,7 +476,7 @@ export class Events {
                 }
 
                 for (const callback of this.wheelExtendedHandlers) {
-                    callback(event, this.lastWheelScrollElement, deltaTime, isStart);
+                    callback(event, el, deltaTime, isStart);
                 }
 
                 this.lastWheelScrollElement = el;

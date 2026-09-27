@@ -36,7 +36,8 @@ type TranslatedGroup = Omit<SettingDefinitionGroup, "visible"> & {
  *
  * There is no shadow control schema here on purpose: every control is emitted as a
  * native `SettingDefinitionControl`, so Obsidian owns value binding, validation and
- * row rendering. The only imperative row is a control that declares `parse`.
+ * row rendering. The only imperative rows are the ones that opt out of that: a control
+ * that declares `parse`, and a row that supplies its own `render`.
  */
 export class SettingsTranslator {
     constructor(private readonly store: SettingsStore) {}
@@ -97,11 +98,33 @@ export class SettingsTranslator {
 
     private translateItem(item: SettingItem): SettingDefinition {
         const visible = bindPredicate(item.visible);
+        const boundDisabled = bindPredicate(item.control.disabled);
+
+        // A row that brings its own DOM opts out of control translation entirely.
+        if (item.render) {
+            const { render } = item;
+            const key = item.control.key as SettingKey;
+
+            return {
+                name: item.name,
+                desc: item.desc,
+                aliases: item.aliases,
+                searchable: item.searchable,
+                visible,
+                render: (setting: Setting) =>
+                    render(setting, {
+                        current: () => this.store.get(key),
+                        commit: (value: unknown) => {
+                            void this.store.set(key, value as never);
+                        },
+                        isDisabled: () => boundDisabled?.() ?? false,
+                    }),
+            };
+        }
 
         // `parse`/`displayFormat` are ours, not Obsidian's: keep them out of the
         // emitted control.
         const { parse, displayFormat, disabled, ...control } = item.control;
-        const boundDisabled = bindPredicate(disabled);
 
         if (parse) {
             // `SettingDefinitionRender` has no `disabled` slot, so the predicate is

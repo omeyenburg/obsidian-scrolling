@@ -1,4 +1,4 @@
-import type { SettingControl as NativeSettingControl } from "obsidian";
+import type { Setting, SettingControl as NativeSettingControl } from "obsidian";
 
 /**
  * A boolean setting state, recomputed on every render.
@@ -54,6 +54,22 @@ export type ValueOf<C> = C extends { type: "toggle" }
                     ? string
                     : unknown;
 
+/**
+ * What a custom row render needs from the store.
+ *
+ * Passed in as plain functions so that this module stays free of any dependency
+ * on `SettingsStore`, and with `unknown` values so a feature can commit without
+ * casting: the translator binds the key and restores the correlation it erased.
+ */
+export interface CustomRenderContext {
+    /** The value currently stored for this row. */
+    current: () => unknown;
+    /** Applies a value through the store, then persists and refreshes. */
+    commit: (value: unknown) => void;
+    /** Whether this row's `disabled` predicate currently holds. */
+    isDisabled: () => boolean;
+}
+
 export interface SettingItem<C extends SettingControl = SettingControl> {
     name: string;
     desc?: string | DocumentFragment;
@@ -61,8 +77,24 @@ export interface SettingItem<C extends SettingControl = SettingControl> {
     searchable?: boolean | (() => boolean);
     /** Re-evaluated on each render, and in place on every write. */
     visible?: BoolPredicate;
-    /** Runs after the value is written and persisted. */
+    /**
+     * Runs once the value has been applied, and before it reaches the vault.
+     *
+     * The handler is for reacting to the new value in memory — restyling, pushing
+     * a value to Obsidian's own config. The vault write is debounced and follows
+     * afterwards, so do not read the vault here to observe this edit.
+     */
     onChange?: (value: ValueOf<C>) => void;
+    /**
+     * Replaces the row's control with hand-built DOM, and is called instead of
+     * translating `control`.
+     *
+     * Escape hatch for the rare row that needs wiring Obsidian's declarative
+     * control schema has no slot for, such as a text field that stages its
+     * value until a separate confirm action commits it. The returned cleanup, if
+     * any, unsubscribes, so nothing outlives the row.
+     */
+    render?: (setting: Setting, ctx: CustomRenderContext) => void | (() => void);
     control: C;
 }
 

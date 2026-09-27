@@ -3,6 +3,10 @@ import type { Feature, FeatureSettingsDefinition, ScrollingPlugin } from "@core/
 
 export class ScrollbarFeature implements Feature {
     public readonly settings = {
+        // The runtime is inert on macOS, so offering these controls there would only
+        // ever show options that do nothing. Gating the group takes the page with it,
+        // since this feature is the page's only contributor.
+        visible: (): boolean => !Platform.isMacOS,
         items: [
             {
                 name: "Scrollbar visibility",
@@ -10,7 +14,7 @@ export class ScrollbarFeature implements Feature {
                 control: {
                     type: "dropdown",
                     key: "scrollbarVisibility",
-                    defaultValue: "scroll",
+                    defaultValue: "show",
                     options: {
                         hide: "Always hide scrollbar",
                         scroll: "Show scrollbar while scrolling",
@@ -27,10 +31,14 @@ export class ScrollbarFeature implements Feature {
                 control: {
                     type: "slider",
                     key: "scrollbarWidth",
-                    defaultValue: 10,
+                    defaultValue: 12,
                     min: 0,
                     max: 30,
                     step: 1,
+                },
+                // The width is only applied on Linux desktop, so the row goes with it.
+                visible: (): boolean => {
+                    return Platform.isLinux && Platform.isDesktop;
                 },
                 onChange: (): void => {
                     this.updateStyle();
