@@ -21,6 +21,7 @@ export class LineLengthFeature implements Feature {
                     defaultValue: true,
                 },
                 onChange: (): void => {
+                    this.updateObsidianReadableLineLength();
                     this.updateLineLength();
                 },
             },
@@ -111,7 +112,7 @@ export class LineLengthFeature implements Feature {
         this.plugin.removeStyleProperty("--file-line-width");
     }
 
-    public updateLineLength = debounce(
+    private updateLineLength = debounce(
         () => {
             if (Platform.isMobile) return;
 
@@ -137,11 +138,12 @@ export class LineLengthFeature implements Feature {
         false,
     );
 
-    public setObsidianReadableLineLength(enabled: boolean): void {
+    private updateObsidianReadableLineLength(): void {
+        const enabled = this.plugin.settings.readableLineLengthEnabled;
         this.plugin.app.vault.setConfig("readableLineLength", enabled);
     }
 
-    public getObsidianReadableLineLength(): boolean {
+    private getObsidianReadableLineLength(): boolean {
         return this.plugin.app.vault.getConfig("readableLineLength") as boolean;
     }
 }
