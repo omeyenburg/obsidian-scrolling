@@ -64,7 +64,7 @@ export class CenteredCursorFeature implements Feature {
                 },
             },
             {
-                name: "Trigger on mouse interactions (Experimental)",
+                name: "Trigger on mouse interactions",
                 desc: "Update when the cursor is moved using the mouse.",
                 control: {
                     type: "toggle",
@@ -76,7 +76,7 @@ export class CenteredCursorFeature implements Feature {
                 },
             },
             {
-                name: "Trigger on mouse selection (Experimental)",
+                name: "Trigger on mouse selection",
                 desc: "Also update when text is selected using the mouse.",
                 control: {
                     type: "toggle",
