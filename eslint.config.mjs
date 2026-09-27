@@ -7,11 +7,8 @@ export default defineConfig(
 		"**/*.js",
 		"**/*.json",
 		"**/*.mjs",
-		"coverage",
 		"dist",
-		"mocks",
 		"node_modules",
-		"test",
 	]),
 	{
 		languageOptions: {

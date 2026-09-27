@@ -23,17 +23,12 @@ Build the plugin in release mode.
 Build and watch the plugin to automatically rebuild the plugin on file changes.
 After building, reload the plugin from Obsidian's settings to apply changes.
 
-`npm run test`:
-Run the test suite.
-`jest` is used for unit testing in a partially mocked Obsidian environment.
-
 ## Project structure
 
 A selective overview:
 
 - `scripts/` contain helper and build scripts.
-- `test/` and `mocks/` contain files related to testing.
 - `styles.css` is the main styles file and bundled as-is.
 - `src/` contains all TypeScript source files and will be transpiled into `main.js`.
-    - `src/components/` contains all features of this plugin separated into distinct components.
-    - `src/core/` contains general plugin files that are not specific to any component.
+    - `src/features/` contains all features of this plugin separated into distinct feature classes.
+    - `src/core/` contains general plugin files that are not specific to any feature.

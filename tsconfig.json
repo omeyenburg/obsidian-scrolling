@@ -23,9 +23,6 @@
       "@core/*": [
         "core/*"
       ],
-      "@components/*": [
-        "components/*"
-      ],
       "@features/*": [
         "features/*"
       ],
